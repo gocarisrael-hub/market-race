@@ -88,9 +88,9 @@ test('the occasion and palette picked on the site open the game in that look', a
   await page.getByRole('button', { name: /^לתשלום/ }).click()
   await page.frameLocator('iframe').getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
 
-  const link = page.getByRole('link', { name: 'לפתוח את המשחק' })
-  await expect(link).toHaveAttribute('href', /\/g\//, { timeout: 30_000 })
-  await page.goto((await link.getAttribute('href'))!)
+  await expect(page.getByRole('heading', { name: 'מתחילים לשחק' })).toBeVisible({ timeout: 30_000 })
+  const manageToken = new URL(page.url()).pathname.split('/m/')[1]
+  await page.goto((await (await page.request.get(`/api/manage/${manageToken}`)).json()).gameLink)
   await expect(page.getByRole('heading', { name: 'המירוץ של שירה' })).toBeVisible()
   const opening = page.locator('main.opening')
   await expect(opening).toHaveAttribute('data-decor', 'birthday')

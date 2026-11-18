@@ -67,11 +67,13 @@ test('buyer edits an answer after paying and sees it in the first riddle', async
   await expect(page.getByText('השינויים נשמרו.')).toBeVisible()
   await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.')
 
-  const gameUrl = (await page.getByRole('link', { name: 'לפתוח את המשחק' }).getAttribute('href'))!
+  const gameUrl: string = (await (await page.request.get(`/api/manage/${manageToken}`)).json()).gameLink
   const view = await (await page.request.get(`/api/game/${gameUrl.split('/g/')[1]}`)).json()
   expect(view.theme.palette.accent).toBe(shopPal.palette.accent)
-  await page.goto(gameUrl)
-  await page.getByRole('button', { name: 'יוצאות לדרך!' }).click()
+  // The captain starts the game here and goes into it.
+  await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
+  await page.getByRole('button', { name: 'כן, מתחילים!' }).click()
+  await page.getByRole('link', { name: 'ממשיכים למשחק' }).click()
   await expect(page.getByRole('heading', { name: 'חידה ראשונה', exact: true })).toBeVisible()
   await expect(page.getByText('דני מהצבא')).toBeVisible()
   await expect(page.getByText('יואב מהשכבה')).toHaveCount(0)

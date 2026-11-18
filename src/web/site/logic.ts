@@ -1,6 +1,7 @@
 // Pure logic of the order flow: prices, step validation, the draft kept between steps.
 import type {
   Buyer,
+  HintQuestion,
   LetterNote,
   Occasion,
   OrderPayload,
@@ -13,6 +14,7 @@ import type {
 import { copy, type SiteForm } from './copy.ts'
 
 export const MAX_NOTES = 3
+export const MAX_HINT_QUESTIONS = 5
 export const MAX_PHOTOS = 5
 const PHONE = /^[0-9+\-\s]{9,16}$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -30,6 +32,8 @@ export type Draft = {
   honoreeName: string
   answers: Record<string, string>
   letterNotes: LetterNote[]
+  /** Optional personal questions that unlock hints in the game. */
+  hintQuestions: HintQuestion[]
   answersLater: boolean
   buyer: Buyer
   /** Set once the order exists on the server (end of step 2). */
@@ -50,6 +54,7 @@ export function emptyDraft(minPeople = 2): Draft {
     honoreeName: '',
     answers: {},
     letterNotes: [],
+    hintQuestions: [],
     answersLater: false,
     buyer: { name: '', phone: '', email: '' },
     manageToken: null,
@@ -165,8 +170,28 @@ export function step2Error(d: Draft, questions: Question[], forms: SiteForm[] = 
   if (!d.honoreeName.trim()) return copy.questions.missingName(d.form)
   if (len(d.honoreeName) > 40) return copy.questions.tooLong
   if (d.answersLater) return null
-  return answersError(d.answers, askedQuestions(questions, d.form))
+  return answersError(d.answers, askedQuestions(questions, d.form)) ?? hintQuestionsError(d.hintQuestions)
 }
+
+/** Personal hint questions with both a question and an answer, trimmed. Empty rows are dropped. */
+export const cleanHintQuestions = (list: HintQuestion[] | null | undefined): HintQuestion[] =>
+  (list ?? [])
+    .map((q) => ({ question: q.question.trim(), answer: q.answer.trim() }))
+    .filter((q) => q.question && q.answer)
+
+/** A row with only one side filled is an error (the game could not check it). */
+export function hintQuestionsError(list: HintQuestion[] | null | undefined): string | null {
+  for (const q of list ?? []) {
+    const hasQ = !!q.question.trim()
+    const hasA = !!q.answer.trim()
+    if (hasQ !== hasA) return copy.hintQuestions.incomplete
+    if (len(q.question) > 140 || len(q.answer) > 60) return copy.questions.tooLong
+  }
+  return null
+}
+
+/** The players stepper on the captain's start: 1..the portions bought. */
+export const clampPlayers = (n: number, max: number) => clampPeople(n, 1, Math.max(1, max))
 
 /**
  * The questions shown as fields. A group's name is asked in the name field (labelled with the
@@ -249,6 +274,7 @@ export function orderPayload(d: Draft, questions: Question[]): OrderPayload {
     diets: d.diets,
     answers,
     letterNotes: d.answersLater ? [] : cleanNotes(d.letterNotes),
+    hintQuestions: d.answersLater ? [] : cleanHintQuestions(d.hintQuestions),
     answersLater: d.answersLater,
   }
 }
@@ -329,8 +355,9 @@ export function editError(
   answers: Record<string, string>,
   questions: Question[],
   form: SiteForm,
+  hintQuestions: HintQuestion[] = [],
 ): string | null {
   if (!name.trim()) return copy.questions.missingName(form)
   if (len(name) > 40) return copy.questions.tooLong
-  return answersError(answers, questions)
+  return answersError(answers, questions) ?? hintQuestionsError(hintQuestions)
 }

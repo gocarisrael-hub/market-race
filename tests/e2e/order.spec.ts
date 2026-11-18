@@ -171,7 +171,9 @@ test('answers later, then from the manage page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'השאלות' })).toHaveCount(0)
 })
 
-test('manage page shows a ready game with its link, QR and WhatsApp share', async ({ page }) => {
+test('manage page: a ready game offers the captain’s start; the link, QR and WhatsApp share come after it', async ({
+  page,
+}) => {
   const login = await page.request.post('/admin/api/login', {
     data: { email: 'owner@example.com', password: 'e2e-password' },
   })
@@ -194,12 +196,17 @@ test('manage page shows a ready game with its link, QR and WhatsApp share', asyn
   const { order, links } = await res.json()
   await page.goto(`/m/${order.manageToken}`)
   await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.')
-  await expect(page.getByRole('link', { name: 'לפתוח את המשחק' })).toHaveAttribute('href', links.game)
+  await expect(page.getByRole('link', { name: /וואטסאפ/ })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'מתחילים לשחק' })).toBeVisible()
+  await shot(page, '6-manage-ready')
+  await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
+  await page.getByRole('button', { name: 'כן, מתחילים!' }).click()
+  await expect(page.getByRole('link', { name: 'ממשיכים למשחק' })).toHaveAttribute('href', links.game)
   await expect(page.getByRole('img', { name: 'קוד QR לקישור המשחק' })).toBeVisible()
-  const wa = await page.getByRole('link', { name: 'לשלוח בוואטסאפ' }).getAttribute('href')
+  const wa = await page.getByRole('link', { name: 'שולחים לכולם בוואטסאפ' }).getAttribute('href')
   expect(wa).toContain('https://wa.me/?text=')
   expect(decodeURIComponent(wa!.split('text=')[1])).toContain(links.game)
-  await shot(page, '6-manage-ready')
+  await shot(page, '6b-manage-started')
 
   // The company payment link of an order that is not payable says so.
   await page.goto(`/pay/${order.manageToken}`)
@@ -250,7 +257,7 @@ test('companies leave a lead', async ({ page }) => {
   await expect(page.getByText('נחזור אליכם בקרוב עם הצעה.')).toBeVisible()
 })
 
-test('a mock payment settles the order and the manage page shows the game link', async ({ page }) => {
+test('a mock payment settles the order and the manage page offers the captain’s start', async ({ page }) => {
   await stepOne(page)
   await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
   await page.getByLabel(/איך קוראים לה/).fill('מיכל')
@@ -267,9 +274,8 @@ test('a mock payment settles the order and the manage page shows the game link',
   await sheet.getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
 
   await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })
-  await expect(page.getByRole('link', { name: 'לפתוח את המשחק' })).toHaveAttribute('href', /\/g\//, {
-    timeout: 30_000,
-  })
+  await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.', { timeout: 30_000 })
+  await expect(page.getByRole('heading', { name: 'מתחילים לשחק' })).toBeVisible()
 })
 
 test('a family game: no she/he choice, the name field is the family name, family questions', async ({

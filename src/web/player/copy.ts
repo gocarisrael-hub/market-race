@@ -5,7 +5,7 @@
 // copy uses the feminine plural (as in the mockup: "יוצאות לדרך!"), otherwise the masculine plural.
 //
 // The owner overrides any text without a deploy through the `player_texts` setting:
-// `{ "start.button": "..." }` for every form, or `{ "start.button.he": "..." }` for one form.
+// `{ "riddle.submit": "..." }` for every form, or `{ "riddle.submit.he": "..." }` for one form.
 // Placeholders in braces ({name}, {n}, ...) are filled at render time.
 import type { Form } from '../../server/domain/types.ts'
 
@@ -22,7 +22,9 @@ export const COPY = {
   'start.summary': '{stops} חידות, {stops} טעימות',
   'start.summaryAllergens': '{stops} חידות, {stops} טעימות, בלי {allergens}',
   'start.together': { default: 'כולם משחקים יחד, מכל טלפון', she: 'כולן משחקות יחד, מכל טלפון' },
-  'start.button': { default: 'יוצאים לדרך!', she: 'יוצאות לדרך!' },
+  // Before the captain starts the game (on the manage page), every phone waits here.
+  'wait.title': 'המשחק עוד לא התחיל',
+  'wait.body': 'מי שהזמין את המשחק מתחיל אותו בשוק, כשכולם שם. המסך יתעדכן לבד.',
   'start.logoAlt': 'הלוגו של {company}',
   'start.mapAlt': 'מפה מאוירת של השוק',
 
@@ -36,6 +38,12 @@ export const COPY = {
   'riddle.checking': 'רגע...',
   'riddle.hintButton': 'רמז',
   'riddle.hintPrefix': 'רמז:',
+  // A personal question before the hint, when the buyer added some.
+  'hintq.title': 'רמז? קודם שאלה אישית',
+  'hintq.answerLabel': { default: 'התשובה שלכם', she: 'התשובה שלכן' },
+  'hintq.submit': 'פותחים את הרמז',
+  'hintq.wrong': 'לא בדיוק. נסו שוב או דלגו',
+  'hintq.skip': 'דילוג, בלי רמז',
   'riddle.wrong': 'כמעט! נסו שוב',
   'riddle.empty': 'קודם כותבים תשובה',
   'riddle.photoAlt': 'תמונה מצוירת',

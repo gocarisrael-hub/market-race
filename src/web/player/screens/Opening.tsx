@@ -1,13 +1,12 @@
-// Opening: the market map, the race title on a ribbon, and "start".
+// Opening: the market map and the race title on a ribbon, waiting for the captain. There is no
+// start here: the buyer starts the game from the manage page, and every phone follows by polling.
 import { Doodles } from '../../shared/decor.tsx'
 import { joinList } from '../copy.ts'
-import { BrushButton, Ribbon, TornEdge } from '../draw.tsx'
+import { Paper, Ribbon, TornEdge } from '../draw.tsx'
 import { iconUrl, ribbonFontSize } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
-import { useBusy } from './useBusy.ts'
 
-export function Opening({ view, t, act }: ScreenProps) {
-  const { busy, run } = useBusy()
+export function Opening({ view, t }: Omit<ScreenProps, 'act'>) {
   const title = t('start.ribbon', { name: view.honoree })
   const stops = view.totalStops
   const summary = view.allergens.length
@@ -55,11 +54,17 @@ export function Opening({ view, t, act }: ScreenProps) {
         <Ribbon text={title} fontSize={ribbonFontSize(title)} />
         <p className="opening-summary">{summary}</p>
         <p className="opening-together">{t('start.together')}</p>
-        <div className="foot">
-          <BrushButton disabled={busy} onClick={() => run(() => act({ type: 'start' }))}>
-            {t('start.button')}
-          </BrushButton>
-        </div>
+        <Paper className="wait-note rise" tilt={-1.4}>
+          <h2 className="wait-title">{t('wait.title')}</h2>
+          <p className="wait-body" role="status">
+            {t('wait.body')}
+          </p>
+          <span className="wait-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </Paper>
       </div>
     </main>
   )

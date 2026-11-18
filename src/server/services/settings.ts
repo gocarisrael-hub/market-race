@@ -15,6 +15,8 @@ export interface SettingsShape {
   poll_seconds: number
   brand_name: string
   // Customer-facing messages. {{var}} placeholders: name, honoree, orderNo, gameLink, manageLink, answersLink, amount.
+  // players_invite is the WhatsApp text the captain shares with the players once the game starts
+  // (its subject is unused); it takes name (the captain), honoree, gameLink and brand.
   message_templates: Record<MessageKey, { subject: string; text: string }>
   // Messaging customers' numbers over WhatsApp can get the number banned; off until the owner decides.
   whatsapp_to_customers: boolean
@@ -28,7 +30,7 @@ export interface SettingsShape {
   support_message: string
 }
 
-export type MessageKey = 'paid_answers_needed' | 'game_ready' | 'company_payment_link'
+export type MessageKey = 'paid_answers_needed' | 'game_ready' | 'company_payment_link' | 'players_invite'
 
 export const SETTING_DEFAULTS: SettingsShape = {
   odd_rules: DEFAULT_ODD_RULES,
@@ -46,11 +48,15 @@ export const SETTING_DEFAULTS: SettingsShape = {
     },
     game_ready: {
       subject: 'המשחק של {{honoree}} מוכן',
-      text: 'היי {{name}},\nהמשחק מוכן. ביום המשחק פותחים את הקישור (או סורקים את הקוד) בטלפון, ואפשר לפתוח אותו בכמה טלפונים יחד:\n{{gameLink}}\n\nאיך משחקים: פותרים חידה, התשובה מגלה את הדוכן הבא, מראים את המסך בדוכן ומקבלים טעימה. בתוקף עד {{validUntil}}.\n\nאפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק: {{manageLink}}\n\n{{brand}}',
+      text: 'היי {{name}},\nהמשחק מוכן. את המשחק מתחילים אתם, ביום המשחק כשכולם בשוק, מדף ההזמנה:\n{{manageLink}}\n\nשם בוחרים כמה הגיעו, לוחצים "מתחילים", ושולחים לכולם את קישור המשחק בוואטסאפ. כולם משחקים יחד, מכל טלפון. זה קישור המשחק (או הקוד המצורף), והוא נפתח רק אחרי שמתחילים:\n{{gameLink}}\n\nאיך משחקים: פותרים חידה, התשובה מגלה את הדוכן הבא, מראים את המסך בדוכן ומקבלים טעימה. בתוקף עד {{validUntil}}.\n\nאפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק, באותו קישור.\n\n{{brand}}',
     },
     company_payment_link: {
       subject: 'הצעת מחיר {{orderNo}}',
       text: 'שלום {{name}},\nמצורף קישור לתשלום על סך {{amount}} ₪:\n{{payLink}}\n\n{{brand}}',
+    },
+    players_invite: {
+      subject: 'מצטרפים למירוץ',
+      text: 'המירוץ של {{honoree}} בשוק התחיל!\nפותחים את הקישור ומשחקים איתנו יחד, מכל טלפון:\n{{gameLink}}',
     },
   },
   whatsapp_to_customers: false,
@@ -62,6 +68,12 @@ export const SETTING_DEFAULTS: SettingsShape = {
 export async function getSetting<K extends keyof SettingsShape>(db: DB, key: K): Promise<SettingsShape[K]> {
   const [row] = await db.select().from(settings).where(eq(settings.key, key))
   return (row?.value as SettingsShape[K] | undefined) ?? SETTING_DEFAULTS[key]
+}
+
+/** One message template; a stored set that predates a message falls back to its default text. */
+export async function messageTemplate(db: DB, key: MessageKey): Promise<{ subject: string; text: string }> {
+  const templates = await getSetting(db, 'message_templates')
+  return templates[key] ?? SETTING_DEFAULTS.message_templates[key]
 }
 
 export async function setSetting<K extends keyof SettingsShape>(db: DB, key: K, value: SettingsShape[K]) {

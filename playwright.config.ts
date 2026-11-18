@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 3999
+// E2E_PORT lets two checkouts run the suite side by side.
+const PORT = Number(process.env.E2E_PORT ?? 3999)
 
 export default defineConfig({
   testDir: 'tests/e2e',

@@ -17,21 +17,28 @@ import {
   themes,
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
+import { israelDate } from '../domain/dates.ts'
 import { questionTextFor } from '../domain/template.ts'
 import { ALLERGENS, DIETS, FORMS, type Form, type OrderStatus } from '../domain/types.ts'
 import { iconUrl } from '../lib/icons.ts'
 import { cardEnabled } from '../services/context.ts'
-import { links, qrPng } from '../services/delivery.ts'
+import { interpolate, links, qrPng } from '../services/delivery.ts'
 import { BuildError, buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
 import { afterBuilt, handleNotify, PaymentError, priceFor, startPayment } from '../services/payments.ts'
 import { completeMockPayment, mockPaymentInfo } from '../services/payments-mock.ts'
 import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
-import { fileUrl } from '../services/play.ts'
-import { getSetting } from '../services/settings.ts'
+import { fileUrl, startBlock, startGame } from '../services/play.ts'
+import { getSetting, messageTemplate } from '../services/settings.ts'
 import { PHOTOS_EDITABLE } from './public-photos.ts'
 
 const phone = z.string().regex(/^[0-9+\-\s]{9,16}$/)
 const letterNote = z.object({ text: z.string().max(600), signature: z.string().max(60) })
+// Personal questions that unlock hints in the game. Optional; a pair needs both sides.
+export const MAX_HINT_QUESTIONS = 10
+const hintQuestion = z.object({ question: z.string().trim().max(140), answer: z.string().trim().max(60) })
+const hintQuestionList = z.array(hintQuestion).max(MAX_HINT_QUESTIONS)
+const cleanHintQuestions = (list: z.infer<typeof hintQuestionList>) =>
+  list.filter((q) => q.question && q.answer)
 
 export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   const { db, config, services } = ctx
@@ -199,6 +206,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     diets: z.array(z.enum(DIETS)).default([]),
     answers: z.record(z.string(), z.string().max(300)).default({}),
     letterNotes: z.array(letterNote).max(10).default([]),
+    hintQuestions: hintQuestionList.default([]),
     answersLater: z.boolean().default(false),
     // Optional when the order is created: the site creates it before the last step (photos need
     // the manage token) and adds the buyer with PUT /api/orders/:token. Pay requires it.
@@ -240,6 +248,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         diets: b.diets,
         answers: cleanAnswers(b.answers, questions),
         letterNotes: b.letterNotes.filter((n) => n.text.trim()),
+        hintQuestions: b.answersLater ? [] : cleanHintQuestions(b.hintQuestions),
         priceAgorot: price,
       },
     } as const
@@ -404,6 +413,22 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       .select({ decor: occasions.decor })
       .from(occasions)
       .where(eq(occasions.key, order.occasionKey))
+    const block = startBlock(order, state, israelDate())
+    const started = !!state && state.step !== 'opening'
+    const gameLink = links(base, order).gameLink
+    // After the start: the captain shares the players' link (the owner's text) and joins the game.
+    let invite: { text: string } | null = null
+    if (started && order.status === 'active') {
+      const tpl = await messageTemplate(db, 'players_invite')
+      invite = {
+        text: interpolate(tpl.text, {
+          name: order.buyerName,
+          honoree: order.companyName || order.honoreeName,
+          gameLink,
+          brand: await getSetting(db, 'brand_name'),
+        }),
+      }
+    }
     return {
       orderNo: order.orderNo,
       kind: order.kind,
@@ -417,7 +442,16 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       people: order.people,
       amountAgorot: order.priceAgorot,
       validUntil: order.validUntil,
-      gameLink: playable ? links(base, order).gameLink : null,
+      gameLink: playable ? gameLink : null,
+      // The captain's start: whether it can start now (or why not), and up to how many players.
+      start: {
+        can: block === null,
+        reason: block,
+        maxPlayers: order.game?.people ?? order.people,
+      },
+      started,
+      players: state?.players ?? (started ? (order.game?.people ?? order.people) : null),
+      invite,
       qr: playable ? `/api/qr/${order.gameToken}.png` : null,
       progress: state
         ? {
@@ -435,6 +469,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       honoreeName: editable ? order.honoreeName : undefined,
       answers: needsAnswers || editable ? order.answers : undefined,
       letterNotes: editable ? order.letterNotes : undefined,
+      // The buyer's own questions and answers, on the buyer's own link only (never in the game).
+      hintQuestions: editable ? order.hintQuestions : undefined,
       // The color: the palettes this order's map can be played in, and the chosen one.
       look: editable ? await lookFor(order) : undefined,
       questions:
@@ -458,6 +494,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           paletteId: z.number().int().nullable().optional(),
           answers: z.record(z.string(), z.string().max(300)),
           letterNotes: z.array(letterNote).max(10).default([]),
+          hintQuestions: hintQuestionList.optional(),
         })
         .safeParse(req.body)
       if (!body.success) return reply.code(400).send({ error: 'invalid' })
@@ -480,6 +517,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           honoreeName: body.data.honoreeName ?? order.honoreeName,
           answers: cleanAnswers(body.data.answers, questions),
           letterNotes: body.data.letterNotes.filter((n) => n.text.trim()),
+          ...(body.data.hintQuestions ? { hintQuestions: cleanHintQuestions(body.data.hintQuestions) } : {}),
           answersSubmittedAt: order.answersSubmittedAt ?? new Date(),
         })
         // Re-checked in the write: the game may have started since it was read.
@@ -495,6 +533,29 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         }
       }
       return { status: order.status }
+    },
+  )
+
+  // The captain starts the game at the market, with the number of players who arrived. Only here:
+  // the game link cannot start it. From now on the order is locked.
+  app.post(
+    '/api/manage/:token/start',
+    { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } },
+    async (req, reply) => {
+      const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
+      const body = z.object({ players: z.number().int() }).safeParse(req.body)
+      if (!body.success) return reply.code(400).send({ error: 'invalid' })
+      const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
+      if (!order) return reply.code(404).send({ error: 'not_found' })
+      const res = await startGame(db, order.gameToken, {
+        players: body.data.players,
+        pollSeconds: await getSetting(db, 'poll_seconds'),
+      })
+      if (!res.ok) {
+        if (res.error === 'not_found') return reply.code(404).send({ error: res.error })
+        return reply.code(res.error === 'bad_players' ? 400 : 409).send({ error: res.error })
+      }
+      return { ok: true, gameLink: links(base, order).gameLink, players: res.view.players }
     },
   )
 

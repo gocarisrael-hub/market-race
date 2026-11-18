@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { orders, redemptions, stalls } from '../../src/server/db/schema.ts'
 import { israelDate } from '../../src/server/domain/dates.ts'
 import { buildOrderGame, createOrder } from '../../src/server/services/orders.ts'
-import { act, getView } from '../../src/server/services/play.ts'
+import { act, getView, startGame } from '../../src/server/services/play.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
 import { makeTestApp } from '../helpers/app.ts'
 
@@ -42,8 +42,9 @@ describe('playing a game', () => {
     expect(view.status).toBe('ready')
     expect(view.current).toBeNull()
 
-    let r = await act(t.db, o.gameToken, { type: 'start' })
-    expect(r.ok && r.view.step).toBe('riddle')
+    const s = await startGame(t.db, o.gameToken)
+    expect(s.ok && s.view.step).toBe('riddle')
+    let r: Awaited<ReturnType<typeof act>>
     const answers = ['תקוה', 'גחנון', 'בוריק', 'פלאפל', 'לחיים']
     for (let i = 0; i < 5; i++) {
       const wrong = await act(t.db, o.gameToken, { type: 'answer', stopIndex: i, answer: 'סתם' })
@@ -73,7 +74,7 @@ describe('playing a game', () => {
 
   it('never sends a later stop to the client', async () => {
     const o = await newGame()
-    await act(t.db, o.gameToken, { type: 'start' })
+    await startGame(t.db, o.gameToken)
     const view = await getView(t.db, o.gameToken)
     const json = JSON.stringify(view)
     // Current riddle's answer is not sent before it is solved, nor later stalls.
@@ -83,7 +84,7 @@ describe('playing a game', () => {
 
   it('treats a second phone acting on an old step as stale and changes nothing', async () => {
     const o = await newGame()
-    await act(t.db, o.gameToken, { type: 'start' })
+    await startGame(t.db, o.gameToken)
     const a = await act(t.db, o.gameToken, { type: 'answer', stopIndex: 0, answer: 'תקווה' })
     const b = await act(t.db, o.gameToken, { type: 'answer', stopIndex: 0, answer: 'תקווה' })
     expect(a.ok).toBe(true)
@@ -99,7 +100,7 @@ describe('playing a game', () => {
 
   it('shows the hint only after asking for it', async () => {
     const o = await newGame()
-    await act(t.db, o.gameToken, { type: 'start' })
+    await startGame(t.db, o.gameToken)
     let v = await getView(t.db, o.gameToken)
     if (typeof v === 'string') throw new Error(v)
     expect(v.current?.riddle).toMatchObject({ hint: null, hasHint: true })
@@ -117,7 +118,7 @@ describe('playing a game', () => {
       .update(stalls)
       .set({ closedOn: israelDate(), closedNote: 'סגור היום' })
       .where(eq(stalls.id, stallId))
-    await act(t.db, o.gameToken, { type: 'start' })
+    await startGame(t.db, o.gameToken)
     const r = await act(t.db, o.gameToken, { type: 'answer', stopIndex: 0, answer: 'תקווה' })
     if (!r.ok) throw new Error(r.error)
     expect(r.view.current?.reveal).toMatchObject({
@@ -136,11 +137,11 @@ describe('playing a game', () => {
   it('refuses expired games and unknown tokens', async () => {
     const o = await newGame()
     await t.db.update(orders).set({ validUntil: '2020-01-01' }).where(eq(orders.id, o.id))
-    expect(await act(t.db, o.gameToken, { type: 'start' })).toMatchObject({ ok: false, error: 'expired' })
+    expect(await startGame(t.db, o.gameToken)).toMatchObject({ ok: false, error: 'expired' })
     expect(await getView(t.db, 'nope-nope-nope')).toBe('not_found')
   })
 
-  it('serves the player API over HTTP', async () => {
+  it('serves the player API over HTTP; the game link cannot start the game', async () => {
     const o = await newGame()
     const get = await t.app.inject({ url: `/api/game/${o.gameToken}` })
     expect(get.statusCode).toBe(200)
@@ -150,14 +151,8 @@ describe('playing a game', () => {
       url: `/api/game/${o.gameToken}/action`,
       payload: { type: 'start' },
     })
-    expect(start.json().view.step).toBe('riddle')
-    const again = await t.app.inject({
-      method: 'POST',
-      url: `/api/game/${o.gameToken}/action`,
-      payload: { type: 'start' },
-    })
-    expect(again.statusCode).toBe(409)
-    expect(again.json().view.step).toBe('riddle')
+    expect(start.statusCode).toBe(400)
+    expect((await getView(t.db, o.gameToken)) as { step: string }).toMatchObject({ step: 'opening' })
     const bad = await t.app.inject({
       method: 'POST',
       url: `/api/game/${o.gameToken}/action`,

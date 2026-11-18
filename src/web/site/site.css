@@ -1695,6 +1695,30 @@ ol.howto.drawn li {
 }
 .file-drop > .drop-word {
   position: relative;
+
+
+/* Manage page: the captain's start and the share step after it. */
+.start-game .stepper {
+  margin-top: 10px;
+}
+.share-game .share-title {
+  margin-top: 6px;
+  font-size: 48px;
+}
+.share-brush {
+  margin: 22px -4px 8px;
+}
+.share-continue {
+  margin: 18px 0 0;
+  text-align: center;
+}
+.share-game .game-link {
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+}
+.hint-q + .hint-q {
+  margin-top: 6px;
 }
 
 /* With / without background, under each photo. */

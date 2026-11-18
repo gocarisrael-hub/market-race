@@ -79,10 +79,16 @@ test('owner builds a family test game (group form) and plays its first riddle', 
   const result = page.locator('section.result')
   await expect(result.getByText('(מוכנה)')).toBeVisible()
   const href = await result.getByRole('link', { name: /\/g\// }).getAttribute('href')
+  const manage = await result.getByRole('link', { name: /\/m\// }).getAttribute('href')
 
   await page.goto(href!)
   await expect(page.getByRole('heading', { name: `המירוץ של ${FAMILY}` })).toBeVisible()
-  await page.getByRole('button', { name: 'יוצאים לדרך!' }).click()
+  await expect(page.getByText('המשחק עוד לא התחיל')).toBeVisible()
+  // The captain (here the owner, through the order's manage link) starts it; the game follows.
+  const started = await page.request.post(`/api/manage/${manage!.split('/m/')[1]}/start`, {
+    data: { players: 2 },
+  })
+  expect(started.ok()).toBe(true)
   await expect(page.getByRole('heading', { name: 'חידה ראשונה', exact: true })).toBeVisible()
   await expect(page.locator('.slot', { hasText: 'דוד שמעון' })).toBeVisible()
   await expect(page.locator('.slot', { hasText: FAMILY })).toBeVisible()

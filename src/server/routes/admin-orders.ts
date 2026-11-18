@@ -62,10 +62,23 @@ export function orderLinks(base: string, o: { gameToken: string; manageToken: st
   }
 }
 
-/** Portions bought (people × stops of the frozen game) vs. portions redeemed. */
-export function usage(o: Pick<Order, 'people' | 'game'>, used: { portions: number; stops: number }) {
+/**
+ * Portions bought (people × stops of the frozen game) vs. portions redeemed. `players` is how many
+ * arrived (the captain's choice at the start). `unused` counts the portions bought and not served:
+ * at the stops redeemed so far, and once the game is over (done or expired) at every stop it did
+ * not reach. Unused portions are not refunded automatically; the owner decides.
+ */
+export function usage(
+  o: Pick<Order, 'people' | 'game'> & { status?: Order['status'] },
+  used: { portions: number; stops: number },
+  players: number | null = null,
+) {
   const stops = o.game?.stops.length ?? 0
-  return { stops, redeemedStops: used.stops, bought: o.people * stops, used: used.portions }
+  const people = o.game?.people ?? o.people
+  const bought = people * stops
+  const over = o.status === 'done' || o.status === 'expired'
+  const unused = Math.max(0, (over ? bought : people * used.stops) - used.portions)
+  return { stops, redeemedStops: used.stops, bought, used: used.portions, players, unused }
 }
 
 async function usedByOrder(db: DB, ids: number[]) {
@@ -126,7 +139,10 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       )
       const totals = { bought: 0, used: 0 }
       const list = rows.map(({ game, ...o }) => {
-        const u = usage({ people: o.people, game }, used.get(o.id) ?? { portions: 0, stops: 0 })
+        const u = usage(
+          { people: o.people, game, status: o.status },
+          used.get(o.id) ?? { portions: 0, stops: 0 },
+        )
         totals.bought += u.bought
         totals.used += u.used
         return { ...o, hasGame: !!game, usage: u }
@@ -188,7 +204,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         order,
         state: state ?? null,
         redemptions: used,
-        usage: usage(order, { portions, stops: used.length }),
+        usage: usage(order, { portions, stops: used.length }, state?.players ?? null),
         messages: msgs,
         paySessions: sessions,
         uploads: files,
@@ -315,6 +331,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           honoreeName: orders.honoreeName,
           companyName: orders.companyName,
           people: orders.people,
+          players: gameStates.players,
           stopIndex: gameStates.stopIndex,
           step: gameStates.step,
           lastActivityAt: gameStates.lastActivityAt,

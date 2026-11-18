@@ -3,17 +3,21 @@ import { COPY, type CopyKey, fill, joinList, makeT, pick, riddleTitle } from '..
 
 describe('player copy', () => {
   it('picks the variant for the honoree form, falling back to the default', () => {
-    expect(pick('start.button', 'she')).toBe('יוצאות לדרך!')
-    expect(pick('start.button', 'he')).toBe('יוצאים לדרך!')
-    expect(pick('start.button', 'couple')).toBe('יוצאים לדרך!')
-    expect(pick('start.button', 'company')).toBe('יוצאים לדרך!')
+    expect(pick('riddle.submit', 'she')).toBe('בודקות!')
+    expect(pick('riddle.submit', 'he')).toBe('בודקים!')
+    expect(pick('riddle.submit', 'couple')).toBe('בודקים!')
+    expect(pick('riddle.submit', 'company')).toBe('בודקים!')
     expect(pick('reveal.correct', 'he')).toBe('נכון!')
   })
 
   it('lets the owner override a key for every form or for one form', () => {
-    const over = { 'start.button': 'קדימה!', 'start.button.company': 'צוות, קדימה!', 'reveal.correct': '  ' }
-    expect(pick('start.button', 'she', over)).toBe('קדימה!')
-    expect(pick('start.button', 'company', over)).toBe('צוות, קדימה!')
+    const over = {
+      'riddle.submit': 'קדימה!',
+      'riddle.submit.company': 'צוות, קדימה!',
+      'reveal.correct': '  ',
+    }
+    expect(pick('riddle.submit', 'she', over)).toBe('קדימה!')
+    expect(pick('riddle.submit', 'company', over)).toBe('צוות, קדימה!')
     // A blank override does not wipe the text.
     expect(pick('reveal.correct', 'she', over)).toBe('נכון!')
   })
