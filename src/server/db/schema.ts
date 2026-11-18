@@ -13,6 +13,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import type {
+  Decor,
   Form,
   GameSnapshot,
   LetterNote,
@@ -123,6 +124,8 @@ export const occasions = pgTable('occasions', {
   audience: text().$type<'private' | 'company'>().notNull(),
   questionSetId: integer().references(() => questionSets.id),
   forms: text().array().$type<Form[]>().notNull(),
+  // Doodle set drawn around the game and the order flow (see DECORS).
+  decor: text().$type<Decor>().notNull().default('generic'),
   sort: integer().notNull().default(0),
   active: boolean().notNull().default(true),
 })
@@ -153,6 +156,17 @@ export const themes = pgTable('themes', {
   active: boolean().notNull().default(true),
 })
 
+// A color palette the buyer can play a map in. Separate from the map: one palette can serve several
+// themes (maps), and a map is offered in every active palette that lists it.
+export const palettes = pgTable('palettes', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  palette: jsonb().$type<Palette>().notNull(),
+  themeIds: integer().array().notNull().default(sql`'{}'::integer[]`),
+  sort: integer().notNull().default(0),
+  active: boolean().notNull().default(true),
+})
+
 export const settings = pgTable('settings', {
   key: text().primaryKey(),
   value: jsonb().notNull(),
@@ -177,6 +191,8 @@ export const orders = pgTable('orders', {
   form: text().$type<Form>().notNull(),
   honoreeName: text().notNull().default(''),
   themeId: integer().references(() => themes.id),
+  // The palette the buyer chose; null plays the theme's own palette. A company palette wins.
+  paletteId: integer().references(() => palettes.id, { onDelete: 'set null' }),
   routeId: integer().references(() => routes.id),
   people: integer().notNull().default(2),
   allergens: textArray(),

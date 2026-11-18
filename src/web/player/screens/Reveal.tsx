@@ -1,5 +1,6 @@
 // Reveal: "נכון!", the answer, and the next stall marked on the map.
 import { useState } from 'react'
+import { Confetti, Doodles } from '../../shared/decor.tsx'
 import type { T } from '../copy.ts'
 import { BrushButton, PinMark, Rays, Underline } from '../draw.tsx'
 import { mapFrame, stopIcon, trailPath } from '../logic.ts'
@@ -15,9 +16,11 @@ export function MapCrop({
   pin,
   icon,
   company,
+  tint,
   t,
 }: {
   map: string | null
+  tint?: string
   pin: { x: number; y: number } | null
   icon: string
   company: { name: string; logo: string | null } | null
@@ -41,6 +44,7 @@ export function MapCrop({
             style={f ? { left: `${f.left}%`, top: `${f.top}%`, width: `${f.width}%` } : undefined}
           />
         )}
+        {map && tint && <span className="map-tint" style={{ background: tint }} />}
         {f && (
           <svg className="map-marks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path className="map-path" d={trailPath(f.x, f.y)} vectorEffect="non-scaling-stroke" />
@@ -72,9 +76,17 @@ export function Reveal({ view, t, act }: ScreenProps) {
   const rv = cur.reveal!
   const { busy, run } = useBusy()
   return (
-    <main className="scr reveal">
+    <main className="scr reveal" data-decor={view.decor}>
+      <Confetti decor={view.decor} />
       <div className="reveal-head">
         <Rays />
+        <Doodles
+          decor={view.decor}
+          spots={[
+            { top: 6, left: '4%', size: 46, rot: -12 },
+            { top: 0, right: '5%', size: 42, rot: 10 },
+          ]}
+        />
         <h1 className="correct pop">{t('reveal.correct')}</h1>
         <p className="answer-was rise">{t('reveal.answerWas', { answer: rv.answer })}</p>
         {rv.afterText && <p className="after-text rise">{rv.afterText}</p>}
@@ -85,6 +97,7 @@ export function Reveal({ view, t, act }: ScreenProps) {
         pin={rv.stall.pin}
         icon={stopIcon(cur.index)}
         company={view.company}
+        tint={view.theme?.palette.mapTint}
         t={t}
       />
 

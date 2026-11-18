@@ -62,7 +62,15 @@ export interface Palette {
   ink: string
   paper: string
   dark?: boolean
+  /** Color the market map is tinted toward (CSS "color" blend), so the illustration follows the
+   * palette. Absent: the map keeps its own colors. */
+  mapTint?: string
 }
+
+// Hand-drawn doodle sets shown around the game and the order flow, picked per occasion.
+export const DECORS = ['birthday', 'love', 'family', 'friends', 'company', 'generic'] as const
+export type Decor = (typeof DECORS)[number]
+export const isDecor = (v: unknown): v is Decor => DECORS.includes(v as Decor)
 
 export interface LetterNote {
   text: string
@@ -119,7 +127,9 @@ export interface GameSnapshot {
   version: 1
   builtAt: string
   market: { id: number; name: string }
-  theme: { id: number; name: string; map: string; palette: Palette }
+  theme: { id: number; name: string; map: string; palette: Palette; paletteId?: number | null }
+  /** Doodle set of the occasion. Missing on games built before it existed. */
+  decor?: Decor
   company: { name: string; logo: string | null } | null
   form: Form
   honoree: string

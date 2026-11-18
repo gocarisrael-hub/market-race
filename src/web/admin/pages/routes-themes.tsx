@@ -1,5 +1,7 @@
-// Routes (ordered stops, the last one is the finale) and themes (map, palette, stall pins).
+// Routes (ordered stops, the last one is the finale), themes (map, palette, stall pins) and the
+// palettes buyers can play a map in.
 import { useEffect, useState } from 'react'
+import { CONTRAST_RULES, contrast, paletteIssues, themeVars } from '../../../server/domain/look.ts'
 import type { Palette, RouteStop } from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
 import {
@@ -10,6 +12,7 @@ import {
   type Market,
   mapUrl,
   NumberInput,
+  type PaletteRow,
   type Riddle,
   type Route,
   Select,
@@ -422,6 +425,147 @@ export function ThemesPage() {
         { label: 'מצב', render: (t) => (t.active ? 'פעיל' : 'לא פעיל') },
       ]}
       Editor={ThemeEditor}
+    />
+  )
+}
+
+// ---------- Palettes ----------
+
+function PaletteEditor({ value, set }: EditorProps<PaletteRow>) {
+  const themes = useList<Theme>('/catalog/themes').items ?? []
+  const palette = value.palette ?? BLANK_PALETTE
+  const setPalette = (p: Partial<Palette>) => set({ palette: { ...palette, ...p } })
+  const ids = value.themeIds ?? []
+  const v = themeVars(palette)
+  const issues = paletteIssues(palette)
+  return (
+    <>
+      <Text
+        label="שם (כפי שהקונים רואים אותו)"
+        value={value.name}
+        onChange={(name) => set({ name })}
+        required
+      />
+      <NumberInput
+        label="סדר (הראשון הוא ברירת המחדל)"
+        value={value.sort}
+        onChange={(sort) => set({ sort })}
+      />
+      <Check label="פעיל" checked={value.active} onChange={(active) => set({ active })} />
+      <fieldset>
+        <legend>צבעים</legend>
+        <div className="row">
+          {COLORS.map((c) => (
+            <label key={c.key}>
+              {c.label}
+              <input
+                type="color"
+                value={String(palette[c.key] ?? '#000000')}
+                onChange={(e) => setPalette({ [c.key]: e.target.value })}
+              />
+            </label>
+          ))}
+          <Check
+            label="צבע הדגשה נוסף"
+            checked={!!palette.accent2}
+            onChange={(on) => setPalette({ accent2: on ? palette.accent : undefined })}
+          />
+          {palette.accent2 && (
+            <label>
+              הדגשה נוספת
+              <input
+                type="color"
+                value={palette.accent2}
+                onChange={(e) => setPalette({ accent2: e.target.value })}
+              />
+            </label>
+          )}
+          <Check
+            label="צביעת המפה"
+            checked={!!palette.mapTint}
+            onChange={(on) => setPalette({ mapTint: on ? palette.accent : undefined })}
+          />
+          {palette.mapTint && (
+            <label>
+              גוון המפה
+              <input
+                type="color"
+                value={palette.mapTint}
+                onChange={(e) => setPalette({ mapTint: e.target.value })}
+              />
+            </label>
+          )}
+          <Check
+            label="ערכה כהה"
+            checked={palette.dark}
+            onChange={(dark) => setPalette({ dark: dark || undefined })}
+          />
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>בדיקת קריאוּת</legend>
+        <ul className="contrast">
+          {CONTRAST_RULES.map((r) => {
+            const ratio = contrast(r.fg(palette, v), r.bg(palette, v))
+            return (
+              <li key={r.check} className={ratio >= r.min ? 'ok' : 'bad'}>
+                <span className="swatches">
+                  <i style={{ background: r.bg(palette, v) }} />
+                  <i style={{ background: r.fg(palette, v) }} />
+                </span>{' '}
+                {r.check}: {ratio.toFixed(2)}:1 (צריך {r.min}:1)
+              </li>
+            )
+          })}
+        </ul>
+        {issues.length > 0 && <p className="error">הצבעים לא קריאים מספיק ולא יישמרו. כהו או בהירו אותם.</p>}
+      </fieldset>
+      <fieldset>
+        <legend>על אילו מפות</legend>
+        {themes.map((t) => (
+          <Check
+            key={t.id}
+            label={t.name}
+            checked={ids.includes(t.id)}
+            onChange={(on) =>
+              set({ themeIds: on ? [...new Set([...ids, t.id])] : ids.filter((x) => x !== t.id) })
+            }
+          />
+        ))}
+      </fieldset>
+    </>
+  )
+}
+
+const BLANK_PALETTE: Palette = { background: '#EADBC8', accent: '#B4161B', ink: '#2B2420', paper: '#FFFBF4' }
+
+export function PalettesPage() {
+  const themes = useList<Theme>('/catalog/themes').items ?? []
+  const themeName = (id: number) => themes.find((t) => t.id === id)?.name ?? `#${id}`
+  return (
+    <CrudPage<PaletteRow>
+      section="palettes"
+      title="צבעים"
+      path="/catalog/palettes"
+      newLabel="צבע חדש"
+      blank={() => ({ name: '', palette: { ...BLANK_PALETTE }, themeIds: [], sort: 0, active: true })}
+      columns={[
+        { label: 'שם', render: (p) => p.name },
+        {
+          label: 'צבעים',
+          render: (p) => (
+            <span className="swatches">
+              {[p.palette.background, p.palette.accent, p.palette.ink, p.palette.paper].map((c, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed order
+                <i key={i} style={{ background: c }} />
+              ))}
+            </span>
+          ),
+        },
+        { label: 'מפות', render: (p) => p.themeIds.map(themeName).join(', ') },
+        { label: 'מצב', render: (p) => (p.active ? 'פעיל' : 'לא פעיל') },
+      ]}
+      Editor={PaletteEditor}
     />
   )
 }

@@ -2,11 +2,19 @@
 // The client never receives a later stop's answer, stall or tasting before it is reached.
 import { and, eq, sql } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
-import { gameStates, markets, orders, redemptions, stalls } from '../db/schema.ts'
+import { gameStates, markets, occasions, orders, redemptions, stalls } from '../db/schema.ts'
 import { dailyCode } from '../domain/dailycode.ts'
 import { israelDate } from '../domain/dates.ts'
 import { matchAnswer } from '../domain/matcher.ts'
-import type { GameSnapshot, Palette, SnapshotStall, SnapshotTasting, TextPart } from '../domain/types.ts'
+import {
+  type Decor,
+  type GameSnapshot,
+  isDecor,
+  type Palette,
+  type SnapshotStall,
+  type SnapshotTasting,
+  type TextPart,
+} from '../domain/types.ts'
 
 export type Step = 'opening' | 'riddle' | 'revealed' | 'redeem' | 'done'
 
@@ -22,6 +30,8 @@ export interface PlayerView {
   version: number
   pollSeconds: number
   theme: { name: string; map: string | null; palette: Palette } | null
+  /** The occasion's doodle set. */
+  decor: Decor
   company: { name: string; logo: string | null } | null
   honoree: string
   form: string
@@ -84,6 +94,16 @@ async function stallClosedToday(db: DB, stallId: number, today: string) {
   return { closed: !s.active || s.closedOn === today, note: s.closedNote }
 }
 
+/** The snapshot's doodle set; games built before it existed use the occasion's current one. */
+async function decorOf(db: DB, order: Loaded['order'], game: GameSnapshot): Promise<Decor> {
+  if (isDecor(game.decor)) return game.decor
+  const [occ] = await db
+    .select({ decor: occasions.decor })
+    .from(occasions)
+    .where(eq(occasions.key, order.occasionKey))
+  return isDecor(occ?.decor) ? occ.decor : 'generic'
+}
+
 async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Promise<PlayerView> {
   const { order, game, state } = l
   const today = israelDate(now)
@@ -99,6 +119,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     version: state.version,
     pollSeconds,
     theme: { name: game.theme.name, map: fileUrl(game.theme.map), palette: game.theme.palette },
+    decor: await decorOf(db, order, game),
     company: game.company ? { name: game.company.name, logo: fileUrl(game.company.logo) } : null,
     honoree: game.honoree,
     form: game.form,

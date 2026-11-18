@@ -38,6 +38,7 @@ const testGame = z.object({
   form: z.enum(FORMS),
   honoreeName: z.string().max(60).default(''),
   themeId: z.number().int(),
+  paletteId: z.number().int().nullable().optional(),
   routeId: z.number().int(),
   people: z.number().int().min(1).max(100),
   allergens: z.array(z.string()).default([]),

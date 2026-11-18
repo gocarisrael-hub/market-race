@@ -1,6 +1,7 @@
 // Step 2: the honoree's name, the occasion's questions, letter notes, or "answer later".
 // Leaving this step creates (or updates) the order, so the next steps have a manage token.
 import { useEffect, useState } from 'react'
+import { Doodles } from '../../shared/decor.tsx'
 import {
   ApiError,
   createOrder,
@@ -13,6 +14,7 @@ import {
 import { copy } from '../copy.ts'
 import {
   type Draft,
+  decorFor,
   errorText,
   MAX_NOTES,
   orderPayload,
@@ -22,7 +24,7 @@ import {
   step2Error,
 } from '../logic.ts'
 import { navigate } from '../router.ts'
-import { Back, Cta, Deco, Failed, Loading, Opt, QField, TornPaper } from '../ui.tsx'
+import { Back, Cta, Deco, Failed, Loading, Opt, QField, StepTrail, TornPaper } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => void }) {
@@ -79,8 +81,17 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
   }
 
   const [t1, t2] = copy.questions.title(form)
+  const decor = decorFor(shop, d.occasionKey)
   return (
-    <main className="page">
+    <main className="page" data-decor={decor ?? undefined}>
+      <Doodles
+        className="deco"
+        decor={decor}
+        spots={[
+          { top: 340, left: 4, size: 46, rot: 12 },
+          { top: 760, left: -10, size: 42, rot: -10 },
+        ]}
+      />
       <Deco
         icon="falafel"
         className="bob"
@@ -93,7 +104,7 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
       />
       <Back href="/" />
       <div style={{ marginTop: 18, marginLeft: 80 }}>
-        <div className="eyebrow">{copy.stepOf(2, STEPS)}</div>
+        <StepTrail step={2} total={STEPS} />
         <h1 className="title rise">
           {t1}
           <br />
@@ -111,10 +122,12 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
           onChange={(v) => set({ honoreeName: v })}
           maxLen={40}
           required
+          paper={-1.2}
         />
         {!d.answersLater &&
-          questions.map((q) => (
+          questions.map((q, i) => (
             <QField
+              paper={i % 2 ? -0.9 : 1.1}
               key={q.slot}
               name={q.slot}
               label={q.text}

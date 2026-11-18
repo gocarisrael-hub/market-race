@@ -1,5 +1,7 @@
 // Hand-drawn building blocks, SVG paths taken from docs/mockup.
 import type { CSSProperties, ReactNode } from 'react'
+import { themeVars } from '../../server/domain/look.ts'
+import type { Palette } from '../../server/domain/types.ts'
 import { copy } from './copy.ts'
 import { navigate } from './router.ts'
 
@@ -88,7 +90,138 @@ export function Opt(props: {
     <button type="button" className={props.small ? 'opt small' : 'opt'} onClick={props.onClick} {...aria}>
       {props.children}
       {props.pressed && <Ring />}
+      {props.pressed && <Tick />}
     </button>
+  )
+}
+
+/** A hand-drawn checkmark, drawn at the corner of a chosen option. */
+export function Tick({ className = 'tick' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 20" aria-hidden="true">
+      <path className="draw" d="M3 11 C 6 13, 8 16, 9 18 C 12 11, 16 6, 22 2" />
+    </svg>
+  )
+}
+
+/**
+ * The drawn progress trail of the order flow (like the riddle trail of the game): a dashed walk
+ * from step to step, done steps ticked, the current one circled. The text stays for screen readers.
+ */
+export function StepTrail({ step, total }: { step: number; total: number }) {
+  const labels = copy.trail
+  return (
+    <nav className="step-trail" aria-label={copy.stepOf(step, total)}>
+      <svg className="step-path" viewBox="0 0 400 64" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M384 26 C 340 6, 312 50, 268 30 S 190 6, 150 34 S 70 52, 16 28" />
+      </svg>
+      <ol>
+        {Array.from({ length: total }, (_, i) => {
+          const n = i + 1
+          const state = n < step ? 'done' : n === step ? 'now' : 'later'
+          return (
+            <li key={n} className={state} aria-current={state === 'now' ? 'step' : undefined}>
+              <span className="dot">
+                {state === 'done' ? <Tick className="dot-tick" /> : n}
+                {state === 'now' && <Ring />}
+              </span>
+              <span className="word">{labels[i] ?? ''}</span>
+            </li>
+          )
+        })}
+      </ol>
+      <span className="eyebrow sr-only">{copy.stepOf(step, total)}</span>
+    </nav>
+  )
+}
+
+// A torn-off note for a question: ragged top and bottom edges.
+const SCRAP =
+  'M4 18 L 22 8 L 41 16 L 63 6 L 84 14 L 106 5 L 127 13 L 150 4 L 171 12 L 193 6 L 214 15 L 236 5 L 257 13 L 278 7 L 296 14 L 293 150 L 297 284 L 279 292 L 258 284 L 236 295 L 215 286 L 193 294 L 172 285 L 150 296 L 128 287 L 106 294 L 85 285 L 63 295 L 42 286 L 21 293 L 3 285 L 6 150 Z'
+
+// A scrap torn on all sides: ragged top and bottom, slightly crooked sides.
+const NOTE =
+  'M3 9 L 12 6 L 20 8.5 L 31 5 L 40 7.5 L 52 4.5 L 63 7 L 75 5 L 88 8 L 99 4.5 L 112 7.5 L 124 5 L 137 8 L 149 5 L 160 7.5 L 172 4.5 L 184 7 L 197 6 L 195 18 L 198 31 L 196 44 L 185 46.5 L 173 43.5 L 161 47 L 148 44 L 136 47 L 123 44.5 L 111 46.5 L 98 43.5 L 86 47 L 73 44 L 61 46.5 L 48 43.5 L 36 47 L 24 44 L 13 46.5 L 4 44 L 6 31 L 2 19 Z'
+
+/** A question on a scrap of torn paper, handwritten (the section titles of the order flow). */
+export function QNote(props: { id?: string; children: ReactNode; tilt?: number }) {
+  return (
+    <div className="qnote" id={props.id} style={{ ['--r' as string]: `${props.tilt ?? -1.5}deg` }}>
+      <svg viewBox="0 0 200 50" preserveAspectRatio="none" aria-hidden="true">
+        <path d={NOTE} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span>{props.children}</span>
+    </div>
+  )
+}
+
+// Brush smears of paint, each a little different.
+const DAUBS = [
+  'M6 24 C 4 14, 14 8, 24 10 C 32 6, 44 5, 52 10 C 60 13, 62 22, 57 28 C 60 34, 50 39, 40 36 C 32 40, 20 39, 12 35 C 5 33, 3 29, 6 24 Z',
+  'M5 20 C 6 11, 18 9, 28 11 C 38 8, 50 9, 56 14 C 62 19, 59 27, 55 30 C 52 36, 40 37, 31 34 C 22 38, 10 36, 7 30 C 3 27, 4 23, 5 20 Z',
+  'M8 18 C 12 10, 24 12, 33 9 C 43 7, 55 11, 58 19 C 61 26, 56 33, 47 34 C 38 37, 28 35, 19 37 C 10 37, 4 30, 8 18 Z',
+]
+const STREAKS = 'M14 19 C 26 16, 40 15, 52 18 M11 27 C 24 25, 37 26, 50 28 M18 33 C 28 31, 36 32, 44 33'
+
+/** A paint daub in a palette's colors: a smear of the accent and a drop of the second color. */
+export function Daub({ palette, index }: { palette: Palette; index: number }) {
+  return (
+    <svg className="daub-shape" viewBox="0 0 64 44" aria-hidden="true">
+      <path d={DAUBS[index % DAUBS.length]} fill={palette.accent} />
+      <path d={STREAKS} fill="none" stroke={palette.ink} strokeOpacity="0.22" strokeWidth="1.2" />
+      <path
+        d="M49 34 C 51 30.5, 58 31, 58.5 35.5 C 59 40, 52 41.5, 49.5 38 Z"
+        fill={palette.accent2 ?? palette.background}
+        stroke={palette.ink}
+        strokeWidth="1"
+      />
+    </svg>
+  )
+}
+
+/**
+ * A small "how it will look" preview: the map tinted with the palette, the palette's background
+ * under a torn edge, and the ribbon and button in the colors the game derives from the palette.
+ */
+export function LookPreview(props: { map: string | null; palette: Palette; name: string }) {
+  const v = themeVars(props.palette)
+  const style = {
+    '--pv-bg': v['--bg'],
+    '--pv-ribbon': v['--ribbon'],
+    '--pv-ribbon-tail': v['--ribbon-tail'],
+    '--pv-on-ribbon': v['--on-ribbon'],
+    '--pv-accent': v['--accent'],
+    '--pv-on-accent': v['--on-accent'],
+    '--pv-ink': v['--ink'],
+  } as CSSProperties
+  return (
+    <figure className="look-preview" style={style} data-testid="look-preview" data-bg={v['--bg']}>
+      <div className="pv-map">
+        {props.map && <img src={props.map} alt={copy.home.previewAlt(props.name)} />}
+        {props.map && props.palette.mapTint && (
+          <span className="map-tint" style={{ background: props.palette.mapTint }} />
+        )}
+      </div>
+      <div className="pv-sheet">
+        <svg className="pv-edge" viewBox="0 0 390 30" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 30 L0 18 C 40 3, 70 23, 110 11 S 180 -2, 220 12 S 300 24, 340 8 S 380 3, 390 10 L390 30 Z" />
+        </svg>
+        <div className="pv-ribbon">
+          <svg viewBox="0 0 330 92" preserveAspectRatio="none" aria-hidden="true">
+            <path className="tail" d="M8 26 L40 20 L34 46 L40 72 L8 66 L20 46 Z" />
+            <path className="tail" d="M322 26 L290 20 L296 46 L290 72 L322 66 L310 46 Z" />
+            <path className="main" d="M34 12 Q165 -4 296 12 L296 72 Q165 56 34 72 Z" />
+          </svg>
+          <span>{copy.home.previewRibbon}</span>
+        </div>
+        <div className="pv-button">
+          <svg viewBox="0 0 346 68" preserveAspectRatio="none" aria-hidden="true">
+            <path d={BRUSH} />
+          </svg>
+          <span>{copy.home.previewButton}</span>
+        </div>
+      </div>
+    </figure>
   )
 }
 
@@ -208,6 +341,8 @@ export function QField(props: {
   placeholder?: string
   multiline?: boolean
   name?: string
+  /** Draws the question on a torn paper note, tilted by this many degrees. */
+  paper?: number
 }) {
   const n = [...props.value].length
   const over = !!props.maxLen && n > props.maxLen
@@ -229,7 +364,15 @@ export function QField(props: {
     />
   )
   return (
-    <label className="q">
+    <label
+      className={props.paper === undefined ? 'q' : 'q on-paper'}
+      style={props.paper === undefined ? undefined : { ['--r' as string]: `${props.paper}deg` }}
+    >
+      {props.paper !== undefined && (
+        <svg className="q-paper" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+          <path d={SCRAP} vectorEffect="non-scaling-stroke" />
+        </svg>
+      )}
       <span className="top">
         <span>
           {props.label}

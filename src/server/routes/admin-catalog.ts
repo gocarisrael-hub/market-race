@@ -1,11 +1,11 @@
 // Admin catalog API (owner only): markets, stalls, tastings, riddles, question sets, occasions,
-// routes, themes, settings. Everything lives under /admin/api/catalog.
+// routes, themes, palettes, settings. Everything lives under /admin/api/catalog.
 import { createWriteStream, existsSync } from 'node:fs'
 import { mkdir, readdir, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { fileURLToPath } from 'node:url'
-import { asc, eq } from 'drizzle-orm'
+import { asc, eq, inArray } from 'drizzle-orm'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import type { AppContext } from '../app.ts'
@@ -14,6 +14,7 @@ import {
   markets,
   occasions,
   orders,
+  palettes,
   questionSets,
   riddles,
   routes,
@@ -25,9 +26,10 @@ import {
 } from '../db/schema.ts'
 import { dailyCode } from '../domain/dailycode.ts'
 import { israelDate } from '../domain/dates.ts'
+import { paletteIssues } from '../domain/look.ts'
 import { matchAnswer } from '../domain/matcher.ts'
 import { extractSlots, fallbackFor, fillTemplate } from '../domain/template.ts'
-import { ALLERGENS, DIETS, FORMS, type Question, type RouteStop } from '../domain/types.ts'
+import { ALLERGENS, DECORS, DIETS, FORMS, type Question, type RouteStop } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
 import { iconNames } from '../lib/icons.ts'
 import { randomToken } from '../lib/tokens.ts'
@@ -133,6 +135,7 @@ const occasionBase = z.object({
   audience: z.enum(['private', 'company']),
   questionSetId: id.nullable(),
   forms: z.array(z.enum(FORMS)).min(1),
+  decor: z.enum(DECORS),
   sort: z.number().int(),
   active: z.boolean(),
 })
@@ -162,6 +165,7 @@ const palette = z.object({
   ink: color,
   paper: color,
   dark: z.boolean().optional(),
+  mapTint: color.optional(),
 })
 const pct = z.number().min(0).max(100)
 const themeBase = z.object({
@@ -179,6 +183,15 @@ const themeCreate = themeBase.partial().extend({
   palette,
   mapFile: themeBase.shape.mapFile,
 })
+
+const paletteBase = z.object({
+  name: str.min(1),
+  palette,
+  themeIds: z.array(id),
+  sort: z.number().int(),
+  active: z.boolean(),
+})
+const paletteCreate = paletteBase.partial().extend({ name: paletteBase.shape.name, palette })
 
 const settingKey = z.string().regex(/^[a-z0-9_.-]{1,100}$/, 'key: a-z, 0-9, _, ., -')
 
@@ -683,6 +696,49 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
       r.delete('/themes/:id', async (req, reply) => {
         const tid = paramId(req.params) ?? 0
         return tryDelete(reply, () => db.delete(themes).where(eq(themes.id, tid)).returning())
+      })
+
+      // ----- palettes -----
+      // A palette must stay readable everywhere in the game (domain/look.ts) and name real themes.
+      const checkPalette = async (p: { palette: z.infer<typeof palette>; themeIds?: number[] }) => {
+        const issues: Issue[] = paletteIssues(p.palette).map((i) => ({
+          path: 'palette',
+          message: `ניגודיות נמוכה מדי: ${i.check} (${i.ratio}:1, צריך ${i.min}:1)`,
+        }))
+        const ids = [...new Set(p.themeIds ?? [])]
+        if (ids.length) {
+          const found = await db.select({ id: themes.id }).from(themes).where(inArray(themes.id, ids))
+          if (found.length !== ids.length) issues.push({ path: 'themeIds', message: 'theme not found' })
+        }
+        return issues
+      }
+      r.get('/palettes', async () => ({
+        items: await db.select().from(palettes).orderBy(asc(palettes.sort), asc(palettes.id)),
+      }))
+      r.post('/palettes', async (req, reply) => {
+        const body = parse(paletteCreate, req.body, reply)
+        if (!body) return
+        const issues = await checkPalette(body)
+        if (issues.length) return invalid(reply, issues)
+        const [row] = await db.insert(palettes).values(body).returning()
+        return reply.code(201).send(row)
+      })
+      r.patch('/palettes/:id', async (req, reply) => {
+        const pid = paramId(req.params) ?? 0
+        const body = parse(paletteBase.partial(), req.body, reply)
+        if (!body) return
+        const [cur] = await db.select().from(palettes).where(eq(palettes.id, pid))
+        if (!cur) return reply.code(404).send({ error: 'not_found' })
+        const issues = await checkPalette({ ...cur, ...body })
+        if (issues.length) return invalid(reply, issues)
+        const [row] = await db.update(palettes).set(body).where(eq(palettes.id, pid)).returning()
+        return row
+      })
+      // Orders that chose a deleted palette fall back to the theme's own (FK on delete set null);
+      // games already built keep their snapshot.
+      r.delete('/palettes/:id', async (req, reply) => {
+        const pid = paramId(req.params) ?? 0
+        return tryDelete(reply, () => db.delete(palettes).where(eq(palettes.id, pid)).returning())
       })
 
       // ----- settings -----

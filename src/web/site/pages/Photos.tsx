@@ -1,15 +1,17 @@
 // Step 3: optional photos, each shown next to its illustrated version.
 import { useEffect, useState } from 'react'
-import { ApiError, deletePhoto, listPhotos, type Photo, uploadPhoto } from '../api.ts'
+import { Doodles } from '../../shared/decor.tsx'
+import { ApiError, deletePhoto, listPhotos, type Photo, type Shop, uploadPhoto } from '../api.ts'
 import { copy } from '../copy.ts'
-import { type Draft, errorText, MAX_PHOTOS } from '../logic.ts'
-import { Arrow, Back, Cta, Deco, Ring, Spinner } from '../ui.tsx'
+import { type Draft, decorFor, errorText, MAX_PHOTOS } from '../logic.ts'
+import { Arrow, Back, Cta, Deco, Ring, Spinner, StepTrail } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 type Item = Photo & { local?: string }
 
-export function Photos(props: { token: string; draft: Draft }) {
-  const { token, draft } = props
+export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
+  const { token, shop, draft } = props
+  const decor = draft.manageToken === token ? decorFor(shop, draft.occasionKey) : null
   const [items, setItems] = useState<Item[]>([])
   const [uploading, setUploading] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +52,17 @@ export function Photos(props: { token: string; draft: Draft }) {
   }
 
   return (
-    <main className="page">
+    <main className="page" data-decor={decor ?? undefined}>
+      {decor && (
+        <Doodles
+          className="deco"
+          decor={decor}
+          spots={[
+            { top: 330, left: 8, size: 46, rot: 10 },
+            { top: 620, left: -8, size: 40, rot: -8 },
+          ]}
+        />
+      )}
       <Deco
         icon="coffee"
         className="bob"
@@ -58,7 +70,7 @@ export function Photos(props: { token: string; draft: Draft }) {
       />
       <Back href="/order/questions" />
       <div style={{ marginTop: 18, marginLeft: 40 }}>
-        <div className="eyebrow">{copy.stepOf(3, STEPS)}</div>
+        <StepTrail step={3} total={STEPS} />
         <h1 className="title rise" style={{ fontSize: 56 }}>
           {copy.photos.title(draft.manageToken === token ? draft.form : null)}
         </h1>

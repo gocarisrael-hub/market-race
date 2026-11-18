@@ -9,6 +9,7 @@ import {
   markets,
   occasions,
   orders,
+  palettes,
   redemptions,
   routes,
   stalls,
@@ -35,7 +36,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   const base = config.publicBaseUrl
 
   app.get('/api/shop', async () => {
-    const [occ, th, rt, mk] = await Promise.all([
+    const [occ, th, rt, mk, pal] = await Promise.all([
       db.select().from(occasions).where(eq(occasions.active, true)).orderBy(asc(occasions.sort)),
       db.select().from(themes).where(eq(themes.active, true)).orderBy(asc(themes.sort)),
       db.select().from(routes).where(eq(routes.active, true)),
@@ -43,10 +44,21 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         .select({ id: markets.id, name: markets.name, hours: markets.hours })
         .from(markets)
         .where(eq(markets.active, true)),
+      db
+        .select()
+        .from(palettes)
+        .where(eq(palettes.active, true))
+        .orderBy(asc(palettes.sort), asc(palettes.id)),
     ])
     return {
       brand: await getSetting(db, 'brand_name'),
-      occasions: occ.map((o) => ({ key: o.key, label: o.label, audience: o.audience, forms: o.forms })),
+      occasions: occ.map((o) => ({
+        key: o.key,
+        label: o.label,
+        audience: o.audience,
+        forms: o.forms,
+        decor: o.decor,
+      })),
       markets: mk,
       themes: th.map((t) => ({
         id: t.id,
@@ -54,6 +66,10 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         marketId: t.marketId,
         map: fileUrl(t.mapFile),
         palette: t.palette,
+        // The colors this map can be played in; the first one is the default.
+        palettes: pal
+          .filter((p) => p.themeIds.includes(t.id))
+          .map((p) => ({ id: p.id, name: p.name, palette: p.palette })),
       })),
       // What buyers taste on each route, in route order. Never stall or tasting names, riddles or
       // catalog ids: the stalls are the riddles' answers.
@@ -175,6 +191,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     form: z.enum(['she', 'he', 'couple']),
     honoreeName: z.string().trim().min(1).max(40),
     themeId: z.number().int(),
+    paletteId: z.number().int().nullable().default(null),
     people: z.number().int(),
     allergens: z.array(z.enum(ALLERGENS)).default([]),
     diets: z.array(z.enum(DIETS)).default([]),
@@ -199,6 +216,10 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const { theme, route } = await routeForTheme(b.themeId)
     if (!theme) return { error: 'bad_theme' } as const
     if (!route) return { error: 'no_route' } as const
+    if (b.paletteId != null) {
+      const [pal] = await db.select().from(palettes).where(eq(palettes.id, b.paletteId))
+      if (!pal?.active || !pal.themeIds.includes(theme.id)) return { error: 'bad_palette' } as const
+    }
     const price = await priceFor(db, b.occasionKey, b.people)
     if (!price) return { error: 'no_price' } as const
     const questions = await questionsForOccasion(db, b.occasionKey)
@@ -210,6 +231,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         form: b.form,
         honoreeName: b.honoreeName,
         themeId: theme.id,
+        paletteId: b.paletteId,
         routeId: route.id,
         people: b.people,
         allergens: b.allergens,

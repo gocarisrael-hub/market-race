@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../shared/fonts.css'
+import '../shared/decor.css'
 import './site.css'
+import { DecorDefs } from '../shared/decor.tsx'
 import { getShop, type Shop } from './api.ts'
 import { copy } from './copy.ts'
-import { type Draft, emptyDraft, loadDraft, orderableThemes, parseRoute, saveDraft } from './logic.ts'
+import {
+  chooseTheme,
+  type Draft,
+  emptyDraft,
+  loadDraft,
+  orderableThemes,
+  parseRoute,
+  saveDraft,
+} from './logic.ts'
 import { Checkout } from './pages/Checkout.tsx'
 import { Companies } from './pages/Companies.tsx'
 import { CompanyPay } from './pages/CompanyPay.tsx'
@@ -32,9 +42,10 @@ function App() {
         setShop(s)
         if (s.brand) document.title = s.brand
         const saved = loadDraft()
-        const d = saved ?? emptyDraft(s.minPeople)
-        // Defaults: the first orderable theme; people within the current limits.
-        if (d.themeId === null) d.themeId = orderableThemes(s)[0]?.id ?? null
+        let d = saved ?? emptyDraft(s.minPeople)
+        // Defaults: the first orderable theme and its first palette; people within the limits.
+        const themeId = d.themeId ?? orderableThemes(s)[0]?.id ?? null
+        if (themeId !== null) d = chooseTheme(s, d, themeId)
         d.people = Math.min(s.maxPeople, Math.max(s.minPeople, d.people))
         setDraftState(d)
       },
@@ -74,7 +85,7 @@ function App() {
     case 'questions':
       return <Questions shop={shop} draft={draft} setDraft={setDraft} />
     case 'photos':
-      return <Photos token={route.token} draft={draft} />
+      return <Photos token={route.token} shop={shop} draft={draft} />
     case 'checkout':
       return <Checkout token={route.token} shop={shop} draft={draft} setDraft={setDraft} />
     case 'companies':
@@ -82,4 +93,9 @@ function App() {
   }
 }
 
-createRoot(document.getElementById('root')!).render(<App />)
+createRoot(document.getElementById('root')!).render(
+  <>
+    <DecorDefs />
+    <App />
+  </>,
+)

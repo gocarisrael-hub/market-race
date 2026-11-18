@@ -1,4 +1,5 @@
 // The final letter: notes from friends with signatures, photos, falling food, and the route.
+import { Doodles } from '../../shared/decor.tsx'
 import { Paper, Tape } from '../draw.tsx'
 import { iconUrl, stopIcon } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
@@ -15,7 +16,7 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
   const letter = view.letter ?? { notes: [], photos: [] }
   const n = view.totalStops
   return (
-    <main className="scr letter">
+    <main className="scr letter" data-decor={view.decor}>
       <div className="falling" aria-hidden="true">
         {FALLING.map((f) => (
           <img
@@ -28,6 +29,14 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
       </div>
 
       <header className="letter-head">
+        <Doodles
+          decor={view.decor}
+          spots={[
+            { top: 4, left: '1%', size: 48, rot: -10 },
+            { top: 46, right: '1%', size: 42, rot: 12 },
+            { top: 120, left: '6%', size: 30, rot: 6 },
+          ]}
+        />
         <div className="muted-label">{t('letter.kicker')}</div>
         <h1 className="letter-title pop">{t('letter.title', { name: view.honoree })}</h1>
         {view.company?.logo && (

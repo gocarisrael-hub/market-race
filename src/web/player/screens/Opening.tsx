@@ -1,4 +1,5 @@
 // Opening: the market map, the race title on a ribbon, and "start".
+import { Doodles } from '../../shared/decor.tsx'
 import { joinList } from '../copy.ts'
 import { BrushButton, Ribbon, TornEdge } from '../draw.tsx'
 import { iconUrl, ribbonFontSize } from '../logic.ts'
@@ -13,11 +14,13 @@ export function Opening({ view, t, act }: ScreenProps) {
     ? t('start.summaryAllergens', { stops, allergens: joinList(view.allergens) })
     : t('start.summary', { stops })
   const map = view.theme?.map
+  const tint = view.theme?.palette.mapTint
 
   return (
-    <main className="scr opening">
+    <main className="scr opening" data-decor={view.decor}>
       <div className="opening-map" aria-hidden={!map}>
         {map && <img className="kb" src={map} alt={t('start.mapAlt')} fetchPriority="high" />}
+        {map && tint && <span className="map-tint" style={{ background: tint }} />}
       </div>
       <div className="opening-top">
         <div className="brand">{t('brand')}</div>
@@ -37,6 +40,16 @@ export function Opening({ view, t, act }: ScreenProps) {
 
       <div className="opening-sheet">
         <TornEdge />
+        <Doodles
+          decor={view.decor}
+          className="opening-doodles"
+          spots={[
+            { top: -26, right: '3%', size: 58, rot: 8 },
+            { top: -18, left: '2%', size: 54, rot: -10 },
+            { top: 112, left: '3%', size: 40, rot: -6 },
+            { top: 104, right: '4%', size: 38, rot: 12 },
+          ]}
+        />
         <Ribbon text={title} fontSize={ribbonFontSize(title)} />
         <p className="opening-summary">{summary}</p>
         <p className="opening-together">{t('start.together')}</p>
