@@ -1,5 +1,5 @@
 // Pure logic of the order flow: prices, step validation, the draft kept between steps.
-import type { Buyer, LetterNote, Occasion, OrderPayload, Question, Shop, Theme } from './api.ts'
+import type { Buyer, LetterNote, Occasion, OrderPayload, PreviewStop, Question, Shop, Theme } from './api.ts'
 import { copy, type SiteForm } from './copy.ts'
 
 export const MAX_NOTES = 3
@@ -69,6 +69,22 @@ export const formsFor = (occ: Occasion | undefined): SiteForm[] =>
 /** Themes whose market has an active route: an order needs both. */
 export const orderableThemes = (shop: Shop): Theme[] =>
   shop.themes.filter((t) => shop.routes.some((r) => r.marketId === t.marketId))
+
+/** The route an order for this theme gets: the market's first route (same as the server). */
+export const routeForTheme = (shop: Shop, themeId: number | null | undefined) => {
+  const theme = shop.themes.find((t) => t.id === themeId)
+  if (!theme) return undefined
+  return shop.routes.filter((r) => r.marketId === theme.marketId).sort((a, b) => a.id - b.id)[0]
+}
+
+/** The stops as listed, before the buyer's allergens and diets are applied. */
+export const listedStops = (route: Shop['routes'][number] | undefined): PreviewStop[] =>
+  (route?.tastings ?? []).map((t) => ({
+    teaser: t.teaser,
+    icon: t.icon,
+    finale: t.finale,
+    status: 'as_listed',
+  }))
 
 export const clampPeople = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number.isFinite(n) ? n : min)))

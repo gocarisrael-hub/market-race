@@ -123,18 +123,104 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
   const beer = await mk('בירה בסוף השוק', 'ביציאה לכיוון הים')
   const coffee = await mk('קפה של השוק', 'ליד הבירה')
 
-  const t = async (stallId: number, name: string, allergens: string[], diets: string[], feeAgorot: number) =>
-    (await db.insert(tastings).values({ stallId, name, allergens, diets, feeAgorot }).returning())[0]
-  const tJuice = await t(tikva.id, 'מיץ תפוזים טרי', [], ALL_DIETS, 800)
-  const tJuice2 = await t(juice2.id, 'מיץ גזר תפוזים', [], ALL_DIETS, 700)
-  const tJachnun = await t(bakery.id, "ג'חנון עם ביצה ורסק", ['גלוטן', 'ביצים', 'חלב'], ['vegetarian'], 1500)
-  const tBurik = await t(burik.id, 'בוריק תפוחי אדמה וביצה', ['גלוטן', 'ביצים'], ['vegetarian'], 1200)
-  const tFalafel = await t(falafel.id, 'חצי פיתה פלאפל', ['גלוטן', 'שומשום'], ['vegan', 'vegetarian'], 1000)
-  await t(falafel.id, 'כדורי פלאפל בצלחת', ['שומשום'], ['vegan', 'vegetarian', 'gluten_free'], 900)
-  const tKebab = await t(kebab.id, 'שיפוד קבב בפיתה', ['גלוטן', 'שומשום'], [], 1400)
-  const tBeer = await t(beer.id, 'בירה מהחבית', ['גלוטן'], ['vegan', 'vegetarian'], 1200)
-  await t(beer.id, 'סיידר תפוחים', [], ALL_DIETS, 1200)
-  const tCoffee = await t(coffee.id, 'קפה הפוך', ['חלב'], ['vegetarian', 'gluten_free'], 900)
+  // Teasers are public before purchase: never the stall's name or a hint at a riddle.
+  const t = async (
+    stallId: number,
+    name: string,
+    allergens: string[],
+    diets: string[],
+    feeAgorot: number,
+    teaser: string,
+    teaserIcon: string | null,
+  ) =>
+    (
+      await db
+        .insert(tastings)
+        .values({ stallId, name, allergens, diets, feeAgorot, teaser, teaserIcon })
+        .returning()
+    )[0]
+  const tJuice = await t(
+    tikva.id,
+    'מיץ תפוזים טרי',
+    [],
+    ALL_DIETS,
+    800,
+    'פירות העונה, סחוטים מול העיניים',
+    'fruit',
+  )
+  const tJuice2 = await t(
+    juice2.id,
+    'מיץ גזר תפוזים',
+    [],
+    ALL_DIETS,
+    700,
+    'כוס כתומה וטרייה, סחוטה במקום',
+    'fruit',
+  )
+  const tJachnun = await t(
+    bakery.id,
+    "ג'חנון עם ביצה ורסק",
+    ['גלוטן', 'ביצים', 'חלב'],
+    ['vegetarian'],
+    1500,
+    'מאפה תימני מסורתי מהתנור',
+    'awning',
+  )
+  const tBurik = await t(
+    burik.id,
+    'בוריק תפוחי אדמה וביצה',
+    ['גלוטן', 'ביצים'],
+    ['vegetarian'],
+    1200,
+    'מאפה פריך וחם, ממולא תפוחי אדמה',
+    'awning',
+  )
+  const tFalafel = await t(
+    falafel.id,
+    'חצי פיתה פלאפל',
+    ['גלוטן', 'שומשום'],
+    ['vegan', 'vegetarian'],
+    1000,
+    'קלאסיקה ירוקה בפיתה, ישר מהשמן',
+    'hummus',
+  )
+  await t(
+    falafel.id,
+    'כדורי פלאפל בצלחת',
+    ['שומשום'],
+    ['vegan', 'vegetarian', 'gluten_free'],
+    900,
+    'כדורים ירוקים ישר מהשמן, בצלחת',
+    'hummus',
+  )
+  const tKebab = await t(
+    kebab.id,
+    'שיפוד קבב בפיתה',
+    ['גלוטן', 'שומשום'],
+    [],
+    1400,
+    'בשר על האש בפיתה',
+    'spices',
+  )
+  const tBeer = await t(
+    beer.id,
+    'בירה מהחבית',
+    ['גלוטן'],
+    ['vegan', 'vegetarian'],
+    1200,
+    'משהו קר מהחבית לסיום',
+    'tomatoes',
+  )
+  await t(beer.id, 'סיידר תפוחים', [], ALL_DIETS, 1200, 'משהו קר ומתוק לסיום', 'fruit')
+  const tCoffee = await t(
+    coffee.id,
+    'קפה הפוך',
+    ['חלב'],
+    ['vegetarian', 'gluten_free'],
+    900,
+    'משהו חם ומעורר, עם הרבה חלב',
+    'coffee',
+  )
 
   const r = async (v: typeof riddles.$inferInsert) => (await db.insert(riddles).values(v).returning())[0]
   const rTikva = await r({

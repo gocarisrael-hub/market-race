@@ -52,8 +52,13 @@ test('owner builds a catalog: market, stall, tasting, question set, riddle, rout
   await editor.getByLabel('שם', { exact: true }).fill(TASTING)
   await editor.getByLabel('טבעוני').check()
   await editor.getByLabel('תשלום לדוכן למנה').fill('12.5')
+  await expect(editor.getByText(/לא לכתוב את שם הדוכן/)).toBeVisible()
+  await editor.getByLabel('תיאור לקונים').fill('משהו מתוק וטרי')
+  await editor.getByRole('combobox', { name: /^איור לתיאור/ }).selectOption('fruit')
+  await expect(editor.locator('img[src="/static/icons/fruit.png"]')).toBeVisible()
   await save(page)
   await expect(page.locator('.list tr', { hasText: TASTING })).toContainText('₪12.50')
+  await expect(page.locator('.list tr', { hasText: TASTING })).toContainText('משהו מתוק וטרי')
 
   // Question set with a "name" slot whose fallback is the sample answer
   editor = await open(page, 'שאלונים', 'שאלון חדש')

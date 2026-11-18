@@ -1,10 +1,23 @@
 // Site API: catalog for the order flow, creating and paying orders, the manage link, leads.
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppContext } from '../app.ts'
-import { gameStates, leads, markets, occasions, orders, redemptions, routes, themes } from '../db/schema.ts'
+import {
+  gameStates,
+  leads,
+  markets,
+  occasions,
+  orders,
+  redemptions,
+  routes,
+  stalls,
+  tastings,
+  themes,
+} from '../db/schema.ts'
+import { previewRoute } from '../domain/builder.ts'
 import { ALLERGENS, DIETS, FORMS, type Form } from '../domain/types.ts'
+import { iconUrl } from '../lib/icons.ts'
 import { cardEnabled } from '../services/context.ts'
 import { links, qrPng } from '../services/delivery.ts'
 import { buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
@@ -42,7 +55,29 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         map: fileUrl(t.mapFile),
         palette: t.palette,
       })),
-      routes: rt.map((r) => ({ id: r.id, marketId: r.marketId, name: r.name, stops: r.stops.length })),
+      // What buyers taste on each route, in route order. Never stall or tasting names, riddles or
+      // catalog ids: the stalls are the riddles' answers.
+      routes: await Promise.all(
+        rt.map(async (r) => {
+          const byId = new Map((await routeTastings(r.marketId)).map((t) => [t.id, t]))
+          return {
+            id: r.id,
+            marketId: r.marketId,
+            name: r.name,
+            stops: r.stops.length,
+            tastings: r.stops.map((stop, i) => {
+              const t = byId.get(stop.tastingId)
+              return {
+                teaser: t?.teaser ?? '',
+                icon: iconUrl(t?.teaserIcon),
+                allergens: t?.allergens ?? [],
+                diets: t?.diets ?? [],
+                finale: i === r.stops.length - 1,
+              }
+            }),
+          }
+        }),
+      ),
       prices: await getSetting(db, 'prices'),
       minPeople: await getSetting(db, 'min_people'),
       maxPeople: await getSetting(db, 'max_people'),
@@ -52,6 +87,76 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       cardProvider: services.paymentProvider,
     }
   })
+
+  async function routeTastings(marketId: number) {
+    const ids = (await db.select({ id: stalls.id }).from(stalls).where(eq(stalls.marketId, marketId))).map(
+      (s) => s.id,
+    )
+    return ids.length ? db.select().from(tastings).where(inArray(tastings.stallId, ids)) : []
+  }
+
+  /** The route an order for this theme gets (same choice as draftValues). */
+  async function routeForTheme(themeId: number) {
+    const [theme] = await db
+      .select()
+      .from(themes)
+      .where(and(eq(themes.id, themeId), eq(themes.active, true)))
+    if (!theme) return { theme: undefined, route: undefined }
+    const [route] = await db
+      .select()
+      .from(routes)
+      .where(and(eq(routes.marketId, theme.marketId), eq(routes.active, true)))
+      .orderBy(asc(routes.id))
+    return { theme, route }
+  }
+
+  // Per stop, what the buyer's group will taste given their allergens and diets. Same safety logic
+  // as building the game. No names or ids; a blocked stop goes to the owner's review after payment.
+  const list = <T extends readonly [string, ...string[]]>(values: T) =>
+    z
+      .string()
+      .default('')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.enum(values)))
+  const previewQuery = z.object({
+    themeId: z.coerce.number().int().positive(),
+    allergens: list(ALLERGENS),
+    diets: list(DIETS),
+  })
+  app.get(
+    '/api/shop/route-preview',
+    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
+    async (req, reply) => {
+      const q = previewQuery.safeParse(req.query)
+      if (!q.success) return reply.code(400).send({ error: 'invalid' })
+      const { route } = await routeForTheme(q.data.themeId)
+      if (!route) return reply.code(404).send({ error: 'no_route' })
+      const [marketStalls, marketTastings] = await Promise.all([
+        db.select().from(stalls).where(eq(stalls.marketId, route.marketId)),
+        routeTastings(route.marketId),
+      ])
+      const preview = previewRoute({
+        stops: route.stops,
+        stalls: marketStalls,
+        tastings: marketTastings,
+        allergens: q.data.allergens,
+        diets: q.data.diets,
+      })
+      return {
+        stops: preview.map((p) => ({
+          teaser: p.tasting?.teaser ?? '',
+          icon: iconUrl(p.tasting?.teaserIcon),
+          finale: p.finale,
+          status: p.status,
+        })),
+      }
+    },
+  )
 
   app.get('/api/shop/questions', async (req, reply) => {
     const q = z.object({ occasion: z.string(), form: z.enum(FORMS) }).safeParse(req.query)
@@ -91,16 +196,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!occ.forms.includes(b.form)) return { error: 'bad_form' } as const
     const [min, max] = [await getSetting(db, 'min_people'), await getSetting(db, 'max_people')]
     if (b.people < min || b.people > max) return { error: 'bad_people' } as const
-    const [theme] = await db
-      .select()
-      .from(themes)
-      .where(and(eq(themes.id, b.themeId), eq(themes.active, true)))
+    const { theme, route } = await routeForTheme(b.themeId)
     if (!theme) return { error: 'bad_theme' } as const
-    const [route] = await db
-      .select()
-      .from(routes)
-      .where(and(eq(routes.marketId, theme.marketId), eq(routes.active, true)))
-      .orderBy(asc(routes.id))
     if (!route) return { error: 'no_route' } as const
     const price = await priceFor(db, b.occasionKey, b.people)
     if (!price) return { error: 'no_price' } as const

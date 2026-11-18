@@ -12,6 +12,7 @@ import {
   formsFor,
   isPayMessage,
   leadErrors,
+  listedStops,
   loadDraft,
   orderableThemes,
   orderPayload,
@@ -19,6 +20,7 @@ import {
   parseRoute,
   payloadKey,
   priceAgorot,
+  routeForTheme,
   saveAction,
   saveDraft,
   step1Error,
@@ -48,7 +50,18 @@ const shop: Shop = {
     { id: 10, name: 'a', marketId: 1, map: null, palette: {} },
     { id: 20, name: 'b', marketId: 2, map: null, palette: {} },
   ],
-  routes: [{ id: 1, marketId: 1, name: 'r', stops: 5 }],
+  routes: [
+    {
+      id: 1,
+      marketId: 1,
+      name: 'r',
+      stops: 2,
+      tastings: [
+        { teaser: 'משהו חם', icon: '/static/icons/coffee.png', allergens: [], diets: [], finale: false },
+        { teaser: 'משהו קר', icon: null, allergens: ['גלוטן'], diets: [], finale: true },
+      ],
+    },
+  ],
   prices: { bachelorette: { base: 5000, perPerson: 9900 }, birthday: { base: 0, perPerson: 0 } },
   minPeople: 2,
   maxPeople: 20,
@@ -172,6 +185,17 @@ describe('site logic', () => {
       'companyName',
       'people',
     ])
+  })
+
+  it('finds the route of a theme and lists its stops as listed', () => {
+    expect(routeForTheme(shop, 10)?.id).toBe(1)
+    expect(routeForTheme(shop, 20)).toBeUndefined()
+    expect(routeForTheme(shop, null)).toBeUndefined()
+    expect(listedStops(routeForTheme(shop, 10))).toEqual([
+      { teaser: 'משהו חם', icon: '/static/icons/coffee.png', finale: false, status: 'as_listed' },
+      { teaser: 'משהו קר', icon: null, finale: true, status: 'as_listed' },
+    ])
+    expect(listedStops(undefined)).toEqual([])
   })
 
   it('parses routes', () => {
