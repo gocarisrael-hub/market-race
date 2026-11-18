@@ -67,6 +67,9 @@ export const COPY = {
   'letter.summaryEnd': 'ושוק אחד שלם',
   'letter.route': 'איפה היינו',
   'letter.photoAlt': 'תמונה מצוירת',
+  'photo.open': 'להגדיל את התמונה',
+  'photo.dialog': 'התמונה בגדול',
+  'photo.close': 'סגירה',
   'letter.logoAlt': 'הלוגו של {company}',
   'letter.keep': 'צלמו מסך ושמרו את המכתב',
 

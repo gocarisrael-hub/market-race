@@ -1,6 +1,7 @@
 // Screenshots of every player screen for design review (docs/screens/player/).
 // Not part of CI: run with `SCREENSHOTS=1 npx playwright test tests/e2e/screens.spec.ts`.
-import { type APIRequestContext, type Browser, expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { type APIRequestContext, type Browser, expect, type Page, test } from '@playwright/test'
 
 test.skip(!process.env.SCREENSHOTS, 'screenshots only on demand')
 
@@ -26,7 +27,6 @@ const MJ = {
 const LOGO = `data:image/svg+xml,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="80" viewBox="0 0 160 80"><rect x="4" y="4" width="152" height="72" rx="10" fill="#0F6E74"/><text x="80" y="50" text-anchor="middle" font-family="Heebo, sans-serif" font-size="24" font-weight="800" fill="#fff">ACME</text></svg>',
 )}`
-const PHOTO = '/static/icons/flowers.webp' // stand-in for an illustrated customer photo
 
 async function game(request: APIRequestContext, themeId = 1) {
   await request.post('/admin/api/login', { data: { email: 'owner@example.com', password: 'e2e-password' } })
@@ -50,16 +50,35 @@ async function game(request: APIRequestContext, themeId = 1) {
     },
   })
   expect(res.ok()).toBe(true)
-  const url: string = (await res.json()).links.game
+  const body = await res.json()
+  const url: string = body.links.game
+  const manageToken: string = body.order.manageToken
   const token = url.split('/g/')[1]
   const act = async (data: Json) => {
     const r = await request.post(`/api/game/${token}/action`, { data })
     expect(r.ok()).toBe(true)
   }
-  return { url, token, act }
+  // Real illustrated photos, through the same upload as the site (allowed until the game starts).
+  const addPhotos = async (files: string[]) => {
+    for (const f of files) {
+      const r = await request.post(`/api/orders/${manageToken}/photos`, {
+        multipart: { file: { name: 'photo.jpg', mimeType: 'image/jpeg', buffer: readFileSync(f) } },
+      })
+      expect(r.ok()).toBe(true)
+    }
+  }
+  return { url, token, act, addPhotos }
 }
 
-async function shoot(browser: Browser, url: string, token: string, name: string, patch?: Patch) {
+async function shoot(
+  browser: Browser,
+  url: string,
+  token: string,
+  name: string,
+  patch?: Patch,
+  before?: (page: Page) => Promise<void>,
+  fullPage = false,
+) {
   for (const size of SIZES) {
     const ctx = await browser.newContext({
       viewport: size,
@@ -78,7 +97,9 @@ async function shoot(browser: Browser, url: string, token: string, name: string,
     await page.waitForLoadState('networkidle')
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(1800) // let the entrance animations settle
+    if (before) await before(page)
     await page.screenshot({
+      fullPage,
       path: `${OUT}/${name}-${size.width}x${size.height}.jpg`,
       type: 'jpeg',
       quality: 78,
@@ -128,21 +149,18 @@ test('watercolor: every screen', async ({ browser, request }) => {
   await shoot(browser, g.url, g.token, 'watercolor-8-expired', (v) => ({ ...v, status: 'expired' }))
 })
 
-test('photos: riddle and letter', async ({ browser, request }) => {
+test('photos: riddle, lightbox and letter', async ({ browser, request }) => {
   const g = await game(request, 1)
+  await g.addPhotos(['tests/fixtures/dog-on-grass.jpg', 'tests/fixtures/boxer-on-grass.jpg'])
   await g.act({ type: 'start' })
-  await g.act({ type: 'answer', stopIndex: 0, answer: 'תקווה' })
-  await g.act({ type: 'arrived', stopIndex: 0 })
-  await g.act({ type: 'redeemed', stopIndex: 0 })
-  await shoot(browser, g.url, g.token, 'photo-1-riddle', (v) => {
-    v.current.photo = PHOTO
-    return v
+  await shoot(browser, g.url, g.token, 'photo-1-riddle')
+  await shoot(browser, g.url, g.token, 'photo-2-lightbox', undefined, async (page) => {
+    await page.getByRole('button', { name: 'להגדיל את התמונה' }).click()
+    await page.waitForTimeout(400)
   })
-  await finish(g.act, 1)
-  await shoot(browser, g.url, g.token, 'photo-2-letter', (v) => {
-    v.letter.photos = [PHOTO, '/static/icons/fruit.webp']
-    return v
-  })
+  await finish(g.act, 0)
+  await shoot(browser, g.url, g.token, 'photo-3-letter')
+  await shoot(browser, g.url, g.token, 'photo-4-letter-full', undefined, undefined, true)
 })
 
 test('riso theme', async ({ browser, request }) => {

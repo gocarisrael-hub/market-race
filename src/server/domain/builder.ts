@@ -177,7 +177,6 @@ export function buildGame(input: BuildInput): BuildResult {
       .sort((a, b) => a.id - b.id)[0]
   }
 
-  const photos = order.photos.slice(0, 5)
   const stops: SnapshotStop[] = []
   input.route.stops.forEach((stop, index) => {
     const finale = index === input.route.stops.length - 1
@@ -250,7 +249,7 @@ export function buildGame(input: BuildInput): BuildResult {
         hint: riddle?.hint ?? '',
         afterText: riddle?.afterText ?? '',
       },
-      photo: !finale ? (photos[index] ?? null) : null,
+      photo: null,
       backup:
         !swappedToBackup && backupStall && backupTasting
           ? { stall: snapStall(backupStall), tasting: snapTasting(backupTasting) }
@@ -272,7 +271,23 @@ export function buildGame(input: BuildInput): BuildResult {
     allergens: [...order.allergens],
     diets: [...order.diets],
     stops,
-    letter: { notes: order.letterNotes.map((n) => ({ ...n })), photos },
+    letter: { notes: order.letterNotes.map((n) => ({ ...n })), photos: [] },
   }
-  return { game, flags }
+  return { game: attachPhotos(game, order.photos), flags }
+}
+
+export const MAX_GAME_PHOTOS = 5
+
+/**
+ * Puts the order's photos into a game: riddle stop i gets photo i (the finale has its own
+ * celebration, no photo), and the letter gets them all. Pure; also used to update the photos of
+ * a built game that has not started, without rebuilding it from the (possibly edited) catalog.
+ */
+export function attachPhotos(game: GameSnapshot, photos: string[]): GameSnapshot {
+  const list = [...new Set(photos.filter((p) => typeof p === 'string' && p.trim()))].slice(0, MAX_GAME_PHOTOS)
+  return {
+    ...game,
+    stops: game.stops.map((s, i) => ({ ...s, photo: s.finale ? null : (list[i] ?? null) })),
+    letter: { ...game.letter, photos: list },
+  }
 }

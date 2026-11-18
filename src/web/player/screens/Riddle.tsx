@@ -2,8 +2,9 @@
 // The component is keyed by stop, so a poll for the same step never clears what is being typed.
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { riddleTitle } from '../copy.ts'
-import { Arrow, BrushButton, HandCircle, Paper, Tape, Tick, Trail } from '../draw.tsx'
+import { Arrow, BrushButton, HandCircle, Paper, Tick, Trail } from '../draw.tsx'
 import { splitQuestion, stopIcon } from '../logic.ts'
+import { TapedPhoto, useLightbox } from '../photo.tsx'
 import type { ScreenProps } from './types.ts'
 import { useBusy } from './useBusy.ts'
 
@@ -15,6 +16,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
   const hint = run
   const { body, question } = splitQuestion(cur.riddle.parts)
   const inputRef = useRef<HTMLInputElement>(null)
+  const lightbox = useLightbox(t, t('riddle.photoAlt'))
 
   // A gentle shake of the answer line on a wrong answer (not a remount: keeps the keyboard up).
   useEffect(() => {
@@ -74,10 +76,14 @@ export function Riddle({ view, t, act }: ScreenProps) {
       <Paper className={`note rise ${cur.photo ? 'with-photo' : ''}`} tilt={cur.index % 2 ? -1.2 : 1.2}>
         <h1 className="note-kicker">{riddleTitle(t, cur.index, cur.finale)}</h1>
         {cur.photo && (
-          <figure className="taped-photo">
-            <Tape />
-            <img src={cur.photo} alt={t('riddle.photoAlt')} />
-          </figure>
+          <TapedPhoto
+            className="riddle-photo"
+            src={cur.photo}
+            alt={t('riddle.photoAlt')}
+            tilt={cur.index % 2 ? 4 : -4}
+            t={t}
+            onOpen={lightbox.open}
+          />
         )}
         <p className="riddle-text">
           {body.map((p, i) =>
@@ -152,6 +158,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
           </BrushButton>
         </div>
       </form>
+      {lightbox.element}
     </main>
   )
 }
