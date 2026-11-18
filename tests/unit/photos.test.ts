@@ -128,3 +128,17 @@ describe('photo upload', () => {
     expect(late.statusCode).toBe(409)
   })
 })
+
+describe('transparent photos', () => {
+  it('turn transparent areas into paper, not black', async () => {
+    const png = await sharp({
+      create: { width: 100, height: 100, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .png()
+      .toBuffer()
+    const out = await illustrate(png)
+    const { data } = await sharp(out).greyscale().raw().toBuffer({ resolveWithObject: true })
+    const mean = data.reduce((s, v) => s + v, 0) / data.length
+    expect(mean).toBeGreaterThan(200)
+  })
+})

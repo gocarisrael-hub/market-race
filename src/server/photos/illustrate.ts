@@ -13,12 +13,16 @@ export interface IllustrateOptions {
 
 /** Normalizes any accepted upload to an upright sRGB JPEG, at most `maxSize` px on the long side. */
 export async function normalizePhoto(input: Buffer, maxSize = 1600): Promise<Buffer> {
-  return sharp(input, { failOn: 'error' })
-    .rotate()
-    .resize(maxSize, maxSize, { fit: 'inside', withoutEnlargement: true })
-    .toColorspace('srgb')
-    .jpeg({ quality: 85, mozjpeg: true })
-    .toBuffer()
+  return (
+    sharp(input, { failOn: 'error' })
+      .rotate()
+      .resize(maxSize, maxSize, { fit: 'inside', withoutEnlargement: true })
+      // Transparent areas become paper, not black.
+      .flatten({ background: '#FFFBF4' })
+      .toColorspace('srgb')
+      .jpeg({ quality: 85, mozjpeg: true })
+      .toBuffer()
+  )
 }
 
 export async function illustrate(input: Buffer, opts: IllustrateOptions = {}): Promise<Buffer> {
@@ -29,7 +33,8 @@ export async function illustrate(input: Buffer, opts: IllustrateOptions = {}): P
   const base = sharp(input)
     .rotate()
     .resize(maxSize, maxSize, { fit: 'inside', withoutEnlargement: true })
-    .removeAlpha()
+    // Transparent areas become paper, not black.
+    .flatten({ background: paper })
   const { data: src, info } = await base
     .clone()
     .toColorspace('srgb')

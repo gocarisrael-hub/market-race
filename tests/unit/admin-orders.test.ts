@@ -40,6 +40,7 @@ describe('admin orders: test games and review queue', () => {
     expect(order.status).toBe('ready')
     expect(order.game.stops).toHaveLength(5)
     expect(links.game).toMatch(/\/g\/.+/)
+    expect(order.answersSubmittedAt).not.toBeNull()
   })
 
   it('sends odd answers to review, fixes them inline and approves', async () => {
