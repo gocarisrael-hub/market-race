@@ -25,6 +25,7 @@ export interface AppContext {
   config: Config
   services: Services
   sweeper?: PaymentSweeper | null
+  reportError?: (message: string) => Promise<unknown>
 }
 
 const root = fileURLToPath(new URL('../..', import.meta.url))
@@ -42,6 +43,12 @@ export async function buildApp(ctx: AppContext) {
   await app.register(rateLimit, { global: false })
   await app.register(multipart, { limits: { fileSize: 15 * 1024 * 1024, files: 5 } })
   await mkdir(ctx.config.uploadDir, { recursive: true })
+
+  // 5xx errors reach the owner (rate limited); details stay in the log.
+  app.addHook('onError', async (req, _reply, err) => {
+    const status = (err as { statusCode?: number }).statusCode ?? 500
+    if (status >= 500) ctx.reportError?.(`${req.method} ${req.routeOptions.url ?? req.url}: ${err.message}`)
+  })
 
   app.get('/healthz', async () => ({ ok: true, env: ctx.config.env }))
 
