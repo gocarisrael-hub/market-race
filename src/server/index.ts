@@ -17,9 +17,10 @@ if ((process.env.SEED_DEMO === '1' || process.env.E2E_SEED === '1') && config.en
 const services = servicesFromEnv()
 // Payments settle only from the terminal's own rows: sweep at boot (reads back a deploy gap),
 // then on a cadence, and whenever a notify asks.
-const sweeper = services.tranzila.isConfigured()
-  ? await createPaymentSweeper(db, services, config.publicBaseUrl)
-  : null
+const sweeper =
+  services.paymentProvider === 'tranzila' && services.tranzila.isConfigured()
+    ? await createPaymentSweeper(db, services, config.publicBaseUrl)
+    : null
 const reportError = createErrorAlerter(services)
 const app = await buildApp({ db, config, services, sweeper, reportError })
 await app.listen({ port: config.port, host: '0.0.0.0' })

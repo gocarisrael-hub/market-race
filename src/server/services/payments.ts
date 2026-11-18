@@ -1,4 +1,4 @@
-// Tranzila payments for orders. Ported from Dugri's pay/init + decideTranzilaRow + notify,
+// Card payments for orders (PeleCard by default, Tranzila kept). Tranzila part: Ported from Dugri's pay/init + decideTranzilaRow + notify,
 // against this product's `orders` and `pay_sessions` tables. See docs/PAYMENT.md.
 import { and, eq, gt, inArray, lte } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
@@ -11,7 +11,7 @@ import {
   type SweepState,
 } from '../payments/sweep.ts'
 import { SUCCESS_CODE, type TxRow, verifyTransaction } from '../payments/tranzila.ts'
-import type { Services } from './context.ts'
+import { cardEnabled, type Services } from './context.ts'
 import { alertOwner, links, sendToBuyer } from './delivery.ts'
 import { buildOrderGame, getOrder, type Order } from './orders.ts'
 import { getSetting } from './settings.ts'
@@ -39,39 +39,61 @@ export class PaymentError extends Error {
   }
 }
 
-/** Opens a pay window for an unpaid order. Returns Tranzila's iframe URL. */
+/** Opens a pay window for an unpaid order with the chosen provider. Returns the iframe URL. */
 export async function startPayment(db: DB, svc: Services, base: string, order: Order) {
-  if (!svc.tranzila.isConfigured()) throw new PaymentError('card_disabled')
+  if (!cardEnabled(svc)) throw new PaymentError('card_disabled')
   if (order.paidAt) throw new PaymentError('already_paid')
   if (!['pending_payment', 'quoted'].includes(order.status)) throw new PaymentError('not_payable')
   if (!(order.priceAgorot > 0)) throw new PaymentError('no_price')
+  // "m" + environment letter + 16 hex: lowercase and 18 chars, so it also fits PeleCard's ParamX.
   const token = svc.tranzila.newSessionToken()
   const brand = await getSetting(db, 'brand_name')
   const back = `${base}/pay/done?o=${encodeURIComponent(order.manageToken)}`
+  const provider = svc.paymentProvider
   try {
-    const { url } = await svc.tranzila.init({
-      amountAgorot: order.priceAgorot,
-      paramToken: token,
-      urls: {
-        goodUrl: back,
-        errorUrl: `${back}&error=1`,
-        notifyUrl: `${base}/api/payment/tranzila/notify?t=${encodeURIComponent(token)}`,
-      },
-      buyer: { email: order.buyerEmail, phone: order.buyerPhone },
-      description: `${brand} ${order.orderNo}`,
-    })
+    let url: string
+    let initTransactionId: string | null = null
+    if (provider === 'pelecard') {
+      const r = await svc.pelecard.init({
+        amountAgorot: order.priceAgorot,
+        paramToken: token,
+        urls: {
+          goodUrl: back,
+          errorUrl: `${back}&error=1`,
+          serverGoodUrl: `${base}/api/payment/pelecard/callback`,
+          serverErrorUrl: `${base}/api/payment/pelecard/callback?error=1`,
+        },
+      })
+      url = r.url
+      initTransactionId = r.transactionId
+    } else {
+      const r = await svc.tranzila.init({
+        amountAgorot: order.priceAgorot,
+        paramToken: token,
+        urls: {
+          goodUrl: back,
+          errorUrl: `${back}&error=1`,
+          notifyUrl: `${base}/api/payment/tranzila/notify?t=${encodeURIComponent(token)}`,
+        },
+        buyer: { email: order.buyerEmail, phone: order.buyerPhone },
+        description: `${brand} ${order.orderNo}`,
+      })
+      url = r.url
+    }
     await db.insert(paySessions).values({
       orderId: order.id,
       token,
       amountAgorot: order.priceAgorot,
       priceKey: orderPriceKey(order),
       env: svc.tranzila.envTag(),
+      provider,
+      raw: initTransactionId ? { initTransactionId } : null,
     })
     return { url, amountAgorot: order.priceAgorot }
   } catch (e) {
     // No window opened and no session recorded: this line is the only trace.
     console.error(
-      `[payment] ${order.orderNo}: tranzila pay/init failed for ${order.priceAgorot} agorot, no window opened: ${(e as Error)?.message ?? e}`,
+      `[payment] ${order.orderNo}: ${provider} pay/init failed for ${order.priceAgorot} agorot, no window opened: ${(e as Error)?.message ?? e}`,
     )
     throw new PaymentError('init_failed')
   }
@@ -150,7 +172,11 @@ export async function decideRow(db: DB, svc: Services, base: string, tx: TxRow):
       repriced.push(m)
       continue
     }
-    const settled = await settle(db, m.session.id, m.order.id, tx)
+    const settled = await settle(db, m.session.id, m.order.id, {
+      transactionId: tx.index,
+      paymentRef: `tranzila:${tx.index}${tx.approvalNo ? `/${tx.approvalNo}` : ''}`,
+      raw: tx.raw,
+    })
     if (settled) await onOrderPaid(db, svc, base, m.order.id)
     return { outcome: 'settled' }
   }
@@ -202,22 +228,23 @@ export async function decideRow(db: DB, svc: Services, base: string, tx: TxRow):
 }
 
 /** Marks session and order paid in one transaction. A transaction id can pay only one session. */
-async function settle(db: DB, sessionId: number, orderId: number, tx: TxRow): Promise<boolean> {
+export async function settle(
+  db: DB,
+  sessionId: number,
+  orderId: number,
+  paid: { transactionId: string; paymentRef: string; raw: unknown },
+): Promise<boolean> {
   return db.transaction(async (trx) => {
     const now = new Date()
     const s = await trx
       .update(paySessions)
-      .set({ status: 'paid', transactionId: tx.index, raw: tx.raw, settledAt: now })
+      .set({ status: 'paid', transactionId: paid.transactionId, raw: paid.raw, settledAt: now })
       .where(and(eq(paySessions.id, sessionId), eq(paySessions.status, 'open')))
       .returning()
     if (!s.length) return false
     const o = await trx
       .update(orders)
-      .set({
-        paidAt: now,
-        paymentRef: `tranzila:${tx.index}${tx.approvalNo ? `/${tx.approvalNo}` : ''}`,
-        status: 'awaiting_answers',
-      })
+      .set({ paidAt: now, paymentRef: paid.paymentRef, status: 'awaiting_answers' })
       .where(and(eq(orders.id, orderId), inArray(orders.status, ['pending_payment', 'quoted'])))
       .returning()
     if (!o.length) throw new Error(`order ${orderId} not payable at settle`)

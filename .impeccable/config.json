@@ -107,6 +107,13 @@
         "files": ["src/server/services/delivery.ts"],
         "createdAt": "2026-11-18T08:44:32.441Z",
         "reason": "Claude: transactional email HTML needs an email-safe system font; web fonts do not load reliably in mail clients"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": ["src/web/admin/admin.css"],
+        "createdAt": "2026-11-18T09:04:13.871Z",
+        "reason": "Claude: neutral grey quote rule marking riddle text in the plain internal admin (CLAUDE.md: admin is plain and functional), not a colored card accent"
       }
     ]
   }
