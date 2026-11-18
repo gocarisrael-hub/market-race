@@ -1,0 +1,133 @@
+// Step 3: optional photos, each shown next to its illustrated version.
+import { useEffect, useState } from 'react'
+import { ApiError, deletePhoto, listPhotos, type Photo, uploadPhoto } from '../api.ts'
+import { copy } from '../copy.ts'
+import { type Draft, errorText, MAX_PHOTOS } from '../logic.ts'
+import { Arrow, Back, Cta, Deco, Ring, Spinner } from '../ui.tsx'
+import { STEPS } from './Home.tsx'
+
+type Item = Photo & { local?: string }
+
+export function Photos(props: { token: string; draft: Draft }) {
+  const { token, draft } = props
+  const [items, setItems] = useState<Item[]>([])
+  const [uploading, setUploading] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [unavailable, setUnavailable] = useState(false)
+
+  useEffect(() => {
+    listPhotos(token).then(
+      (p) => setItems(p),
+      () => setUnavailable(true),
+    )
+  }, [token])
+
+  const room = MAX_PHOTOS - items.length - uploading
+  const add = async (files: FileList | null) => {
+    setError(null)
+    const list = Array.from(files ?? []).slice(0, Math.max(0, room))
+    if (!list.length) return
+    setUploading((n) => n + list.length)
+    for (const file of list) {
+      try {
+        const photo = await uploadPhoto(token, file)
+        setItems((xs) => [...xs, { ...photo, local: URL.createObjectURL(file) }])
+        setUnavailable(false)
+      } catch (e) {
+        setError(photoErrorText(e instanceof ApiError ? e : new ApiError('generic', 0)))
+      } finally {
+        setUploading((n) => n - 1)
+      }
+    }
+  }
+  const remove = async (p: Item) => {
+    try {
+      await deletePhoto(token, p.id)
+      setItems((xs) => xs.filter((x) => x.id !== p.id))
+    } catch (e) {
+      setError(errorText(e instanceof ApiError ? e.code : 'generic'))
+    }
+  }
+
+  return (
+    <main className="page">
+      <Deco
+        icon="coffee"
+        className="bob"
+        style={{ top: 30, left: -10, width: 70, ['--r' as string]: '8deg' }}
+      />
+      <Back href="/order/questions" />
+      <div style={{ marginTop: 18, marginLeft: 40 }}>
+        <div className="eyebrow">{copy.stepOf(3, STEPS)}</div>
+        <h1 className="title rise" style={{ fontSize: 56 }}>
+          {copy.photos.title(draft.manageToken === token ? draft.form : null)}
+        </h1>
+        <p className="lead">{copy.photos.intro}</p>
+      </div>
+
+      <div className="photos">
+        {items.map((p) => (
+          <div className="photo-pair rise" key={p.id}>
+            <img className="orig" src={p.local ?? p.url} alt={copy.photos.original} />
+            <Arrow />
+            <div className="drawn">
+              <span className="tape" aria-hidden="true" />
+              <img src={p.previewUrl} alt={copy.photos.drawn} />
+            </div>
+            <button type="button" className="link-btn remove" onClick={() => remove(p)}>
+              {copy.photos.remove}
+            </button>
+          </div>
+        ))}
+        {uploading > 0 && (
+          <div className="photo-pair" role="status">
+            <Spinner />
+            <span className="hint" style={{ gridColumn: '2 / -1' }}>
+              {copy.photos.uploading}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="section" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        {room > 0 && (
+          <label className="file-label">
+            {copy.photos.add(items.length)}
+            <Ring />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(e) => {
+                add(e.target.files)
+                e.target.value = ''
+              }}
+            />
+          </label>
+        )}
+        <span className="hint">{copy.photos.count(items.length, MAX_PHOTOS)}</span>
+      </div>
+      {room <= 0 && !uploading && <p className="hint">{copy.photos.full}</p>}
+      {unavailable && !items.length && !error && <p className="hint">{copy.photos.unavailable}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <p className="hint">{copy.photos.privacy}</p>
+
+      <Cta href={`/order/${token}/pay`}>{copy.photos.next}</Cta>
+    </main>
+  )
+}
+
+/** Friendly text for a failed upload (codes from src/server/routes/public-photos.ts). */
+function photoErrorText(e: ApiError) {
+  if (e.code === 'too_many') return copy.photos.full
+  if (e.status === 413) return copy.photos.tooBig
+  if (e.code === 'unsupported_type' || e.code === 'unreadable_image' || e.code === 'no_file')
+    return copy.photos.failed
+  if (e.code === 'locked') return copy.photos.locked
+  if (e.status === 404) return copy.photos.unavailable
+  return errorText(e.code)
+}

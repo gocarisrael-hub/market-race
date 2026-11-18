@@ -56,6 +56,11 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     return { questions: publicQuestions(questions, q.data.form) }
   })
 
+  const buyerBody = z.object({
+    name: z.string().trim().min(1).max(60),
+    phone,
+    email: z.string().email().max(120),
+  })
   const orderBody = z.object({
     occasionKey: z.string().min(1),
     form: z.enum(['she', 'he', 'couple']),
@@ -67,40 +72,39 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     answers: z.record(z.string(), z.string().max(300)).default({}),
     letterNotes: z.array(letterNote).max(10).default([]),
     answersLater: z.boolean().default(false),
-    buyer: z.object({ name: z.string().trim().min(1).max(60), phone, email: z.string().email().max(120) }),
+    // Optional when the order is created: the site creates it before the last step (photos need
+    // the manage token) and adds the buyer with PUT /api/orders/:token. Pay requires it.
+    buyer: buyerBody.optional(),
   })
 
-  app.post(
-    '/api/orders',
-    { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } },
-    async (req, reply) => {
-      const parsed = orderBody.safeParse(req.body)
-      if (!parsed.success) return reply.code(400).send({ error: 'invalid', issues: parsed.error.issues })
-      const b = parsed.data
-      const [occ] = await db.select().from(occasions).where(eq(occasions.key, b.occasionKey))
-      if (!occ?.active || occ.audience !== 'private') return reply.code(400).send({ error: 'bad_occasion' })
-      if (!occ.forms.includes(b.form)) return reply.code(400).send({ error: 'bad_form' })
-      const [min, max] = [await getSetting(db, 'min_people'), await getSetting(db, 'max_people')]
-      if (b.people < min || b.people > max) return reply.code(400).send({ error: 'bad_people' })
-      const [theme] = await db
-        .select()
-        .from(themes)
-        .where(and(eq(themes.id, b.themeId), eq(themes.active, true)))
-      if (!theme) return reply.code(400).send({ error: 'bad_theme' })
-      const [route] = await db
-        .select()
-        .from(routes)
-        .where(and(eq(routes.marketId, theme.marketId), eq(routes.active, true)))
-        .orderBy(asc(routes.id))
-      if (!route) return reply.code(400).send({ error: 'no_route' })
-      const price = await priceFor(db, b.occasionKey, b.people)
-      if (!price) return reply.code(400).send({ error: 'no_price' })
-      const questions = await questionsForOccasion(db, b.occasionKey)
-      const answers = cleanAnswers(b.answers, questions)
-
-      const order = await createOrder(db, {
-        kind: 'private',
-        status: 'pending_payment',
+  /** Validates an order body against the catalog. Returns the row values or an error code. */
+  async function draftValues(body: unknown) {
+    const parsed = orderBody.safeParse(body)
+    if (!parsed.success) return { error: 'invalid', issues: parsed.error.issues } as const
+    const b = parsed.data
+    const [occ] = await db.select().from(occasions).where(eq(occasions.key, b.occasionKey))
+    if (!occ?.active || occ.audience !== 'private') return { error: 'bad_occasion' } as const
+    if (!occ.forms.includes(b.form)) return { error: 'bad_form' } as const
+    const [min, max] = [await getSetting(db, 'min_people'), await getSetting(db, 'max_people')]
+    if (b.people < min || b.people > max) return { error: 'bad_people' } as const
+    const [theme] = await db
+      .select()
+      .from(themes)
+      .where(and(eq(themes.id, b.themeId), eq(themes.active, true)))
+    if (!theme) return { error: 'bad_theme' } as const
+    const [route] = await db
+      .select()
+      .from(routes)
+      .where(and(eq(routes.marketId, theme.marketId), eq(routes.active, true)))
+      .orderBy(asc(routes.id))
+    if (!route) return { error: 'no_route' } as const
+    const price = await priceFor(db, b.occasionKey, b.people)
+    if (!price) return { error: 'no_price' } as const
+    const questions = await questionsForOccasion(db, b.occasionKey)
+    return {
+      answersLater: b.answersLater,
+      buyer: b.buyer,
+      values: {
         occasionKey: b.occasionKey,
         form: b.form,
         honoreeName: b.honoreeName,
@@ -109,16 +113,69 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         people: b.people,
         allergens: b.allergens,
         diets: b.diets,
-        answers,
+        answers: cleanAnswers(b.answers, questions),
         letterNotes: b.letterNotes.filter((n) => n.text.trim()),
-        buyerName: b.buyer.name,
-        buyerPhone: b.buyer.phone,
-        buyerEmail: b.buyer.email,
         priceAgorot: price,
+      },
+    } as const
+  }
+
+  app.post(
+    '/api/orders',
+    { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } },
+    async (req, reply) => {
+      const d = await draftValues(req.body)
+      if ('error' in d) return reply.code(400).send(d)
+      const order = await createOrder(db, {
+        kind: 'private',
+        status: 'pending_payment',
+        ...d.values,
+        buyerName: d.buyer?.name ?? '',
+        buyerPhone: d.buyer?.phone ?? '',
+        buyerEmail: d.buyer?.email ?? '',
       })
-      if (!b.answersLater)
+      if (!d.answersLater)
         await db.update(orders).set({ answersSubmittedAt: new Date() }).where(eq(orders.id, order.id))
-      return { orderNo: order.orderNo, manageToken: order.manageToken, amountAgorot: price }
+      return { orderNo: order.orderNo, manageToken: order.manageToken, amountAgorot: order.priceAgorot }
+    },
+  )
+
+  // The site edits an unpaid private order while the buyer goes back and forth between steps.
+  // Safe after a pay window opened: a charge only settles when the order is still the same purchase.
+  app.put(
+    '/api/orders/:token',
+    { config: { rateLimit: { max: 60, timeWindow: '10 minutes' } } },
+    async (req, reply) => {
+      const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
+      const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
+      if (!order) return reply.code(404).send({ error: 'not_found' })
+      if (order.kind !== 'private' || order.paidAt || order.status !== 'pending_payment')
+        return reply.code(409).send({ error: 'not_editable' })
+      const raw = (req.body ?? {}) as Record<string, unknown>
+      if (!('occasionKey' in raw)) {
+        // Buyer details only (the last step of the site).
+        const b = z.object({ buyer: buyerBody }).safeParse(raw)
+        if (!b.success) return reply.code(400).send({ error: 'invalid', issues: b.error.issues })
+        const { name, phone: buyerPhone, email } = b.data.buyer
+        await db
+          .update(orders)
+          .set({ buyerName: name, buyerPhone, buyerEmail: email })
+          .where(eq(orders.id, order.id))
+        return { orderNo: order.orderNo, manageToken: order.manageToken, amountAgorot: order.priceAgorot }
+      }
+      const d = await draftValues(raw)
+      if ('error' in d) return reply.code(400).send(d)
+      await db
+        .update(orders)
+        .set({
+          ...d.values,
+          ...(d.buyer
+            ? { buyerName: d.buyer.name, buyerPhone: d.buyer.phone, buyerEmail: d.buyer.email }
+            : {}),
+          answersSubmittedAt: d.answersLater ? null : (order.answersSubmittedAt ?? new Date()),
+        })
+        .where(eq(orders.id, order.id))
+      return { orderNo: order.orderNo, manageToken: order.manageToken, amountAgorot: d.values.priceAgorot }
     },
   )
 
@@ -129,6 +186,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
       const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
       if (!order) return reply.code(404).send({ error: 'not_found' })
+      if (order.kind === 'private' && !(order.buyerEmail && order.buyerPhone && order.buyerName))
+        return reply.code(400).send({ error: 'no_buyer' })
       try {
         return await startPayment(db, services, base, order)
       } catch (e) {
