@@ -9,7 +9,10 @@ import { fakeServices } from './fakes.ts'
 
 export const OWNER = { email: 'owner@example.com', password: 'correct horse battery' }
 
-export async function makeTestApp(overrides: Partial<Config> = {}) {
+export async function makeTestApp(
+  overrides: Partial<Config> = {},
+  serviceOpts: Parameters<typeof fakeServices>[0] = {},
+) {
   const handle = await openDb('pglite:memory')
   const config: Config = {
     env: 'test',
@@ -20,7 +23,7 @@ export async function makeTestApp(overrides: Partial<Config> = {}) {
     bootstrapOwner: null,
     ...overrides,
   }
-  const services = fakeServices()
+  const services = fakeServices(serviceOpts)
   const app = await buildApp({ db: handle.db, config, services })
   await createOwner(handle.db, OWNER.email, OWNER.password)
   const close = async () => {

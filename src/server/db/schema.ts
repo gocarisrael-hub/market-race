@@ -249,6 +249,7 @@ export const paySessions = pgTable(
     // What was being bought when the window opened; a charge from an older window does not pay a changed order.
     priceKey: text().notNull().default(''),
     env: text().notNull(),
+    provider: text().$type<'pelecard' | 'tranzila'>().notNull().default('tranzila'),
     status: text().$type<'open' | 'paid' | 'failed'>().notNull().default('open'),
     transactionId: text(),
     raw: jsonb(),

@@ -1,0 +1,1 @@
+ALTER TABLE "pay_sessions" ADD COLUMN "provider" text DEFAULT 'tranzila' NOT NULL;

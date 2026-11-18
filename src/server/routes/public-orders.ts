@@ -5,9 +5,11 @@ import { z } from 'zod'
 import type { AppContext } from '../app.ts'
 import { gameStates, leads, markets, occasions, orders, redemptions, routes, themes } from '../db/schema.ts'
 import { ALLERGENS, DIETS, FORMS, type Form } from '../domain/types.ts'
+import { cardEnabled } from '../services/context.ts'
 import { links, qrPng } from '../services/delivery.ts'
 import { buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
 import { afterBuilt, handleNotify, PaymentError, priceFor, startPayment } from '../services/payments.ts'
+import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
 import { fileUrl } from '../services/play.ts'
 import { getSetting } from '../services/settings.ts'
 
@@ -45,7 +47,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       maxPeople: await getSetting(db, 'max_people'),
       allergens: ALLERGENS,
       diets: DIETS,
-      cardEnabled: services.tranzila.isConfigured(),
+      cardEnabled: cardEnabled(services),
+      cardProvider: services.paymentProvider,
     }
   })
 
@@ -198,6 +201,18 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     },
   )
 
+  // PeleCard server-side feedback. Untrusted body; settles only after re-fetching the transaction.
+  app.post('/api/payment/pelecard/callback', async (req, reply) => {
+    const outcome = await handlePelecardCallback(
+      db,
+      services,
+      base,
+      (req.body ?? {}) as Record<string, unknown>,
+    )
+    if (outcome === 'retry') return reply.code(502).send({ error: 'verification failed' })
+    return { ok: true }
+  })
+
   app.post('/api/payment/tranzila/notify', async (req) => {
     await handleNotify(
       db,
@@ -215,6 +230,12 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
     const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
     if (!order) return reply.code(404).send({ error: 'not_found' })
+    // Back from a PeleCard window and still unpaid: ask PeleCard directly in case the callback was lost.
+    if (!order.paidAt && services.paymentProvider === 'pelecard') {
+      await checkPelecardReturn(db, services, base, order)
+      const [fresh] = await db.select().from(orders).where(eq(orders.id, order.id))
+      if (fresh) Object.assign(order, fresh)
+    }
     const [state] = await db.select().from(gameStates).where(eq(gameStates.orderId, order.id))
     const used = await db.select().from(redemptions).where(eq(redemptions.orderId, order.id))
     const playable = ['ready', 'active', 'done'].includes(order.status)
