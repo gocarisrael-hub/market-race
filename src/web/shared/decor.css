@@ -140,3 +140,110 @@
     display: none;
   }
 }
+
+/* A doodle as an icon: inline next to a heading or a line of text, still. */
+.doodle.icon {
+  /* Wins over the absolute "svg fills its parent" rules of brushes and paper notes. */
+  position: relative;
+  inset: auto;
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  transform: rotate(var(--r, 0deg));
+}
+
+/* Secondary buttons: a handwritten word inside a hand-drawn outline (SketchShape), never a bare
+   underlined link. Each app sets --sketch-ink and --sketch-line. */
+.sketch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 22px 8px;
+  border: 0;
+  background: none;
+  color: var(--sketch-ink, currentColor);
+  font-family: "Amatic SC", Heebo, sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sketch > :not(.sketch-shape) {
+  position: relative;
+}
+.sketch-shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.sketch-shape path {
+  fill: var(--sketch-fill, rgba(255, 255, 255, 0.4));
+  stroke: var(--sketch-line, currentColor);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sketch-shape .again {
+  fill: none;
+  stroke-width: 1.2;
+  opacity: 0.55;
+}
+.sketch.small {
+  min-height: 40px;
+  padding: 4px 16px 6px;
+  font-size: 23px;
+}
+.sketch .doodle.icon {
+  width: 26px;
+  height: 26px;
+}
+.sketch.small .doodle.icon {
+  width: 22px;
+  height: 22px;
+}
+.sketch:active {
+  transform: translateY(1px) rotate(-0.6deg);
+}
+@media (hover: hover) {
+  .sketch:hover .sketch-shape path:first-child {
+    stroke-width: 2.8;
+  }
+}
+
+/* A small burst of doodles that pops once (a correct answer). Still with reduced motion. */
+.burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.burst .doodle {
+  position: absolute;
+  animation: burst-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+@keyframes burst-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2) rotate(calc(var(--r, 0deg) - 30deg));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(var(--r, 0deg));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .burst .doodle {
+    animation: none;
+    transform: rotate(var(--r, 0deg));
+  }
+  .sketch:active {
+    transform: none;
+  }
+}

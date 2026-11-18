@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ApiError, type Shop, sendLead } from '../api.ts'
 import { copy } from '../copy.ts'
 import { companyOccasions, errorText, type Lead, leadErrors } from '../logic.ts'
-import { Back, Cta, Deco, Field, Link, Opt } from '../ui.tsx'
+import { Back, Cta, Deco, Field, Opt, Sketch } from '../ui.tsx'
 
 export function Companies({ shop }: { shop: Shop }) {
   const [lead, setLead] = useState<Lead>({
@@ -62,7 +62,9 @@ export function Companies({ shop }: { shop: Shop }) {
           <p className="status" role="status">
             {b}
           </p>
-          <Link href="/">{copy.companies.backHome}</Link>
+          <Sketch href="/" icon="house" small>
+            {copy.companies.backHome}
+          </Sketch>
         </div>
       </main>
     )

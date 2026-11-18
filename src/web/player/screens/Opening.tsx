@@ -48,6 +48,8 @@ export function Opening({ view, t, act }: ScreenProps) {
             { top: -18, left: '2%', size: 54, rot: -10 },
             { top: 112, left: '3%', size: 40, rot: -6 },
             { top: 104, right: '4%', size: 38, rot: 12 },
+            { top: 40, left: '-2%', size: 30, rot: 14 },
+            { top: 36, right: '-1%', size: 28, rot: -12 },
           ]}
         />
         <Ribbon text={title} fontSize={ribbonFontSize(title)} />

@@ -1,4 +1,5 @@
 // Redeem: the screen the vendor checks. Day's code, who it is for, portions, tasting, allergens.
+import { Icon } from '../../shared/decor.tsx'
 import { joinList } from '../copy.ts'
 import { BrushButton, Paper, Underline } from '../draw.tsx'
 import { stopIcon } from '../logic.ts'
@@ -21,7 +22,10 @@ export function Redeem({ view, t, act }: ScreenProps) {
       <img className="redeem-icon bob" src={stopIcon(cur.index)} alt="" />
 
       <div className="code-block">
-        <div className="muted-label">{t('redeem.codeLabel')}</div>
+        <div className="muted-label with-icon">
+          <Icon name="key" size={28} tilt={-10} />
+          {t('redeem.codeLabel')}
+        </div>
         <div
           className="code"
           dir="ltr"
@@ -44,15 +48,20 @@ export function Redeem({ view, t, act }: ScreenProps) {
 
       <div className="redeem-what">
         <div className="portions">
+          <Icon name="plate" size={34} tilt={-4} />
           {rd.portions === 1
             ? t('redeem.portionsOne', { tasting: rd.tasting })
             : t('redeem.portions', { n: rd.portions, tasting: rd.tasting })}
         </div>
-        <div className="for">{t('redeem.for', { name: rd.name })}</div>
+        <div className="for">
+          <Icon name="people" size={26} tilt={4} />
+          {t('redeem.for', { name: rd.name })}
+        </div>
       </div>
 
       {rd.allergens.length > 0 && (
         <Paper className="allergy" tilt={-2}>
+          <Icon name="alert" size={30} />
           {t('redeem.allergens', { allergens: joinList(rd.allergens) })}
         </Paper>
       )}

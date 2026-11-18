@@ -28,7 +28,19 @@ import {
   step2Error,
 } from '../logic.ts'
 import { navigate } from '../router.ts'
-import { Back, Cta, Deco, Failed, Loading, Opt, QField, StepTrail, TornPaper } from '../ui.tsx'
+import {
+  Back,
+  Cta,
+  Deco,
+  Failed,
+  Loading,
+  Opt,
+  QField,
+  Sketch,
+  StepTrail,
+  TitleIcon,
+  TornPaper,
+} from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => void }) {
@@ -113,11 +125,14 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
       <Back href="/" />
       <div style={{ marginTop: 18, marginLeft: 80 }}>
         <StepTrail step={2} total={STEPS} />
-        <h1 className="title rise">
-          {t1}
-          <br />
-          {t2}
-        </h1>
+        <div className="title-row">
+          <h1 className="title rise">
+            {t1}
+            <br />
+            {t2}
+          </h1>
+          <TitleIcon icon="pencil" />
+        </div>
         <p className="lead">{copy.questions.intro}</p>
       </div>
 
@@ -191,24 +206,23 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
                 onChange={(v) => setNote(i, { signature: v })}
               />
               {d.letterNotes.length > 1 && (
-                <button
-                  type="button"
-                  className="link-btn"
+                <Sketch
+                  small
+                  icon="scissors"
                   onClick={() => set({ letterNotes: d.letterNotes.filter((_, j) => j !== i) })}
                 >
                   {copy.questions.removeNote}
-                </button>
+                </Sketch>
               )}
             </div>
           ))}
           {notes.length < MAX_NOTES && (
-            <button
-              type="button"
-              className="add-link"
+            <Sketch
+              className="add-note"
               onClick={() => set({ letterNotes: [...notes, { text: '', signature: '' }] })}
             >
               {copy.questions.addNote}
-            </button>
+            </Sketch>
           )}
         </TornPaper>
       )}

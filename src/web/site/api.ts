@@ -68,6 +68,8 @@ export type Manage = {
   honoree: string
   form: string
   occasionKey: string
+  /** The occasion's doodle set. */
+  decor?: string
   people: number
   amountAgorot: number
   validUntil: string | null

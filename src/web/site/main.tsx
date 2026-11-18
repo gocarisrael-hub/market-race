@@ -25,7 +25,7 @@ import { PayMock } from './pages/PayMock.tsx'
 import { Photos } from './pages/Photos.tsx'
 import { Questions } from './pages/Questions.tsx'
 import { useLocation } from './router.ts'
-import { Failed, Link, Loading } from './ui.tsx'
+import { Failed, Loading, Sketch } from './ui.tsx'
 
 function App() {
   const loc = useLocation()
@@ -73,7 +73,9 @@ function App() {
           <p className="status" style={{ marginTop: 80 }}>
             {copy.notFound}
           </p>
-          <Link href="/">{copy.toHome}</Link>
+          <Sketch href="/" icon="house" small>
+            {copy.toHome}
+          </Sketch>
         </main>
       )
   }

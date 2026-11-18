@@ -15,7 +15,7 @@ import {
   ensureOccasionDecor,
   seedDemo,
 } from '../../src/server/services/seed-demo.ts'
-import { DECOR_SETS } from '../../src/web/shared/decor.tsx'
+import { DECOR_SETS, DOODLES } from '../../src/web/shared/decor.tsx'
 import { makeTestApp, ownerCookie } from '../helpers/app.ts'
 import { catalog, order } from '../helpers/fixtures.ts'
 
@@ -48,6 +48,14 @@ describe('decor sets', () => {
     for (const d of DECORS) expect(DECOR_SETS[d].length).toBeGreaterThanOrEqual(3)
     expect(DECOR_SETS.birthday).toEqual(expect.arrayContaining(['balloons', 'cake', 'partyHat', 'confetti']))
     expect(DECOR_SETS.love).toEqual(expect.arrayContaining(['heart', 'ring', 'lips', 'flower']))
+  })
+
+  it('gives every occasion a rich set of distinct, drawn doodles', () => {
+    for (const d of ['birthday', 'love', 'family', 'friends', 'generic'] as const) {
+      expect(DECOR_SETS[d].length).toBeGreaterThanOrEqual(10)
+      expect(new Set(DECOR_SETS[d]).size).toBe(DECOR_SETS[d].length)
+    }
+    for (const d of DECORS) for (const name of DECOR_SETS[d]) expect(DOODLES).toContain(name)
   })
 })
 

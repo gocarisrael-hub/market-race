@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, getManage, startPay } from './api.ts'
 import { copy } from './copy.ts'
 import { errorText, isPayMessage } from './logic.ts'
-import { Link, Spinner } from './ui.tsx'
+import { Brush, Sketch, Spinner } from './ui.tsx'
 
 type State =
   | { s: 'idle' }
@@ -80,9 +80,9 @@ export function PayLayer({ pay, token }: { pay: ReturnType<typeof usePay>; token
       <div className="sheet" role="dialog" aria-modal="true" aria-label={copy.pay.sheetTitle}>
         <header>
           <h2 className="sheet-title">{copy.pay.sheetTitle}</h2>
-          <button type="button" className="link-btn" onClick={pay.close}>
+          <Sketch small onClick={pay.close}>
             {copy.pay.close}
-          </button>
+          </Sketch>
         </header>
         <iframe
           title={copy.pay.sheetTitle}
@@ -105,9 +105,9 @@ export function PayLayer({ pay, token }: { pay: ReturnType<typeof usePay>; token
       <div className="overlay" role="status">
         <h2>{copy.pay.checking}</h2>
         <p className="status">{copy.pay.slow}</p>
-        <Link href={`/m/${token}`} className="big-link">
+        <Brush href={`/m/${token}`} small>
           {copy.pay.toManage}
-        </Link>
+        </Brush>
       </div>
     )
   return null

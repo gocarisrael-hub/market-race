@@ -1,8 +1,19 @@
 // The buyer's edit link: after paying (mock provider), the buyer opens the manage page, taps
 // "ערוך", changes an answer, the name and the color, and the game shows the change.
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 
 test.use({ viewport: { width: 390, height: 844 } })
+
+/** Every visible action is drawn (brush or outline), none is a bare underlined text link. */
+async function noBareLinks(page: Page) {
+  const bare = await page.$$eval('a, button', (els) =>
+    els
+      .filter((el) => (el as HTMLElement).offsetParent !== null)
+      .filter((el) => getComputedStyle(el).textDecorationLine.includes('underline'))
+      .map((el) => el.textContent?.trim()),
+  )
+  expect(bare).toEqual([])
+}
 
 test('buyer edits an answer after paying and sees it in the first riddle', async ({ page }) => {
   const shop = await (await page.request.get('/api/shop')).json()
@@ -26,8 +37,16 @@ test('buyer edits an answer after paying and sees it in the first riddle', async
   await page.goto(`/m/${manageToken}`)
   await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.')
   await expect(page.getByText('אפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק.')).toBeVisible()
+  // The photo control is a drawn drop area with empty taped slots and a count.
+  const drop = page.getByRole('link', { name: 'להוסיף תמונות למשחק' })
+  await expect(drop).toHaveClass(/photo-drop/)
+  await expect(drop.locator('.drop-count')).toHaveText('0/5')
+  await expect(drop.locator('.slot')).toHaveCount(5)
+  await noBareLinks(page)
   await page.getByRole('button', { name: 'ערוך' }).click()
   await expect(page.getByRole('heading', { name: 'עריכה' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'ביטול' })).toHaveClass(/sketch/)
+  await noBareLinks(page)
   const field = page.locator('input[name="first_love"]')
   await expect(field).toHaveValue('יואב מהשכבה')
   await field.fill('דני מהצבא')

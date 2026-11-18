@@ -1330,15 +1330,7 @@ h2 {
   text-decoration: none;
 }
 .help-plain {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border: 0;
-  background: none;
-  color: var(--ink-soft);
-  font-size: 16px;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  cursor: pointer;
+  margin-top: 14px;
 }
 .help-confirm .help-failed {
   margin: 10px 0 0;
@@ -1552,4 +1544,62 @@ h2 {
   .pop {
     transform: rotate(-3deg);
   }
+}
+
+/* ---------- Drawn icons and secondary buttons ---------- */
+
+:root {
+  --sketch-ink: var(--on-bg);
+  --sketch-line: var(--on-bg);
+  --sketch-fill: transparent;
+}
+.paper {
+  /* On paper the doodles and outlines use the paper's ink, also in dark themes. */
+  --decor-ink: var(--ink);
+  --sketch-ink: var(--ink);
+  --sketch-line: var(--ink);
+}
+.note-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hint-line .doodle.icon {
+  margin-top: -4px;
+}
+.answer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.muted-label.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.correct-wrap {
+  position: relative;
+  display: inline-block;
+  padding: 0 34px;
+}
+.correct-wrap .burst {
+  z-index: 0;
+}
+.portions .doodle.icon {
+  margin: -6px 0 0 6px;
+}
+.for {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.allergy .doodle.icon {
+  float: right;
+  margin: 0 0 0 8px;
 }

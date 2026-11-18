@@ -73,6 +73,10 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
           spots={[
             { top: 4, left: '1%', size: 48, rot: -10 },
             { top: 46, right: '1%', size: 42, rot: 12 },
+            { top: 96, left: '6%', size: 30, rot: 8 },
+            { top: 0, right: '22%', size: 28, rot: -14 },
+            { top: 104, right: '14%', size: 26, rot: 18 },
+            { top: 6, left: '24%', size: 24, rot: -6 },
           ]}
         />
         <div className="muted-label">{t('letter.kicker')}</div>
