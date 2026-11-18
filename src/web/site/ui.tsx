@@ -1,11 +1,9 @@
 // Hand-drawn building blocks, SVG paths taken from docs/mockup.
-import { type CSSProperties, type ReactNode, useEffect, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { themeVars } from '../../server/domain/look.ts'
 import type { Palette } from '../../server/domain/types.ts'
 import { type DoodleName, Icon, SketchShape } from '../shared/decor.tsx'
-import { listPhotos, type Photo } from './api.ts'
 import { copy } from './copy.ts'
-import { MAX_PHOTOS } from './logic.ts'
 import { navigate } from './router.ts'
 
 const BRUSH =
@@ -434,59 +432,6 @@ export function TitleIcon({ icon }: { icon: DoodleName }) {
       <Icon name={icon} size={58} tilt={8} />
       <Ring />
     </span>
-  )
-}
-
-// The paper slots of the photo control: dashes for empty ones.
-const SLOT = 'M4 5 C 20 3, 40 6, 56 4 C 58 22, 55 44, 57 62 C 40 64, 20 61, 3 63 C 5 44, 2 22, 4 5 Z'
-const DROP =
-  'M8 10 C 90 4, 210 9, 292 6 C 296 40, 293 80, 295 112 C 210 117, 90 113, 6 115 C 3 80, 7 40, 8 10 Z'
-
-/**
- * The photo control of the manage page: a dashed, hand-drawn drop area with a camera, a row of
- * taped slots (filled with the drawn versions) and a "1/5" count. It leads to the photos page.
- */
-export function PhotoDrop({ token, count }: { token: string; count: number }) {
-  const [photos, setPhotos] = useState<Photo[]>([])
-  useEffect(() => {
-    if (!count) return
-    listPhotos(token).then(
-      (r) => setPhotos(r.photos),
-      () => setPhotos([]),
-    )
-  }, [token, count])
-  const n = Math.max(count, photos.length)
-  return (
-    <Link href={`/order/${token}/photos`} className="photo-drop">
-      <svg className="drop-edge" viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
-        <path d={DROP} vectorEffect="non-scaling-stroke" />
-      </svg>
-      <span className="sr-only">{copy.manage.photosLink(count)}</span>
-      <span className="drop-top" aria-hidden="true">
-        <Icon name="camera" size={52} tilt={-8} />
-        <span className="drop-word">{n ? copy.manage.photosChange : copy.manage.photosAdd}</span>
-        <span className="drop-count">{copy.manage.photosCount(n, MAX_PHOTOS)}</span>
-      </span>
-      <span className="drop-slots" aria-hidden="true">
-        {Array.from({ length: MAX_PHOTOS }, (_, i) => {
-          const p = photos[i]
-          return (
-            <span
-              // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
-              key={i}
-              className={p || i < n ? 'slot full' : 'slot'}
-              style={{ ['--r' as string]: `${[-5, 3, -2, 4, -3][i]}deg` }}
-            >
-              <svg viewBox="0 0 60 66" preserveAspectRatio="none" aria-hidden="true">
-                <path d={SLOT} vectorEffect="non-scaling-stroke" />
-              </svg>
-              {p ? <img src={p.previewUrl} alt="" /> : i >= n && <span className="plus">+</span>}
-              {(p || i < n) && <span className="washi" />}
-            </span>
-          )
-        })}
-      </span>
-    </Link>
   )
 }
 

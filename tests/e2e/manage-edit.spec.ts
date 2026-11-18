@@ -38,8 +38,8 @@ test('buyer edits an answer after paying and sees it in the first riddle', async
   await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.')
   await expect(page.getByText('אפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק.')).toBeVisible()
   // The photo control is a drawn drop area with empty taped slots and a count.
-  const drop = page.getByRole('link', { name: 'להוסיף תמונות למשחק' })
-  await expect(drop).toHaveClass(/photo-drop/)
+  const drop = page.locator('.photo-drop')
+  await expect(drop.getByRole('link', { name: 'להוסיף תמונות למשחק' })).toBeVisible()
   await expect(drop.locator('.drop-count')).toHaveText('0/5')
   await expect(drop.locator('.slot')).toHaveCount(5)
   await noBareLinks(page)

@@ -38,6 +38,12 @@ test('an order with two photos: on the riddles, in a lightbox, and in the letter
   // Taped prints of the drawn photos in the drop area's slots.
   await expect(page.locator('.photo-drop .drop-count')).toHaveText('2/5')
   await expect(page.locator('.photo-drop .slot img')).toHaveCount(2)
+  // One control: each filled slot carries its background toggle and a remove action.
+  const cards = page.locator('.photo-drop .slot-card')
+  await expect(cards).toHaveCount(2)
+  await expect(cards.getByRole('radiogroup', { name: 'הרקע של התמונה' })).toHaveCount(2)
+  await expect(cards.getByRole('button', { name: 'הסרה' })).toHaveCount(2)
+  await expect(page.locator('.manage-photos')).toHaveCount(0)
   const gameUrl: string = (await (await page.request.get(`/api/manage/${token}`)).json()).gameLink
   const gameToken = gameUrl.split('/g/')[1]
 
