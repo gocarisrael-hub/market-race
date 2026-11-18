@@ -1,5 +1,28 @@
 import { useEffect, useState } from 'react'
 import { ApiError, api } from './api.ts'
+import {
+  CodesPage,
+  MarketsPage,
+  OccasionsPage,
+  SettingsPage,
+  StallsPage,
+  TastingsPage,
+} from './pages/basic.tsx'
+import { QuestionSetsPage, RiddlesPage } from './pages/content.tsx'
+import { RoutesPage, ThemesPage } from './pages/routes-themes.tsx'
+import { useLoc } from './ui.tsx'
+
+const SECTIONS = [
+  { key: 'markets', label: 'שווקים', Page: MarketsPage },
+  { key: 'stalls', label: 'דוכנים', Page: StallsPage },
+  { key: 'tastings', label: 'טעימות', Page: TastingsPage },
+  { key: 'riddles', label: 'חידות', Page: RiddlesPage },
+  { key: 'question-sets', label: 'שאלונים', Page: QuestionSetsPage },
+  { key: 'occasions', label: 'אירועים', Page: OccasionsPage },
+  { key: 'routes', label: 'מסלולים', Page: RoutesPage },
+  { key: 'themes', label: 'עיצובים', Page: ThemesPage },
+  { key: 'settings', label: 'הגדרות', Page: SettingsPage },
+]
 
 type Owner = { id: number; email: string; name: string }
 
@@ -14,24 +37,45 @@ export function App() {
 
   if (owner === undefined) return null
   if (!owner) return <Login onLogin={setOwner} />
+  return <Shell owner={owner} onLogout={() => setOwner(null)} />
+}
+
+function Shell({ owner, onLogout }: { owner: Owner; onLogout: () => void }) {
+  const loc = useLoc()
+  const current = SECTIONS.find((s) => s.key === loc.section)
   return (
     <div className="shell">
-      <header>
+      <header className="no-print">
         <strong>market-race admin</strong>
         <span>{owner.email}</span>
         <button
           type="button"
           onClick={async () => {
             await api('/logout', { method: 'POST' })
-            setOwner(null)
+            onLogout()
           }}
         >
           התנתקות
         </button>
       </header>
-      <main>
-        <h1>ניהול</h1>
-      </main>
+      <div className="layout">
+        <nav className="no-print">
+          {SECTIONS.map((s) => (
+            <a key={s.key} href={`#/${s.key}`} className={s.key === loc.section ? 'on' : ''}>
+              {s.label}
+            </a>
+          ))}
+        </nav>
+        <main>
+          {loc.section === 'codes' ? (
+            <CodesPage />
+          ) : current ? (
+            <current.Page key={current.key} />
+          ) : (
+            <h1>ניהול</h1>
+          )}
+        </main>
+      </div>
     </div>
   )
 }
