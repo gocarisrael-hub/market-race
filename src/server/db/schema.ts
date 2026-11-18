@@ -200,6 +200,9 @@ export const gameStates = pgTable('game_states', {
   stopIndex: integer().notNull().default(0),
   step: text().$type<'opening' | 'riddle' | 'revealed' | 'redeem' | 'done'>().notNull().default('opening'),
   hintsShown: integer().array().notNull().default(sql`'{}'::integer[]`),
+  // Stops where the stall was closed on the day and the backup stall was used.
+  backupStops: integer().array().notNull().default(sql`'{}'::integer[]`),
+  wrongAnswers: integer().notNull().default(0),
   // Bumped on every change; clients poll and re-render when it moves.
   version: integer().notNull().default(0),
   startedAt: timestamp({ withTimezone: true }),
