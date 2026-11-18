@@ -57,6 +57,13 @@
       "when": 1795011372288,
       "tag": "0007_photo_background",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795013037421,
+      "tag": "0008_captain_players_hint_questions",
+      "breakpoints": true
     }
   ]
 }
