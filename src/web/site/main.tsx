@@ -11,6 +11,7 @@ import { CompanyPay } from './pages/CompanyPay.tsx'
 import { Home } from './pages/Home.tsx'
 import { Manage } from './pages/Manage.tsx'
 import { PayDone } from './pages/PayDone.tsx'
+import { PayMock } from './pages/PayMock.tsx'
 import { Photos } from './pages/Photos.tsx'
 import { Questions } from './pages/Questions.tsx'
 import { useLocation } from './router.ts'
@@ -22,7 +23,7 @@ function App() {
   const [shop, setShop] = useState<Shop | null>(null)
   const [shopError, setShopError] = useState(false)
   const [draft, setDraftState] = useState<Draft | null>(null)
-  const needsShop = !['payDone', 'manage', 'companyPay'].includes(route.page)
+  const needsShop = !['payDone', 'payMock', 'manage', 'companyPay'].includes(route.page)
 
   useEffect(() => {
     if (!needsShop || shop) return
@@ -47,6 +48,8 @@ function App() {
   }
 
   switch (route.page) {
+    case 'payMock':
+      return <PayMock search={loc.search} />
     case 'payDone':
       return <PayDone search={loc.search} />
     case 'manage':

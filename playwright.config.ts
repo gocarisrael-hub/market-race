@@ -22,6 +22,7 @@ export default defineConfig({
       ADMIN_BOOTSTRAP_EMAIL: 'owner@example.com',
       ADMIN_BOOTSTRAP_PASSWORD: 'e2e-password',
       E2E_SEED: '1',
+      PAYMENT_PROVIDER: 'mock',
     },
   },
 })

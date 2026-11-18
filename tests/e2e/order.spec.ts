@@ -84,9 +84,14 @@ test('buyer orders a game up to the pay step', async ({ page }) => {
   await expect(page.getByText('כתובת האימייל לא נראית תקינה')).toBeVisible()
   await page.getByLabel('אימייל').fill('noa@example.com')
   await shot(page, '4-checkout')
+  // e2e runs with the mock provider; simulate card payment being off to check the message.
+  await page.route('**/api/orders/*/pay', (route) =>
+    route.fulfill({ status: 400, json: { error: 'card_disabled' } }),
+  )
   await page.getByRole('button', { name: 'לתשלום 495 ₪' }).click()
-  // Tranzila is not configured in e2e: a clear message, the order is kept.
+  // Card payment off: a clear message, the order is kept.
   await expect(page.getByText('התשלום באשראי עוד לא פתוח באתר')).toBeVisible()
+  await page.unroute('**/api/orders/*/pay')
   await shot(page, '4-checkout-card-disabled')
 
   // Refresh keeps the step: the summary comes from the server, the buyer from the draft.
@@ -182,8 +187,12 @@ test('company payment link shows the amount and the payment state', async ({ pag
   await page.goto(`/pay/${token}`)
   await expect(page.getByTestId('total')).toContainText('396 ₪')
   await shot(page, '7-pay-link')
+  await page.route('**/api/orders/*/pay', (route) =>
+    route.fulfill({ status: 400, json: { error: 'card_disabled' } }),
+  )
   await page.getByRole('button', { name: 'לתשלום 396 ₪' }).click()
   await expect(page.getByText('התשלום באשראי עוד לא פתוח באתר')).toBeVisible()
+  await page.unroute('**/api/orders/*/pay')
 
   // Opened outside the iframe, /pay/done continues to the manage page and checks the payment.
   await page.goto(`/pay/done?o=${token}`)
@@ -207,4 +216,24 @@ test('companies leave a lead', async ({ page }) => {
   await shot(page, '8-companies')
   await page.getByRole('button', { name: 'שלחו לנו' }).click()
   await expect(page.getByText('נחזור אליכם בקרוב עם הצעה.')).toBeVisible()
+})
+
+test('a mock payment settles the order and the manage page shows the game link', async ({ page }) => {
+  await stepOne(page)
+  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
+  await page.getByLabel(/איך קוראים לה/).fill('מיכל')
+  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+  const token = await toToken(page)
+  await page.getByRole('link', { name: 'לתשלום' }).click()
+  await page.getByLabel('השם שלכם').fill('נועה')
+  await page.getByLabel('טלפון').fill('050-1234567')
+  await page.getByLabel('אימייל').fill('noa@example.com')
+  await page.getByRole('button', { name: /^לתשלום/ }).click()
+
+  const sheet = page.frameLocator('iframe')
+  await expect(sheet.getByText('תשלום לדוגמה, לא נגבה כסף')).toBeVisible()
+  await sheet.getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
+
+  await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })
+  await expect(page.locator('a.big-link')).toHaveAttribute('href', /\/g\//, { timeout: 30_000 })
 })

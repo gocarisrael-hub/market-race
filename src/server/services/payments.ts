@@ -53,7 +53,10 @@ export async function startPayment(db: DB, svc: Services, base: string, order: O
   try {
     let url: string
     let initTransactionId: string | null = null
-    if (provider === 'pelecard') {
+    if (provider === 'mock') {
+      // A fake payment page on our own site (staging only; cardEnabled is false in production).
+      url = `${base}/pay/mock?s=${encodeURIComponent(token)}`
+    } else if (provider === 'pelecard') {
       const r = await svc.pelecard.init({
         amountAgorot: order.priceAgorot,
         paramToken: token,

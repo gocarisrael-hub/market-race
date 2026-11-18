@@ -1,8 +1,25 @@
 # Payment
 
-Two card providers are built in. `PAYMENT_PROVIDER` picks which one opens new payments: **PeleCard** (the default, in use now) or `tranzila` (kept for later). A provider with a missing variable turns card payment off (`cardEnabled: false` in `/api/shop`); it never falls back to the other one.
+Three providers are built in. `PAYMENT_PROVIDER` picks which one opens new payments:
 
-## PeleCard (active)
+- `pelecard` (the default): the real card provider, once the owner has PeleCard credentials.
+- `mock`: a fake payment page on our own site, used on staging until then. No money moves.
+- `tranzila`: kept for later.
+
+A provider with a missing variable turns card payment off (`cardEnabled: false` in `/api/shop`); it never falls back to another one.
+
+## Mock (staging, for now)
+
+`PAYMENT_PROVIDER=mock`. Refused whenever `APP_ENV` is `production`: card payment is off and the server logs it at startup.
+
+Pay opens a normal pay session (provider `mock`, same price key) and returns `/pay/mock?s=<token>` on our own site, shown in the same pay sheet. That page is labeled "תשלום לדוגמה, לא נגבה כסף", shows the amount, and has two buttons:
+
+- Pay: `POST /api/payment/mock/complete {token}` settles through the same path as a real charge (`paymentRef` `mock:<token>`), builds and sends the game, and returns to `/pay/done?o=<manageToken>`.
+- Fail: returns to `/pay/done?o=<manageToken>&error=1`.
+
+The e2e suite runs with the mock provider.
+
+## PeleCard (when credentials arrive)
 
 Ported from Dugri's `server/pelecard.js` and `/api/payment/callback` (read on 2026-11-18). Code: `src/server/payments/pelecard.ts`, `src/server/services/payments-pelecard.ts`. PeleCard Iframe (V2), gateway `gateway21.pelecard.biz`.
 

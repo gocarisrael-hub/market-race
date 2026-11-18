@@ -20,8 +20,9 @@ export function fakeServices(
   opts: {
     tranzila?: boolean
     rows?: () => TxRow[]
-    provider?: 'pelecard' | 'tranzila'
+    provider?: 'pelecard' | 'tranzila' | 'mock'
     pelecard?: boolean
+    mockAllowed?: boolean
   } = {},
 ) {
   const pc: FakePelecard = { txs: new Map(), inits: [], failLookups: false }
@@ -52,6 +53,7 @@ export function fakeServices(
       },
     },
     paymentProvider: opts.provider ?? 'tranzila',
+    mockAllowed: opts.mockAllowed ?? true,
     pelecard: {
       isConfigured: () => pelecardOn,
       init: async (o) => {
