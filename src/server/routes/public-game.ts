@@ -28,7 +28,10 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
       reply.header('cache-control', 'no-store')
       // The owner's text overrides ride along with the view (PlayerView itself stays unchanged).
       // The brand name setting fills the "brand" text unless player_texts overrides it.
-      const texts = { brand: await getSetting(ctx.db, 'brand_name'), ...(await getSetting(ctx.db, 'player_texts')) }
+      const texts = {
+        brand: await getSetting(ctx.db, 'brand_name'),
+        ...(await getSetting(ctx.db, 'player_texts')),
+      }
       return { ...view, texts }
     },
   )
