@@ -3,6 +3,7 @@ import type { Palette } from '../../server/domain/types.ts'
 import { DecorDefs } from '../shared/decor.tsx'
 import { tokenFromPath } from './api.ts'
 import { makeT } from './copy.ts'
+import { Help } from './screens/Help.tsx'
 import { Letter } from './screens/Letter.tsx'
 import { Message } from './screens/Message.tsx'
 import { Opening } from './screens/Opening.tsx'
@@ -31,7 +32,7 @@ function useTheme(palette: Palette) {
 
 export function App() {
   const token = tokenFromPath(window.location.pathname)
-  const { state, texts, offline, act, retry } = useGame(token)
+  const { state, texts, support, offline, act, retry } = useGame(token)
   const view = state.phase === 'view' ? state.view : null
   const palette = view?.theme?.palette ?? DEFAULT_PALETTE
   useTheme(palette)
@@ -62,6 +63,7 @@ export function App() {
         </div>
       )}
       {screen}
+      {view && view.status !== 'expired' && <Help view={view} t={t} act={act} support={support} />}
     </>
   )
 }

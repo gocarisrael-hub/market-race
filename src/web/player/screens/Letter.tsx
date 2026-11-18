@@ -1,8 +1,13 @@
-// The final letter: notes from friends with signatures, photos, falling food, and the route.
+// The final letter: notes from friends with signatures, a collage of the photos taped between
+// and around the notes, the occasion's doodles, falling food, and the route.
+import type { ReactNode } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
-import { Paper, Tape } from '../draw.tsx'
+import { Paper } from '../draw.tsx'
 import { iconUrl, stopIcon } from '../logic.ts'
+import { TapedPhoto, useLightbox } from '../photo.tsx'
 import type { ScreenProps } from './types.ts'
+
+const PHOTO_TILTS = [5, -6, 4, -4, 6]
 
 const FALLING = [
   { icon: 'tomatoes', left: '6%', size: 54, delay: '0s', dur: '7s' },
@@ -15,6 +20,40 @@ const FALLING = [
 export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
   const letter = view.letter ?? { notes: [], photos: [] }
   const n = view.totalStops
+  const lightbox = useLightbox(t, t('letter.photoAlt'))
+
+  // The collage: photo, note, photo, note... photos alternate sides and overlap the notes' edges.
+  const pieces: ReactNode[] = []
+  const count = Math.max(letter.notes.length, letter.photos.length)
+  for (let i = 0; i < count; i++) {
+    const src = letter.photos[i]
+    if (src)
+      pieces.push(
+        <TapedPhoto
+          key={`p${src}`}
+          className={`letter-photo rise ${i % 2 ? 'side-r' : 'side-l'}`}
+          src={src}
+          alt={t('letter.photoAlt')}
+          tilt={PHOTO_TILTS[i % PHOTO_TILTS.length]}
+          t={t}
+          onOpen={lightbox.open}
+          style={{ animationDelay: `${0.2 + i * 0.3}s` }}
+        />,
+      )
+    const note = letter.notes[i]
+    if (note)
+      pieces.push(
+        <Paper
+          key={`n${i}`}
+          className={`letter-note rise ${i % 2 ? 'shift-l' : 'shift-r'}`}
+          tilt={[-2.5, 2, -1.5, 2.5][i % 4]}
+          style={{ animationDelay: `${0.3 + i * 0.35}s` }}
+        >
+          <p>"{note.text}"</p>
+          {note.signature && <div className="sig">{note.signature}</div>}
+        </Paper>,
+      )
+  }
   return (
     <main className="scr letter" data-decor={view.decor}>
       <div className="falling" aria-hidden="true">
@@ -34,7 +73,6 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
           spots={[
             { top: 4, left: '1%', size: 48, rot: -10 },
             { top: 46, right: '1%', size: 42, rot: 12 },
-            { top: 120, left: '6%', size: 30, rot: 6 },
           ]}
         />
         <div className="muted-label">{t('letter.kicker')}</div>
@@ -48,38 +86,7 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
         )}
       </header>
 
-      {letter.photos.length > 0 && (
-        <div className={`letter-photos n${Math.min(letter.photos.length, 3)}`}>
-          {letter.photos.map((src, i) => (
-            <figure
-              key={src}
-              className="letter-photo rise"
-              style={{
-                ['--r' as string]: `${[4, -5, 3, -3, 5][i % 5]}deg`,
-                animationDelay: `${0.2 + i * 0.2}s`,
-              }}
-            >
-              <Tape />
-              <img src={src} alt={t('letter.photoAlt')} loading="lazy" />
-            </figure>
-          ))}
-        </div>
-      )}
-
-      <div className="letter-notes">
-        {letter.notes.map((note, i) => (
-          <Paper
-            // biome-ignore lint/suspicious/noArrayIndexKey: notes are positional
-            key={i}
-            className={`letter-note rise ${i % 2 ? 'shift-l' : 'shift-r'}`}
-            tilt={[-2.5, 2, -1.5, 2.5][i % 4]}
-            style={{ animationDelay: `${0.3 + i * 0.35}s` }}
-          >
-            <p>"{note.text}"</p>
-            {note.signature && <div className="sig">{note.signature}</div>}
-          </Paper>
-        ))}
-      </div>
+      <div className={`letter-notes ${letter.photos.length ? 'with-photos' : ''}`}>{pieces}</div>
 
       <div className="letter-summary">
         <div className="cup" aria-hidden="true">
@@ -114,6 +121,7 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
       )}
 
       <p className="keep">{t('letter.keep')}</p>
+      {lightbox.element}
     </main>
   )
 }

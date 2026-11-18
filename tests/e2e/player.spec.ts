@@ -167,6 +167,56 @@ test('a closed stall sends the group to the backup, and a stall without a pin sh
   await expect(page.locator('.map-x')).toHaveCount(0)
 })
 
+test('help: WhatsApp to us, and a closed stall reported on the spot sends the group to the backup', async ({
+  page,
+  request,
+}) => {
+  const { url } = await newGame(request)
+  const set = await request.put('/admin/api/catalog/settings/support_whatsapp', {
+    data: { value: '054-6577715' },
+  })
+  expect(set.ok()).toBe(true)
+  await page.goto(url)
+
+  // On the opening: WhatsApp only, the prefilled text names the honoree.
+  await page.getByRole('button', { name: 'עזרה' }).click()
+  const sheet = page.getByRole('dialog', { name: 'צריכות עזרה?' })
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByRole('link', { name: 'לדבר איתנו בוואטסאפ' })).toHaveAttribute(
+    'href',
+    `https://wa.me/972546577715?text=${encodeURIComponent('היי, אנחנו במירוץ של מיכל.')}`,
+  )
+  await expect(sheet.getByRole('button', { name: 'הדוכן סגור' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+
+  // On the reveal: report the stall closed, confirm in the page, see the backup stall.
+  await page.getByRole('button', { name: 'יוצאות לדרך!' }).click()
+  await answer(page, ANSWERS[0])
+  await expect(page.getByRole('heading', { name: 'דוכן המיצים של תקווה' })).toBeVisible()
+  await page.getByRole('button', { name: 'עזרה' }).click()
+  await expect(sheet.getByRole('link', { name: 'לדבר איתנו בוואטסאפ' })).toHaveAttribute(
+    'href',
+    `https://wa.me/972546577715?text=${encodeURIComponent('היי, אנחנו במירוץ של מיכל, בתחנה 1.')}`,
+  )
+  await sheet.getByRole('button', { name: 'הדוכן סגור' }).click()
+  await expect(sheet.getByText('דוכן המיצים של תקווה סגור? נשלח אתכם לדוכן אחר.')).toBeVisible()
+  await sheet.getByRole('button', { name: 'כן, הדוכן סגור' }).click()
+  await expect(sheet).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'מיצים בפינה' })).toBeVisible()
+  await expect(page.getByText('דוכן המיצים של תקווה סגור היום, אז ממשיכים לדוכן אחר:')).toBeVisible()
+
+  // The backup is closed too: nowhere else to go, WhatsApp front and center.
+  await page.getByRole('button', { name: 'עזרה' }).click()
+  await sheet.getByRole('button', { name: 'הדוכן סגור' }).click()
+  await sheet.getByRole('button', { name: 'כן, הדוכן סגור' }).click()
+  await expect(page.getByRole('dialog', { name: 'אין דוכן חלופי, דברו איתנו' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'לדבר איתנו בוואטסאפ' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'מיצים בפינה' })).toBeVisible()
+
+  await request.delete('/admin/api/catalog/settings/support_whatsapp')
+})
+
 test('friendly screens for a missing or expired game', async ({ page, request }) => {
   await page.goto('/g/this-game-does-not-exist')
   await expect(page.getByRole('heading', { name: 'לא מצאנו את המשחק' })).toBeVisible()

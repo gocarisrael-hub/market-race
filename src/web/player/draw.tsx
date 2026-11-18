@@ -1,6 +1,6 @@
 // Hand-drawn pieces shared by the screens. Paths come from the mockup (docs/mockup/*.dc.html).
 // Colors come from the theme's CSS variables (see theme.ts).
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
 
 const BRUSH =
   'M9 12 C 70 4, 180 9, 262 5 C 300 3, 330 6, 339 9 C 344 26, 341 44, 343 58 C 262 64, 150 59, 60 63 C 36 64, 16 62, 5 60 C 2 44, 7 28, 9 12 Z'
@@ -16,6 +16,18 @@ export function BrushButton({ children, className = '', ...rest }: ButtonHTMLAtt
       </svg>
       <span>{children}</span>
     </button>
+  )
+}
+
+/** The brush-stroke look on a link (e.g. opening WhatsApp). */
+export function BrushLink({ children, className = '', ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return (
+    <a className={`brush ${className}`} {...rest}>
+      <svg viewBox="0 0 346 68" preserveAspectRatio="none" aria-hidden="true">
+        <path d={BRUSH} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span>{children}</span>
+    </a>
   )
 }
 

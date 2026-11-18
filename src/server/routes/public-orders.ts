@@ -27,6 +27,7 @@ import { completeMockPayment, mockPaymentInfo } from '../services/payments-mock.
 import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
 import { fileUrl } from '../services/play.ts'
 import { getSetting } from '../services/settings.ts'
+import { PHOTOS_EDITABLE } from './public-photos.ts'
 
 const phone = z.string().regex(/^[0-9+\-\s]{9,16}$/)
 const letterNote = z.object({ text: z.string().max(600), signature: z.string().max(60) })
@@ -397,6 +398,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           }
         : null,
       needsAnswers,
+      // Photos can be added or changed until the game starts (see public-photos.ts).
+      photos: { count: order.photos.length, editable: PHOTOS_EDITABLE.includes(order.status) },
       answers: needsAnswers ? order.answers : undefined,
       questions: needsAnswers
         ? publicQuestions(await questionsForOccasion(db, order.occasionKey), order.form)

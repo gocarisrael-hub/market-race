@@ -1,10 +1,11 @@
-// Step 3: optional photos, each shown next to its illustrated version.
+// Step 3: optional photos, each shown next to its illustrated version (a taped polaroid, as it
+// appears in the game). Also reachable from the manage page until the game starts.
 import { useEffect, useState } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
 import { ApiError, deletePhoto, listPhotos, type Photo, type Shop, uploadPhoto } from '../api.ts'
 import { copy } from '../copy.ts'
 import { type Draft, decorFor, errorText, MAX_PHOTOS } from '../logic.ts'
-import { Arrow, Back, Cta, Deco, Ring, Spinner, StepTrail } from '../ui.tsx'
+import { Arrow, Back, Cta, Deco, Polaroid, Ring, Spinner, StepTrail } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 type Item = Photo & { local?: string }
@@ -16,10 +17,14 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
   const [uploading, setUploading] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
+  const [paid, setPaid] = useState(false)
 
   useEffect(() => {
     listPhotos(token).then(
-      (p) => setItems(p),
+      (r) => {
+        setItems(r.photos)
+        setPaid(r.paid)
+      },
       () => setUnavailable(true),
     )
   }, [token])
@@ -68,24 +73,25 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
         className="bob"
         style={{ top: 30, left: -10, width: 70, ['--r' as string]: '8deg' }}
       />
-      <Back href="/order/questions" />
+      <Back href={paid ? `/m/${token}` : '/order/questions'} />
       <div style={{ marginTop: 18, marginLeft: 40 }}>
         <StepTrail step={3} total={STEPS} />
         <h1 className="title rise" style={{ fontSize: 56 }}>
           {copy.photos.title(draft.manageToken === token ? draft.form : null)}
         </h1>
         <p className="lead">{copy.photos.intro}</p>
+        <p className="photos-where">
+          {copy.photos.where}
+          <span className="hint"> {copy.photos.order}</span>
+        </p>
       </div>
 
       <div className="photos">
-        {items.map((p) => (
+        {items.map((p, i) => (
           <div className="photo-pair rise" key={p.id}>
             <img className="orig" src={p.local ?? p.url} alt={copy.photos.original} />
             <Arrow />
-            <div className="drawn">
-              <span className="tape" aria-hidden="true" />
-              <img src={p.previewUrl} alt={copy.photos.drawn} />
-            </div>
+            <Polaroid src={p.previewUrl} alt={copy.photos.drawn} tilt={i % 2 ? 3 : -3} />
             <button type="button" className="link-btn remove" onClick={() => remove(p)}>
               {copy.photos.remove}
             </button>
@@ -128,7 +134,11 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
       )}
       <p className="hint">{copy.photos.privacy}</p>
 
-      <Cta href={`/order/${token}/pay`}>{copy.photos.next}</Cta>
+      {paid ? (
+        <Cta href={`/m/${token}`}>{copy.photos.done}</Cta>
+      ) : (
+        <Cta href={`/order/${token}/pay`}>{copy.photos.next}</Cta>
+      )}
     </main>
   )
 }

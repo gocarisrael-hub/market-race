@@ -444,3 +444,17 @@ export function Failed({ text }: { text: string }) {
     </main>
   )
 }
+
+/** An illustrated photo as a taped polaroid: white border, two washi strips, a drawn shadow line. */
+export function Polaroid({ src, alt, tilt = -3 }: { src: string; alt: string; tilt?: number }) {
+  return (
+    <figure className="polaroid" style={{ ['--r' as string]: `${tilt}deg` }}>
+      <span className="washi washi-a" aria-hidden="true" />
+      <span className="washi washi-b" aria-hidden="true" />
+      <img src={src} alt={alt} />
+      <svg className="polaroid-shade" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M6 4 C 50 9, 110 6, 150 8 S 190 6, 196 3" vectorEffect="non-scaling-stroke" />
+      </svg>
+    </figure>
+  )
+}

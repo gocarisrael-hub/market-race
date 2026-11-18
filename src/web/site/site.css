@@ -688,24 +688,74 @@ dl.summary dd {
 .photo-pair:nth-child(even) .orig {
   transform: rotate(-4deg);
 }
-.photo-pair .drawn {
-  position: relative;
+.photo-pair .polaroid {
   justify-self: center;
+  width: min(100%, 190px);
 }
-.photo-pair .drawn img {
+.photos-where {
+  margin: 10px 0 0;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent);
+}
+.photos-where .hint {
   display: block;
-  max-width: 100%;
-  max-height: 190px;
-  transform: rotate(-3deg);
+  margin-top: 4px;
+  font-family: Heebo, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
 }
-.photo-pair .drawn .tape {
+
+/* A taped polaroid: white border, washi tape strips, a drawn shadow line under it (no box shadow). */
+.polaroid {
+  position: relative;
+  margin: 0;
+  padding: 7px 7px 22px;
+  background: #fffefa;
+  transform: rotate(var(--r, -3deg));
+}
+.polaroid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+.polaroid .washi {
   position: absolute;
+  z-index: 1;
+  width: 52px;
+  height: 17px;
+  background: rgba(244, 199, 95, 0.72);
+  clip-path: polygon(0 8%, 6% 0, 12% 10%, 20% 2%, 100% 0, 96% 50%, 100% 100%, 8% 96%, 0 100%, 4% 50%);
+}
+.polaroid .washi-a {
   top: -8px;
-  right: 30%;
-  width: 56px;
-  height: 18px;
-  background: rgba(244, 199, 95, 0.7);
-  transform: rotate(-6deg);
+  right: -14px;
+  transform: rotate(38deg);
+}
+.polaroid .washi-b {
+  top: -8px;
+  left: -14px;
+  transform: rotate(-36deg);
+  background: rgba(180, 22, 27, 0.32);
+}
+.polaroid-shade {
+  position: absolute;
+  right: 4px;
+  bottom: -9px;
+  left: 10px;
+  width: calc(100% - 14px);
+  height: 10px;
+}
+.polaroid-shade path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.55;
 }
 .photo-pair .remove {
   grid-column: 1 / -1;
