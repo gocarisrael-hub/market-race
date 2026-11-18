@@ -119,6 +119,16 @@ export function Manage({ token, search }: { token: string; search: string }) {
         </section>
       )}
 
+      {m.photos?.editable && (
+        <section className="section">
+          <h2 className="sub">{copy.manage.photosTitle}</h2>
+          <p>
+            <Link href={`/order/${token}/photos`}>{copy.manage.photosLink(m.photos.count)}</Link>
+          </p>
+          <p className="hint">{copy.manage.photosHint}</p>
+        </section>
+      )}
+
       {submitted && (
         <p className="status" role="status">
           {copy.manage.submitted}
