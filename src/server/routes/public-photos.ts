@@ -12,12 +12,19 @@ import type { AppContext } from '../app.ts'
 import type { DB } from '../db/index.ts'
 import { orders, uploads } from '../db/schema.ts'
 import { attachPhotos, MAX_GAME_PHOTOS } from '../domain/builder.ts'
+import type { OrderStatus } from '../domain/types.ts'
 import { illustrate, normalizePhoto } from '../photos/illustrate.ts'
 
 export const MAX_PHOTOS = MAX_GAME_PHOTOS
 /** Statuses before the game starts. Later, a game in play or done keeps its photos. */
-export const PHOTOS_EDITABLE = ['pending_payment', 'awaiting_answers', 'quoted', 'review', 'ready']
-const editable = (o: { status: string }) => PHOTOS_EDITABLE.includes(o.status)
+export const PHOTOS_EDITABLE: OrderStatus[] = [
+  'pending_payment',
+  'awaiting_answers',
+  'quoted',
+  'review',
+  'ready',
+]
+const editable = (o: { status: OrderStatus }) => PHOTOS_EDITABLE.includes(o.status)
 
 type Tx = Parameters<Parameters<DB['transaction']>[0]>[0]
 

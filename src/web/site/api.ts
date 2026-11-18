@@ -63,6 +63,10 @@ export type Manage = {
   progress: { step: string; stopIndex: number; total: number; redeemed: number } | null
   needsAnswers: boolean
   photos: { count: number; editable: boolean }
+  /** The buyer can still change name, answers, notes, photos and color (until the game starts). */
+  editable: boolean
+  honoreeName?: string
+  letterNotes?: LetterNote[]
   answers?: Record<string, string>
   questions?: Question[]
 }
@@ -128,10 +132,15 @@ export const updateOrder = (token: string, p: OrderPayload | { buyer: Buyer }) =
 export const startPay = (token: string) =>
   api<{ url: string }>(`/api/orders/${encodeURIComponent(token)}/pay`, { method: 'POST' })
 export const getManage = (token: string) => api<Manage>(`/api/manage/${encodeURIComponent(token)}`)
-export const submitAnswers = (token: string, answers: Record<string, string>, letterNotes: LetterNote[]) =>
+export type OrderEdit = {
+  honoreeName?: string
+  answers: Record<string, string>
+  letterNotes: LetterNote[]
+}
+export const submitAnswers = (token: string, edit: OrderEdit) =>
   api<{ status: string }>(`/api/manage/${encodeURIComponent(token)}/answers`, {
     method: 'PUT',
-    json: { answers, letterNotes },
+    json: edit,
   })
 export const sendLead = (lead: Record<string, unknown>) =>
   api<{ ok: true }>('/api/leads', { method: 'POST', json: lead })

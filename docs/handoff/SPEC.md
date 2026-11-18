@@ -118,7 +118,7 @@ Playing:
 
 - After payment: confirmation and a link to answer the questions (if not answered during the order).
 - When ready: the game link + QR and a short how-to-play, by email and WhatsApp.
-- A manage link to see progress.
+- A manage link to see progress and to edit: until the game starts (status before `active`, the shared game still on its opening screen) the buyer can change the name, the answers, the letter notes, the photos and the color, any number of times. A paid game that is already built is rebuilt at once; odd answers send it to review as on the first build, while flags the owner already approved stay approved. The paid and game-ready emails say so ("אפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק").
 
 ## Admin (new, separate, plain)
 

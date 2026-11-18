@@ -169,12 +169,13 @@ describe('order and payment flow', () => {
     })
     expect(put.json().status).toBe('ready')
     expect(t.services.emails.map((e) => e.subject)).toContain('המשחק של מיכל מוכן')
+    // Not once only: the buyer can send again until the game starts (see manage-edit.test.ts).
     const twice = await t.app.inject({
       method: 'PUT',
       url: `/api/manage/${order.manageToken}/answers`,
-      payload: { answers: {} },
+      payload: { answers: { first_love: 'רון' } },
     })
-    expect(twice.statusCode).toBe(409)
+    expect(twice.statusCode).toBe(200)
   })
 
   it('sends odd answers to review and tells the owner instead of delivering', async () => {

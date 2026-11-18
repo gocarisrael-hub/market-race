@@ -257,3 +257,15 @@ export const PAY_MESSAGE = 'market-race:pay-done'
 export type PayMessage = { type: typeof PAY_MESSAGE; token: string; ok: boolean }
 export const isPayMessage = (data: unknown): data is PayMessage =>
   !!data && typeof data === 'object' && (data as PayMessage).type === PAY_MESSAGE
+
+/** Error message for the manage page's edit form (name, answers), or null. */
+export function editError(
+  name: string,
+  answers: Record<string, string>,
+  questions: Question[],
+  form: SiteForm,
+): string | null {
+  if (!name.trim()) return copy.questions.missingName(form)
+  if (len(name) > 40) return copy.questions.tooLong
+  return answersError(answers, questions)
+}

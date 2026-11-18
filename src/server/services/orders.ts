@@ -1,5 +1,5 @@
 // Orders: creation, building the frozen game, review queue transitions.
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, notInArray } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import {
   markets,
@@ -163,19 +163,33 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
     }
   }
 
+  // A rebuild (the buyer edited before the game started) keeps what the owner already approved:
+  // the same flag on the same text stays resolved and does not send the order back to review.
+  // A blocked stop is never approved, so it always counts.
+  const approved = new Set(order.flags.filter((f) => f.resolved && f.code !== 'blocked_stop').map(flagKey))
+  for (const f of flags) if (approved.has(flagKey(f))) f.resolved = true
+  const open = flags.filter((f) => !f.resolved)
+
   const validYears = await getSetting(db, 'valid_years')
   const [updated] = await db
     .update(orders)
     .set({
       game,
       flags,
-      status: flags.length ? 'review' : 'ready',
+      status: open.length ? 'review' : 'ready',
       validUntil: order.validUntil ?? addYears(israelDate(now), validYears),
     })
-    .where(eq(orders.id, orderId))
+    // Never over a game that started meanwhile: a started game is frozen.
+    .where(and(eq(orders.id, orderId), notInArray(orders.status, STARTED)))
     .returning()
+  if (!updated) throw new BuildError('the game already started')
   return updated
 }
+
+/** Statuses after the game started (or ended): its frozen game never changes again. */
+export const STARTED: OrderStatus[] = ['active', 'done', 'expired', 'cancelled']
+
+const flagKey = (f: OrderFlag) => `${f.code}|${f.slot ?? ''}|${f.stopIndex ?? ''}|${f.message}`
 
 /** Owner approves a flagged order (after fixing it). Blocked stops must be rebuilt clean first. */
 export async function approveOrder(db: DB, orderId: number): Promise<Order> {

@@ -16,11 +16,11 @@ import {
   themes,
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
-import { ALLERGENS, DIETS, FORMS, type Form } from '../domain/types.ts'
+import { ALLERGENS, DIETS, FORMS, type Form, type OrderStatus } from '../domain/types.ts'
 import { iconUrl } from '../lib/icons.ts'
 import { cardEnabled } from '../services/context.ts'
 import { links, qrPng } from '../services/delivery.ts'
-import { buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
+import { BuildError, buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
 import { afterBuilt, handleNotify, PaymentError, priceFor, startPayment } from '../services/payments.ts'
 import { completeMockPayment, mockPaymentInfo } from '../services/payments-mock.ts'
 import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
@@ -354,6 +354,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const used = await db.select().from(redemptions).where(eq(redemptions.orderId, order.id))
     const playable = ['ready', 'active', 'done'].includes(order.status)
     const needsAnswers = !order.answersSubmittedAt && order.kind === 'private'
+    // The buyer can change everything personal until the game starts (see isEditable).
+    const editable = isEditable(order, state)
     return {
       orderNo: order.orderNo,
       kind: order.kind,
@@ -378,42 +380,63 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       needsAnswers,
       // Photos can be added or changed until the game starts (see public-photos.ts).
       photos: { count: order.photos.length, editable: PHOTOS_EDITABLE.includes(order.status) },
-      answers: needsAnswers ? order.answers : undefined,
-      questions: needsAnswers
-        ? publicQuestions(await questionsForOccasion(db, order.occasionKey), order.form)
-        : undefined,
+      editable,
+      // What the edit form needs. The manage token is the buyer's own link.
+      honoreeName: editable ? order.honoreeName : undefined,
+      answers: needsAnswers || editable ? order.answers : undefined,
+      letterNotes: editable ? order.letterNotes : undefined,
+      questions:
+        needsAnswers || editable
+          ? publicQuestions(await questionsForOccasion(db, order.occasionKey), order.form)
+          : undefined,
     }
   })
 
-  app.put('/api/manage/:token/answers', async (req, reply) => {
-    const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
-    const body = z
-      .object({
-        answers: z.record(z.string(), z.string().max(300)),
-        letterNotes: z.array(letterNote).max(10).default([]),
-      })
-      .safeParse(req.body)
-    if (!body.success) return reply.code(400).send({ error: 'invalid' })
-    const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
-    if (!order) return reply.code(404).send({ error: 'not_found' })
-    if (order.answersSubmittedAt || order.kind !== 'private')
-      return reply.code(409).send({ error: 'already_submitted' })
-    const questions = await questionsForOccasion(db, order.occasionKey)
-    await db
-      .update(orders)
-      .set({
-        answers: cleanAnswers(body.data.answers, questions),
-        letterNotes: body.data.letterNotes.filter((n) => n.text.trim()),
-        answersSubmittedAt: new Date(),
-      })
-      .where(eq(orders.id, order.id))
-    if (order.paidAt) {
-      const built = await buildOrderGame(db, order.id)
-      await afterBuilt(db, services, base, built)
-      return { status: built.status }
-    }
-    return { status: order.status }
-  })
+  // The buyer's edit: name, answers and letter notes, any number of times until the game starts.
+  // A paid order is (re)built right away, so a built game that has not started shows the edit;
+  // odd answers send it to the owner's review as on the first build.
+  app.put(
+    '/api/manage/:token/answers',
+    { config: { rateLimit: { max: 60, timeWindow: '10 minutes' } } },
+    async (req, reply) => {
+      const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
+      const body = z
+        .object({
+          honoreeName: z.string().trim().min(1).max(40).optional(),
+          answers: z.record(z.string(), z.string().max(300)),
+          letterNotes: z.array(letterNote).max(10).default([]),
+        })
+        .safeParse(req.body)
+      if (!body.success) return reply.code(400).send({ error: 'invalid' })
+      const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
+      if (!order) return reply.code(404).send({ error: 'not_found' })
+      if (order.kind !== 'private') return reply.code(409).send({ error: 'not_editable' })
+      const [state] = await db.select().from(gameStates).where(eq(gameStates.orderId, order.id))
+      if (!isEditable(order, state)) return reply.code(409).send({ error: 'locked' })
+      const questions = await questionsForOccasion(db, order.occasionKey)
+      await db
+        .update(orders)
+        .set({
+          honoreeName: body.data.honoreeName ?? order.honoreeName,
+          answers: cleanAnswers(body.data.answers, questions),
+          letterNotes: body.data.letterNotes.filter((n) => n.text.trim()),
+          answersSubmittedAt: order.answersSubmittedAt ?? new Date(),
+        })
+        // Re-checked in the write: the game may have started since it was read.
+        .where(and(eq(orders.id, order.id), inArray(orders.status, PHOTOS_EDITABLE)))
+      if (order.paidAt) {
+        try {
+          const built = await buildOrderGame(db, order.id)
+          await afterBuilt(db, services, base, built)
+          return { status: built.status }
+        } catch (e) {
+          if (e instanceof BuildError) return reply.code(409).send({ error: 'locked' })
+          throw e
+        }
+      }
+      return { status: order.status }
+    },
+  )
 
   app.get('/api/qr/:file', async (req, reply) => {
     const { file } = z.object({ file: z.string().regex(/^[A-Za-z0-9_-]{10,64}\.png$/) }).parse(req.params)
@@ -469,4 +492,17 @@ function cleanAnswers(
     if (v) out[q.slot] = q.maxLen > 0 ? [...v].slice(0, q.maxLen * 2).join('') : v
   }
   return out
+}
+
+/**
+ * Whether the buyer can still change the order: before the game starts (status before `active`
+ * and the shared game still on its opening screen).
+ */
+export function isEditable(
+  order: { status: OrderStatus; kind: string },
+  state: { step: string } | undefined,
+): boolean {
+  return (
+    order.kind === 'private' && PHOTOS_EDITABLE.includes(order.status) && (!state || state.step === 'opening')
+  )
 }

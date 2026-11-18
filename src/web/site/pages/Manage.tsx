@@ -1,9 +1,11 @@
-// /m/:token: the buyer's manage page. Status, the game link and QR, progress, late answers.
+// /m/:token: the buyer's manage page. Status, the game link and QR, progress, and the edit mode
+// (name, answers, letter notes, photos) until the game starts.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, getManage, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
+import { ApiError, getManage, type Manage as M } from '../api.ts'
 import { copy } from '../copy.ts'
-import { answersError, cleanNotes, errorText, MAX_NOTES, whatsappShare } from '../logic.ts'
-import { Cta, Deco, Failed, Link, Loading, QField, TornPaper } from '../ui.tsx'
+import { errorText, whatsappShare } from '../logic.ts'
+import { Deco, Failed, Link, Loading, Ring } from '../ui.tsx'
+import { ManageEdit } from './ManageEdit.tsx'
 
 const ACTIVE_POLL_MS = 15_000
 const PAID_POLL_MS = 4000
@@ -11,7 +13,8 @@ const PAID_POLL_MS = 4000
 export function Manage({ token, search }: { token: string; search: string }) {
   const [m, setM] = useState<M | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState<'first' | 'edit' | null>(null)
+  const [editing, setEditing] = useState(false)
   const checking = new URLSearchParams(search).get('paid') === '1'
   const started = useRef(Date.now())
 
@@ -43,9 +46,13 @@ export function Manage({ token, search }: { token: string; search: string }) {
     return () => window.clearInterval(id)
   }, [live, waitingPay, load])
 
+  // The emails link to #answers (first answers) and to the page itself (edits).
+  const hasManage = !!m
   useEffect(() => {
-    if (m && location.hash === '#answers') document.getElementById('answers')?.scrollIntoView()
-  }, [m])
+    if (!hasManage || location.hash !== '#answers') return
+    setEditing(true)
+    window.setTimeout(() => document.getElementById('answers')?.scrollIntoView(), 0)
+  }, [hasManage])
 
   if (loadError)
     return <Failed text={loadError === copy.errors.not_found ? copy.manage.notFound : loadError} />
@@ -53,6 +60,9 @@ export function Manage({ token, search }: { token: string; search: string }) {
 
   const [t1, t2] = copy.manage.title(m.honoree)
   const payHref = m.kind === 'company' ? `/pay/${token}` : `/order/${token}/pay`
+  // Paid with "answer later" and nothing sent yet: the form is open, worded as first answers.
+  const first = m.needsAnswers && m.status !== 'review'
+  const showForm = m.editable && !!m.questions && (editing || first)
   const canPay = !m.paid && (m.status === 'pending_payment' || m.status === 'quoted') && m.amountAgorot > 0
 
   return (
@@ -119,7 +129,42 @@ export function Manage({ token, search }: { token: string; search: string }) {
         </section>
       )}
 
-      {m.photos?.editable && (
+      {submitted && !editing && (
+        <p className="status" role="status">
+          {submitted === 'first' ? copy.manage.submitted : copy.manage.saved}
+        </p>
+      )}
+      {showForm ? (
+        <ManageEdit
+          token={token}
+          m={m}
+          first={first}
+          onCancel={first ? undefined : () => setEditing(false)}
+          onDone={() => {
+            setSubmitted(first ? 'first' : 'edit')
+            setEditing(false)
+            load()
+          }}
+        />
+      ) : (
+        m.editable && (
+          <section className="section">
+            <button
+              type="button"
+              className="big-link link-btn edit-btn"
+              onClick={() => {
+                setSubmitted(null)
+                setEditing(true)
+              }}
+            >
+              {copy.manage.edit}
+              <Ring />
+            </button>
+            <p className="hint">{copy.manage.editHint}</p>
+          </section>
+        )
+      )}
+      {!showForm && m.photos?.editable && (
         <section className="section">
           <h2 className="sub">{copy.manage.photosTitle}</h2>
           <p>
@@ -128,106 +173,6 @@ export function Manage({ token, search }: { token: string; search: string }) {
           <p className="hint">{copy.manage.photosHint}</p>
         </section>
       )}
-
-      {submitted && (
-        <p className="status" role="status">
-          {copy.manage.submitted}
-        </p>
-      )}
-      {m.needsAnswers &&
-        m.questions &&
-        ['pending_payment', 'quoted', 'awaiting_answers'].includes(m.status) && (
-          <LateAnswers
-            token={token}
-            m={m}
-            onDone={() => {
-              setSubmitted(true)
-              load()
-            }}
-          />
-        )}
     </main>
-  )
-}
-
-function LateAnswers({ token, m, onDone }: { token: string; m: M; onDone: () => void }) {
-  const questions = m.questions ?? []
-  const [answers, setAnswers] = useState<Record<string, string>>(m.answers ?? {})
-  const [notes, setNotes] = useState<LetterNote[]>([{ text: '', signature: '' }])
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  const submit = async () => {
-    const e = answersError(answers, questions)
-    if (e) return setError(e)
-    setBusy(true)
-    try {
-      await submitAnswers(token, answers, cleanNotes(notes))
-      onDone()
-    } catch (err) {
-      setError(errorText(err instanceof ApiError ? err.code : 'generic'))
-      setBusy(false)
-    }
-  }
-  const setNote = (i: number, patch: Partial<LetterNote>) =>
-    setNotes(notes.map((n, j) => (j === i ? { ...n, ...patch } : n)))
-
-  return (
-    <section className="section" id="answers" aria-labelledby="answers-title">
-      <h2 className="sub" id="answers-title">
-        {copy.manage.answersTitle}
-      </h2>
-      <p className="hint">{copy.manage.answersIntro}</p>
-      {questions.map((q) => (
-        <QField
-          key={q.slot}
-          name={q.slot}
-          label={q.text}
-          value={answers[q.slot] ?? ''}
-          maxLen={q.maxLen || undefined}
-          required={q.required}
-          onChange={(v) => {
-            setError(null)
-            setAnswers({ ...answers, [q.slot]: v })
-          }}
-        />
-      ))}
-      <TornPaper tilt="r">
-        <h2 className="sub">{copy.questions.notes}</h2>
-        <p className="hint" style={{ margin: '4px 0 0' }}>
-          {copy.questions.notesHint} ({copy.optional})
-        </p>
-        {notes.map((n, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: notes have no id; order is stable
-          <div className="note" key={i}>
-            <QField
-              label={copy.questions.noteText}
-              value={n.text}
-              multiline
-              maxLen={600}
-              onChange={(v) => setNote(i, { text: v })}
-            />
-            <QField
-              label={copy.questions.noteSignature}
-              value={n.signature}
-              maxLen={60}
-              onChange={(v) => setNote(i, { signature: v })}
-            />
-          </div>
-        ))}
-        {notes.length < MAX_NOTES && (
-          <button
-            type="button"
-            className="add-link"
-            onClick={() => setNotes([...notes, { text: '', signature: '' }])}
-          >
-            {copy.questions.addNote}
-          </button>
-        )}
-      </TornPaper>
-      <Cta onClick={submit} busy={busy} error={error}>
-        {copy.manage.submit}
-      </Cta>
-    </section>
   )
 }
