@@ -13,6 +13,14 @@ async function login(page: Page) {
   await expect(page.getByText('owner@example.com')).toBeVisible()
 }
 
+/** The page itself never scrolls sideways; wide tables scroll in their own box. */
+async function noSideScroll(page: Page) {
+  const over = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(over).toBeLessThanOrEqual(1)
+}
+
 const nav = (page: Page, name: string | RegExp) =>
   page
     .getByRole('navigation')
@@ -40,11 +48,13 @@ test('owner creates a test game from the form and finds it in the orders', async
   await page.getByLabel(/^חיפוש/).fill(run)
   const row = page.locator('table.orders tbody tr', { hasText: HONOREE })
   await expect(row).toHaveCount(1)
+  await noSideScroll(page)
   await expect(row).toContainText('מוכנה')
   await expect(row).toContainText('0 / 20')
   await row.click()
   await expect(page.getByRole('heading', { name: /^הזמנה/ })).toBeVisible()
   await expect(page.locator('ol.stops > li')).toHaveCount(5)
+  await noSideScroll(page)
   await expect(page.getByText('נקנה מול נוצל')).toBeVisible()
   await expect(page.getByRole('img', { name: 'QR למשחק' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'שליחת קישור המשחק שוב' })).toBeVisible()
@@ -68,6 +78,7 @@ test('owner turns a company lead into a quote', async ({ page }) => {
   await page.locator('.list tr', { hasText: COMPANY }).click()
   const editor = page.locator('.editor')
   await expect(editor.getByRole('heading', { name: COMPANY })).toBeVisible()
+  await noSideScroll(page)
   await editor.getByLabel('הערות').fill('ביקשו יום שישי')
   await editor.getByRole('button', { name: 'שמירה' }).click()
   await expect(editor.getByText('נשמר')).toBeVisible()
