@@ -1,0 +1,142 @@
+/* Occasion doodles (decor.tsx). Colors come from --decor-ink and --decor-accent, which each app
+   maps to its palette; the fills stay light so the doodles never compete with the text. */
+.doodle {
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+.doodle .i,
+.doodle .a,
+.doodle .f {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+}
+.doodle .i {
+  fill: none;
+  stroke: var(--decor-ink, currentColor);
+}
+.doodle .a {
+  fill: none;
+  stroke: var(--decor-accent, currentColor);
+}
+.doodle .f {
+  fill: var(--decor-accent, currentColor);
+  fill-opacity: 0.22;
+  stroke: var(--decor-ink, currentColor);
+}
+.doodle .d {
+  fill: var(--decor-accent, currentColor);
+  stroke: none;
+}
+
+.doodles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.doodles .doodle {
+  position: absolute;
+}
+
+@keyframes doodle-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-6px) rotate(calc(var(--r, 0deg) + 4deg));
+  }
+}
+@keyframes doodle-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(var(--r, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(var(--r, 0deg));
+  }
+}
+.doodle-bob {
+  transform: rotate(var(--r, 0deg));
+  animation:
+    doodle-in 0.5s ease-out both,
+    doodle-bob 5.2s ease-in-out 0.5s infinite;
+}
+
+/* Confetti: a one-time fall. */
+.confetti {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.confetti-piece {
+  position: absolute;
+  top: -40px;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  animation: confetti-fall 2.8s cubic-bezier(0.3, 0.1, 0.5, 1) both;
+}
+.confetti-piece.big {
+  width: 40px;
+  height: 40px;
+}
+.confetti-piece.bit path,
+.confetti-piece.bit circle {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.confetti-piece.acc path,
+.confetti-piece.acc circle {
+  stroke: var(--decor-accent, currentColor);
+}
+.confetti-piece.ink path,
+.confetti-piece.ink circle {
+  stroke: var(--decor-ink, currentColor);
+}
+.confetti-piece.bit circle {
+  fill: var(--decor-accent, currentColor);
+  stroke: none;
+}
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(var(--r, 0deg));
+  }
+  10% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift, 0), 70vh) rotate(calc(var(--r, 0deg) + 220deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doodle-bob {
+    animation: none;
+  }
+  /* A few still bits near the top instead of a fall. */
+  .confetti-piece {
+    animation: none;
+    opacity: 0.85;
+    top: calc(10px + var(--still, 0px));
+    transform: rotate(var(--r, 0deg));
+  }
+  .confetti-piece:nth-child(n + 7) {
+    display: none;
+  }
+}

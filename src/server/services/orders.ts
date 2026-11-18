@@ -5,6 +5,7 @@ import {
   markets,
   occasions,
   orders,
+  palettes,
   questionSets,
   riddles,
   routes,
@@ -28,6 +29,7 @@ export interface NewOrder {
   form: Form
   honoreeName?: string
   themeId: number
+  paletteId?: number | null
   routeId: number
   people: number
   allergens?: string[]
@@ -107,6 +109,11 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
       ])
     : [[], []]
   const questions = await questionsForOccasion(db, order.occasionKey)
+  const [occasion] = await db.select().from(occasions).where(eq(occasions.key, order.occasionKey))
+  // The chosen palette, if it still exists (a deleted palette falls back to the theme's own).
+  const [palette] = order.paletteId
+    ? await db.select().from(palettes).where(eq(palettes.id, order.paletteId))
+    : []
 
   const company =
     order.kind === 'company' && order.companyName
@@ -122,6 +129,8 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
       palette: theme.palette,
       pins: theme.pins,
     },
+    palette: palette ? { id: palette.id, palette: palette.palette } : null,
+    decor: occasion?.decor ?? 'generic',
     stalls: marketStalls,
     tastings: marketTastings,
     riddles: marketRiddles,

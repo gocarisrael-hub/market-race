@@ -1,10 +1,11 @@
 // Markets (with the printable daily-code sheet), stalls, tastings, occasions, settings.
 import { useEffect, useState } from 'react'
-import { ALLERGENS, DIETS, FORMS, type Form, type MarketHours } from '../../../server/domain/types.ts'
+import { ALLERGENS, DECORS, DIETS, FORMS, type Form, type MarketHours } from '../../../server/domain/types.ts'
 import { ApiError, api, type Issue } from '../api.ts'
 import {
   Check,
   CrudPage,
+  DECOR_LABELS,
   DIET_LABELS,
   type EditorProps,
   errorText,
@@ -393,6 +394,12 @@ function OccasionEditor({ value, set }: EditorProps<Occasion>) {
           />
         ))}
       </fieldset>
+      <Select
+        label="קישוטים (ציורים סביב המשחק והאתר)"
+        value={value.decor ?? 'generic'}
+        options={DECORS.map((d) => ({ value: d, label: DECOR_LABELS[d] }))}
+        onChange={(decor) => set({ decor })}
+      />
       <NumberInput label="סדר" value={value.sort} onChange={(sort) => set({ sort })} />
       <Check label="פעיל" checked={value.active} onChange={(active) => set({ active })} />
     </>
@@ -412,12 +419,14 @@ export function OccasionsPage() {
         audience: 'private',
         questionSetId: null,
         forms: ['she'],
+        decor: 'generic',
         sort: 0,
         active: true,
       })}
       columns={[
         { label: 'שם', render: (o) => o.label },
         { label: 'מפתח', render: (o) => o.key },
+        { label: 'קישוטים', render: (o) => DECOR_LABELS[o.decor]?.split(' (')[0] ?? o.decor },
         { label: 'קהל', render: (o) => (o.audience === 'company' ? 'חברה' : 'פרטי') },
         { label: 'מצב', render: (o) => activeLabel(o.active) },
       ]}

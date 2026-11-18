@@ -1,13 +1,25 @@
 // Thin client for the site API (src/server/routes/public-orders.ts).
+import type { Palette } from '../../server/domain/types.ts'
 import type { SiteForm } from './copy.ts'
 
-export type Occasion = { key: string; label: string; audience: 'private' | 'company'; forms: string[] }
+export type Occasion = {
+  key: string
+  label: string
+  audience: 'private' | 'company'
+  forms: string[]
+  /** Doodle set of the occasion (birthday, love, ...). */
+  decor?: string
+}
+/** A color palette a map can be played in. */
+export type ShopPalette = { id: number; name: string; palette: Palette }
 export type Theme = {
   id: number
   name: string
   marketId: number
   map: string | null
-  palette: Record<string, string | boolean>
+  palette: Palette
+  /** The palettes offered for this map, the default first. Empty: the map's own colors. */
+  palettes?: ShopPalette[]
 }
 /** What a stop serves, as buyers see it before purchase: no stall or tasting names. */
 export type RouteTasting = {
@@ -40,6 +52,7 @@ export type OrderPayload = {
   form: SiteForm
   honoreeName: string
   themeId: number
+  paletteId: number | null
   people: number
   allergens: string[]
   diets: string[]

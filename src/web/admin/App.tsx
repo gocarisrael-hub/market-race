@@ -11,7 +11,7 @@ import {
 import { CompaniesPage } from './pages/companies.tsx'
 import { QuestionSetsPage, RiddlesPage } from './pages/content.tsx'
 import { LivePage, OrdersPage, ReviewPage, TestGamePage } from './pages/orders.tsx'
-import { RoutesPage, ThemesPage } from './pages/routes-themes.tsx'
+import { PalettesPage, RoutesPage, ThemesPage } from './pages/routes-themes.tsx'
 import { SettlementPage } from './pages/settlement.tsx'
 import { useLoc } from './ui.tsx'
 
@@ -33,6 +33,7 @@ const CATALOG = [
   { key: 'occasions', label: 'אירועים', Page: OccasionsPage },
   { key: 'routes', label: 'מסלולים', Page: RoutesPage },
   { key: 'themes', label: 'עיצובים', Page: ThemesPage },
+  { key: 'palettes', label: 'צבעים', Page: PalettesPage },
   { key: 'settings', label: 'הגדרות', Page: SettingsPage },
 ]
 const SECTIONS = [...OPS, ...CATALOG]

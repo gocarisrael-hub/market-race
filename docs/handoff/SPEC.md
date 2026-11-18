@@ -62,6 +62,10 @@ The buyer picks a look. Each theme = a market map illustration + a palette appli
 
 Themes are rows in the database (admin can add one: upload map, set colors). The map's market and the route's market must match.
 
+Palettes are separate from maps (`palettes` table, admin "צבעים"): each palette lists the themes (maps) it is offered on, and the buyer picks one on step 1 from paint daubs, with a live preview (the map tinted toward the palette's `mapTint`, the ribbon and button in its colors). The first palette of a map is the default. The order stores `palette_id`; the game snapshot freezes the resolved palette (company palette > chosen palette > theme palette). Every palette must pass the contrast checks in `src/server/domain/look.ts` (the same derivation the player uses); the admin refuses one that does not. Demo palettes: classic red, sea blue, olive green, sunset orange, berry pink (watercolor maps), blue-pink (riso), night (Mahane Yehuda night).
+
+Occasion doodles: each occasion has a `decor` set (birthday, love, family, friends, company, generic), chosen in the admin. Hand-drawn inline SVG doodles of that set appear around the opening ribbon, as confetti on each reveal, on the final letter and through the order flow once the occasion is picked (`src/web/shared/decor.tsx`). Food illustrations stay.
+
 ## Companies
 
 - Sold by quote: the company leaves details on the site; the owner sends a quote and a payment link (Tranzila); the owner fills the company questions together with the company in the admin.

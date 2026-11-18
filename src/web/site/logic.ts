@@ -1,5 +1,15 @@
 // Pure logic of the order flow: prices, step validation, the draft kept between steps.
-import type { Buyer, LetterNote, Occasion, OrderPayload, PreviewStop, Question, Shop, Theme } from './api.ts'
+import type {
+  Buyer,
+  LetterNote,
+  Occasion,
+  OrderPayload,
+  PreviewStop,
+  Question,
+  Shop,
+  ShopPalette,
+  Theme,
+} from './api.ts'
 import { copy, type SiteForm } from './copy.ts'
 
 export const MAX_NOTES = 3
@@ -12,6 +22,8 @@ export type Draft = {
   occasionKey: string | null
   form: SiteForm | null
   themeId: number | null
+  /** The palette the map is played in; null plays the map's own colors. */
+  paletteId: number | null
   people: number
   allergens: string[]
   diets: string[]
@@ -31,6 +43,7 @@ export function emptyDraft(minPeople = 2): Draft {
     occasionKey: null,
     form: null,
     themeId: null,
+    paletteId: null,
     people: Math.max(minPeople, 4),
     allergens: [],
     diets: [],
@@ -86,6 +99,29 @@ export const listedStops = (route: Shop['routes'][number] | undefined): PreviewS
     status: 'as_listed',
   }))
 
+/** The palettes a theme can be played in (the default first). */
+export const palettesFor = (shop: Shop, themeId: number | null | undefined): ShopPalette[] =>
+  shop.themes.find((t) => t.id === themeId)?.palettes ?? []
+
+/** The palette shown for the draft: the chosen one, else the theme's first, else none. */
+export const currentPalette = (shop: Shop, d: Pick<Draft, 'themeId' | 'paletteId'>) => {
+  const list = palettesFor(shop, d.themeId)
+  return list.find((p) => p.id === d.paletteId) ?? list[0] ?? null
+}
+
+/** Applies a theme choice: keeps the palette when the new map offers it, else its default. */
+export function chooseTheme(shop: Shop, d: Draft, themeId: number): Draft {
+  const list = palettesFor(shop, themeId)
+  const paletteId = list.some((p) => p.id === d.paletteId) ? d.paletteId : (list[0]?.id ?? null)
+  return { ...d, themeId, paletteId }
+}
+
+/** The doodle set of the draft's occasion, or null before one is picked. */
+export const decorFor = (shop: Shop, occasionKey: string | null | undefined): string | null => {
+  const occ = shop.occasions.find((o) => o.key === occasionKey)
+  return occ ? (occ.decor ?? 'generic') : null
+}
+
 export const clampPeople = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number.isFinite(n) ? n : min)))
 
@@ -108,6 +144,8 @@ export function step1Error(d: Draft, shop: Shop): string | null {
   const occ = shop.occasions.find((o) => o.key === d.occasionKey && o.audience === 'private')
   if (!occ || formsFor(occ).length === 0) return copy.home.pickOccasion
   if (!orderableThemes(shop).some((t) => t.id === d.themeId)) return copy.home.pickTheme
+  const pals = palettesFor(shop, d.themeId)
+  if (pals.length && !pals.some((p) => p.id === d.paletteId)) return copy.home.pickPalette
   if (d.people < shop.minPeople || d.people > shop.maxPeople) return copy.errors.bad_people
   if (priceAgorot(shop, d.occasionKey, d.people) === null) return copy.errors.no_price
   return null
@@ -205,6 +243,7 @@ export function orderPayload(d: Draft, questions: Question[]): OrderPayload {
     form: d.form ?? 'she',
     honoreeName: d.honoreeName.trim(),
     themeId: d.themeId ?? 0,
+    paletteId: d.paletteId ?? null,
     people: d.people,
     allergens: d.allergens,
     diets: d.diets,

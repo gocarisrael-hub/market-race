@@ -5,8 +5,11 @@ import {
   askedQuestions,
   buyerErrors,
   chooseOccasion,
+  chooseTheme,
   clampPeople,
   clearDraft,
+  currentPalette,
+  decorFor,
   emptyDraft,
   errorText,
   formatShekels,
@@ -32,6 +35,7 @@ import {
   whatsappShare,
 } from '../../src/web/site/logic.ts'
 
+const PAL = { background: '#EADBC8', accent: '#B4161B', ink: '#2B2420', paper: '#FFFBF4' }
 const occ = (key: string, forms: string[], audience: 'private' | 'company' = 'private'): Occasion => ({
   key,
   label: key,
@@ -52,8 +56,8 @@ const shop: Shop = {
     { id: 2, name: 'מחנה יהודה' },
   ],
   themes: [
-    { id: 10, name: 'a', marketId: 1, map: null, palette: {} },
-    { id: 20, name: 'b', marketId: 2, map: null, palette: {} },
+    { id: 10, name: 'a', marketId: 1, map: null, palette: PAL },
+    { id: 20, name: 'b', marketId: 2, map: null, palette: PAL },
   ],
   routes: [
     {
@@ -268,5 +272,52 @@ describe('site logic', () => {
     expect(whatsappShare('הנה https://x.y/g/1')).toBe(
       `https://wa.me/?text=${encodeURIComponent('הנה https://x.y/g/1')}`,
     )
+  })
+})
+
+describe('palettes and decor', () => {
+  const sea = { ...PAL, background: '#DCE6EA', accent: '#1F5E8C', mapTint: '#2F6E9E' }
+  const withPalettes: Shop = {
+    ...shop,
+    occasions: [...shop.occasions, { ...occ('bday', ['she']), decor: 'birthday' }],
+    themes: [
+      {
+        ...shop.themes[0],
+        palettes: [
+          { id: 1, name: 'אדום', palette: PAL },
+          { id: 2, name: 'כחול', palette: sea },
+        ],
+      },
+      { ...shop.themes[1], palettes: [{ id: 2, name: 'כחול', palette: sea }] },
+    ],
+    prices: { bday: { base: 0, perPerson: 9900 } },
+  }
+
+  it('picks the map default and keeps a palette the new map also offers', () => {
+    const d = chooseTheme(withPalettes, emptyDraft(), 10)
+    expect(d.paletteId).toBe(1)
+    expect(currentPalette(withPalettes, d)?.name).toBe('אדום')
+    const blue = chooseTheme(withPalettes, { ...d, paletteId: 2 }, 20)
+    expect(blue.paletteId).toBe(2)
+    expect(chooseTheme(withPalettes, d, 20).paletteId).toBe(2)
+    expect(chooseTheme(shop, d, 10).paletteId).toBeNull()
+  })
+
+  it('requires a palette of the chosen map and sends it with the order', () => {
+    const d = {
+      ...chooseOccasion(emptyDraft(), withPalettes.occasions.find((o) => o.key === 'bday')!),
+      themeId: 10,
+      paletteId: 99,
+    }
+    expect(step1Error(d, withPalettes)).toBe('בחרו צבע')
+    const ok = { ...d, paletteId: 2 }
+    expect(step1Error(ok, withPalettes)).toBeNull()
+    expect(orderPayload({ ...ok, honoreeName: 'דנה' }, []).paletteId).toBe(2)
+  })
+
+  it('finds the doodle set of the occasion', () => {
+    expect(decorFor(withPalettes, 'bday')).toBe('birthday')
+    expect(decorFor(withPalettes, 'bachelorette')).toBe('generic')
+    expect(decorFor(withPalettes, null)).toBeNull()
   })
 })

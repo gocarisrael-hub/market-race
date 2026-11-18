@@ -20,6 +20,8 @@
   --hand: "Amatic SC", Heebo, sans-serif;
   --sans: Heebo, system-ui, -apple-system, "Segoe UI", sans-serif;
   --gutter: 18px;
+  --decor-ink: var(--line);
+  --decor-accent: var(--mark);
 }
 
 *,
@@ -1498,6 +1500,41 @@ h2 {
 }
 .kb {
   animation: kenburns 18s ease-in-out infinite alternate;
+}
+
+/* ---------- Palette tint and occasion doodles ---------- */
+
+/* The map follows the palette: its hues are pulled toward the tint, light and shade stay. */
+.opening-map,
+.map-clip {
+  isolation: isolate;
+}
+.map-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  mix-blend-mode: color;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.opening-doodles {
+  z-index: 0;
+}
+.reveal-head .doodles,
+.letter-head .doodles {
+  z-index: 0;
+}
+.reveal-head > :not(.doodles):not(.rays),
+.letter-head > :not(.doodles) {
+  position: relative;
+  z-index: 1;
+}
+.letter-head {
+  position: relative;
+  min-height: 120px;
+}
+.reveal > .confetti {
+  z-index: 8;
 }
 
 @media (prefers-reduced-motion: reduce) {
