@@ -81,6 +81,8 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           companyName: b.companyName ?? null,
           notes: 'test game',
         })
+        // The owner entered the answers here, so they count as submitted.
+        await ctx.db.update(orders).set({ answersSubmittedAt: new Date() }).where(eq(orders.id, order.id))
         const built = await buildOrderGame(ctx.db, order.id)
         return { order: built, links: orderLinks(ctx.config.publicBaseUrl, built) }
       } catch (err) {
