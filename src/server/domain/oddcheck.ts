@@ -19,6 +19,7 @@ export function checkAnswers(
   const repeat = new RegExp(`(.)\\1{${Math.max(1, rules.maxRepeatedChars)},}`, 'u')
 
   for (const q of questions) {
+    if (q.hidden) continue
     const v = (answers[q.slot] ?? '').trim()
     if (!v) {
       if (q.required) flags.push({ code: 'empty_required', slot: q.slot, message: `חסרה תשובה: ${q.slot}` })

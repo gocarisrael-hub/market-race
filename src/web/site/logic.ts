@@ -6,7 +6,7 @@ export const MAX_NOTES = 3
 export const MAX_PHOTOS = 5
 const PHONE = /^[0-9+\-\s]{9,16}$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const SITE_FORMS: SiteForm[] = ['she', 'he', 'couple']
+const SITE_FORMS: SiteForm[] = ['she', 'he', 'couple', 'group']
 
 export type Draft = {
   occasionKey: string | null
@@ -89,7 +89,11 @@ export const listedStops = (route: Shop['routes'][number] | undefined): PreviewS
 export const clampPeople = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number.isFinite(n) ? n : min)))
 
-/** Applies an occasion choice: keeps the form when still allowed, auto-picks a single one. */
+/**
+ * Applies an occasion choice: keeps the form when still allowed, auto-picks a single one (couple
+ * for a couple, she for a bachelorette, group for family and friends). With several (she or he),
+ * the form stays open: the buyer picks it next to the name field on the questions step.
+ */
 export function chooseOccasion(d: Draft, occ: Occasion): Draft {
   const forms = formsFor(occ)
   const form = d.form && forms.includes(d.form) ? d.form : forms.length === 1 ? forms[0] : null
@@ -102,8 +106,7 @@ export const toggle = (list: string[], v: string) =>
 /** Error message for step 1, or null when it is complete. */
 export function step1Error(d: Draft, shop: Shop): string | null {
   const occ = shop.occasions.find((o) => o.key === d.occasionKey && o.audience === 'private')
-  if (!occ) return copy.home.pickOccasion
-  if (!d.form || !formsFor(occ).includes(d.form)) return copy.home.pickForm
+  if (!occ || formsFor(occ).length === 0) return copy.home.pickOccasion
   if (!orderableThemes(shop).some((t) => t.id === d.themeId)) return copy.home.pickTheme
   if (d.people < shop.minPeople || d.people > shop.maxPeople) return copy.errors.bad_people
   if (priceAgorot(shop, d.occasionKey, d.people) === null) return copy.errors.no_price
@@ -112,12 +115,32 @@ export function step1Error(d: Draft, shop: Shop): string | null {
 
 const len = (s: string) => [...s.trim()].length
 
+/** The forms the buyer picks between on the questions step: none when the occasion has one. */
+export function formChoice(shop: Shop, d: Draft): SiteForm[] {
+  const forms = formsFor(shop.occasions.find((o) => o.key === d.occasionKey))
+  return forms.length > 1 ? forms : []
+}
+
 /** Error message for step 2 (questions), or null. */
-export function step2Error(d: Draft, questions: Question[]): string | null {
-  if (!d.honoreeName.trim()) return copy.questions.missingName(d.form ?? 'she')
+export function step2Error(d: Draft, questions: Question[], forms: SiteForm[] = []): string | null {
+  if (!d.form || (forms.length > 0 && !forms.includes(d.form))) return copy.questions.pickForm
+  if (!d.honoreeName.trim()) return copy.questions.missingName(d.form)
   if (len(d.honoreeName) > 40) return copy.questions.tooLong
   if (d.answersLater) return null
-  return answersError(d.answers, questions)
+  return answersError(d.answers, askedQuestions(questions, d.form))
+}
+
+/**
+ * The questions shown as fields. A group's name is asked in the name field (labelled with the
+ * group_name question), so it is not asked twice.
+ */
+export const askedQuestions = (questions: Question[], form: string | null | undefined) =>
+  form === 'group' ? questions.filter((q) => q.slot !== 'group_name') : questions
+
+/** The name field's label: for a group, the question set's own group_name question. */
+export function nameLabel(questions: Question[], form: SiteForm | null): string {
+  const own = form === 'group' ? questions.find((q) => q.slot === 'group_name')?.text : undefined
+  return own || copy.questions.name(form)
 }
 
 export function answersError(answers: Record<string, string>, questions: Question[]): string | null {
@@ -170,10 +193,13 @@ export const cleanNotes = (notes: LetterNote[]) =>
 export function orderPayload(d: Draft, questions: Question[]): OrderPayload {
   const answers: Record<string, string> = {}
   if (!d.answersLater)
-    for (const q of questions) {
+    for (const q of askedQuestions(questions, d.form)) {
       const v = (d.answers[q.slot] ?? '').trim()
       if (v) answers[q.slot] = v
     }
+  // A group's name is the name field (the server fills the slot from it as well).
+  if (d.form === 'group' && questions.some((q) => q.slot === 'group_name') && d.honoreeName.trim())
+    answers.group_name = d.honoreeName.trim()
   return {
     occasionKey: d.occasionKey ?? '',
     form: d.form ?? 'she',

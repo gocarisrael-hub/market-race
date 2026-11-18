@@ -7,10 +7,35 @@ export function extractSlots(template: string): string[] {
   return [...new Set([...template.matchAll(SLOT)].map((m) => m[1]))]
 }
 
+// When a text has no version for a form, the closest one: a group reads best in the plural (couple).
+const NEAREST: Record<Form, Form[]> = {
+  she: ['she'],
+  he: ['he', 'she'],
+  couple: ['couple', 'she'],
+  group: ['group', 'couple', 'she'],
+  company: ['company', 'she'],
+}
+
+/** A per-form text for a form, falling back to the nearest form, then to any. */
+export function textFor(texts: Partial<Record<Form, string>>, form: Form): string | undefined {
+  for (const f of NEAREST[form] ?? [form]) if (texts[f]) return texts[f]
+  return Object.values(texts).find(Boolean)
+}
+
 export function fallbackFor(q: Question | undefined, form: Form): string {
   if (!q) return ''
   if (typeof q.fallback === 'string') return q.fallback
-  return q.fallback[form] ?? q.fallback.she ?? Object.values(q.fallback)[0] ?? ''
+  return textFor(q.fallback, form) ?? ''
+}
+
+/** The question as the buyer reads it for a form. */
+export function questionTextFor(q: Question, form: Form): string {
+  return textFor(q.text, form) ?? q.slot
+}
+
+/** Slots the buyer fills outside the question list: the name field (and for a group, its name). */
+export function nameSlots(form: Form): string[] {
+  return form === 'group' ? ['name', 'group_name'] : ['name']
 }
 
 export interface FillResult {

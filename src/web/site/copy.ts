@@ -1,11 +1,16 @@
 // Every customer-facing text of the site, in one place (Hebrew). Business facts (prices,
 // occasions, themes, questions, the brand name) come from the API, never from here.
 
-export type SiteForm = 'she' | 'he' | 'couple'
+export type SiteForm = 'she' | 'he' | 'couple' | 'group'
 
-/** Picks the wording for the grammatical form of the honoree. */
-export const byForm = (form: SiteForm | null | undefined, she: string, he: string, couple: string) =>
-  form === 'he' ? he : form === 'couple' ? couple : she
+/** Picks the wording for the grammatical form of the honoree. A group defaults to the plural. */
+export const byForm = (
+  form: SiteForm | null | undefined,
+  she: string,
+  he: string,
+  couple: string,
+  group = couple,
+) => (form === 'he' ? he : form === 'couple' ? couple : form === 'group' ? group : she)
 
 export const copy = {
   back: '→ חזרה',
@@ -20,9 +25,7 @@ export const copy = {
     title: (market: string) => ['מירוץ טעימות', market ? `ב${market}` : 'בשוק'],
     intro:
       'חידות אישיות על מי שחוגגים, דוכנים אמיתיים בשוק וטעימה בכל תחנה. משחקים יחד מהטלפון, ביום שמתאים לכם.',
-    occasion: 'לכבוד מה חוגגים?',
-    about: 'על מי המשחק?',
-    forms: { she: 'עליה', he: 'עליו', couple: 'על זוג' } as Record<SiteForm, string>,
+    occasion: 'איזה משחק?',
     theme: 'איך זה ייראה?',
     people: 'כמה אתם?',
     peopleUnit: (n: number) => (n === 1 ? 'משתתף אחד' : `${n} משתתפים`),
@@ -42,19 +45,28 @@ export const copy = {
     dietLabels: { vegan: 'טבעוני', vegetarian: 'צמחוני', gluten_free: 'ללא גלוטן' } as Record<string, string>,
     total: 'סה״כ',
     perPerson: (p: string) => `${p} לאדם`,
-    next: (form: SiteForm | null) => `ממשיכים לשאלות ${form ? byForm(form, 'עליה', 'עליו', 'עליהם') : ''}`,
-    pickOccasion: 'בחרו לכבוד מה חוגגים',
-    pickForm: 'בחרו על מי המשחק',
+    next: (form: SiteForm | null) =>
+      form ? `ממשיכים לשאלות ${byForm(form, 'עליה', 'עליו', 'עליהם', 'עליכם')}` : 'ממשיכים לשאלות',
+    pickOccasion: 'בחרו איזה משחק',
     pickTheme: 'בחרו איך זה ייראה',
     companies: 'לחברות וצוותים',
     noOccasions: 'אין כרגע משחקים להזמנה. נסו שוב בקרוב.',
   },
 
   questions: {
-    title: (form: SiteForm) => ['ספרו לנו', byForm(form, 'עליה', 'עליו', 'עליהם')],
+    title: (form: SiteForm | null) =>
+      form ? ['ספרו לנו', byForm(form, 'עליה', 'עליו', 'עליהם', 'עליכם')] : ['ספרו לנו', 'על מי שחוגגים'],
     intro: 'מילה או שתיים. זה נכנס לחידות ולמכתב בסוף.',
-    name: (form: SiteForm) => byForm(form, 'איך קוראים לה?', 'איך קוראים לו?', 'איך קוראים להם?'),
-    namePlaceholder: (form: SiteForm) => byForm(form, 'למשל: מיכל', 'למשל: יואב', 'למשל: מיכל ויואב'),
+    name: (form: SiteForm | null) =>
+      form
+        ? byForm(form, 'איך קוראים לה?', 'איך קוראים לו?', 'איך קוראים להם?', 'שם הקבוצה / המשפחה')
+        : 'איך קוראים למי שחוגגים?',
+    namePlaceholder: (form: SiteForm | null) =>
+      byForm(form, 'למשל: מיכל', 'למשל: יואב', 'למשל: מיכל ויואב', 'למשל: משפחת כהן, צוות אלפא'),
+    /** The small she/he choice next to the name, when the occasion allows both. */
+    formLabel: 'המשחק',
+    forms: { she: 'עליה', he: 'עליו', couple: 'על זוג', group: 'על קבוצה' } as Record<SiteForm, string>,
+    pickForm: 'בחרו: עליה או עליו?',
     later: 'אמלא את השאלות אחר כך',
     laterHint: 'אחרי התשלום נשלח לכם קישור למלא אותן. המשחק נבנה כשהתשובות אצלנו.',
     notes: 'משפטים למכתב בסוף',
@@ -65,14 +77,22 @@ export const copy = {
     removeNote: 'הסרה',
     next: 'ממשיכים לתמונות',
     saving: 'שומרים...',
-    missingName: (form: SiteForm) =>
-      byForm(form, 'כתבו איך קוראים לה', 'כתבו איך קוראים לו', 'כתבו איך קוראים להם'),
+    missingName: (form: SiteForm | null) =>
+      form
+        ? byForm(
+            form,
+            'כתבו איך קוראים לה',
+            'כתבו איך קוראים לו',
+            'כתבו איך קוראים להם',
+            'כתבו את שם הקבוצה או המשפחה',
+          )
+        : 'כתבו איך קוראים למי שחוגגים',
     missingRequired: 'יש שאלת חובה שעוד לא ענינו עליה',
     tooLong: 'יש תשובה ארוכה מדי',
   },
 
   photos: {
-    title: (form: SiteForm | null) => `ועכשיו, תמונות ${byForm(form, 'שלה', 'שלו', 'שלהם')}`,
+    title: (form: SiteForm | null) => `ועכשיו, תמונות ${byForm(form, 'שלה', 'שלו', 'שלהם', 'שלכם')}`,
     intro: 'עד 5 תמונות, לא חובה. אנחנו מציירים אותן מחדש בסגנון של המפה, והן נכנסות לחידות ולמכתב בסוף.',
     add: (n: number) => (n ? '+ עוד תמונה' : '+ תמונה'),
     count: (n: number, max: number) => `${n} מתוך ${max}`,
@@ -208,7 +228,7 @@ export const copy = {
     bad_people: 'מספר המשתתפים מחוץ לטווח.',
     no_price: 'אין עדיין מחיר לאירוע הזה. דברו איתנו.',
     bad_occasion: 'האירוע הזה לא זמין כרגע.',
-    bad_form: 'בחרו על מי המשחק.',
+    bad_form: 'בחרו: עליה או עליו?',
     bad_theme: 'העיצוב הזה לא זמין כרגע. בחרו אחר.',
     no_route: 'אין כרגע מסלול בשוק הזה. בחרו עיצוב של שוק אחר.',
     card_disabled: 'התשלום באשראי עוד לא פתוח באתר. ההזמנה נשמרה, ונחזור אליכם לתשלום.',
