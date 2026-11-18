@@ -3,8 +3,21 @@ import type { PlayAction, PlayerView } from '../../server/services/play.ts'
 
 export type { PlayAction, PlayerView }
 
+/** The help button's contact, from the owner's settings. */
+export interface Support {
+  whatsapp: string
+  message: string
+}
+
 export type Loaded =
-  | { kind: 'view'; view: PlayerView; texts?: Record<string, string>; correct?: boolean }
+  | {
+      kind: 'view'
+      view: PlayerView
+      texts?: Record<string, string>
+      support?: Support
+      correct?: boolean
+      noBackup?: boolean
+    }
   | { kind: 'not_found' }
   | { kind: 'not_ready' }
   | { kind: 'error' }
@@ -20,7 +33,9 @@ async function parse(res: Response): Promise<Loaded> {
     error?: string
     view?: PlayerView
     correct?: boolean
+    noBackup?: boolean
     texts?: Record<string, string>
+    support?: Support
   } & Partial<PlayerView>
   if (res.status === 404) return { kind: 'not_found' }
   if (res.status === 409) {
@@ -30,9 +45,9 @@ async function parse(res: Response): Promise<Loaded> {
     return { kind: 'error' }
   }
   if (!res.ok) return { kind: 'error' }
-  if (b.view) return { kind: 'view', view: b.view, correct: b.correct }
-  const { texts, ...view } = b
-  return { kind: 'view', view: view as PlayerView, texts }
+  if (b.view) return { kind: 'view', view: b.view, correct: b.correct, noBackup: b.noBackup }
+  const { texts, support, ...view } = b
+  return { kind: 'view', view: view as PlayerView, texts, support }
 }
 
 export async function fetchGame(token: string): Promise<Loaded> {

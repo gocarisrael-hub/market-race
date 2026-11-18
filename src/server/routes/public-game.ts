@@ -11,6 +11,11 @@ const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('hint'), stopIndex: z.number().int().min(0) }),
   z.object({ type: z.literal('arrived'), stopIndex: z.number().int().min(0) }),
   z.object({ type: z.literal('redeemed'), stopIndex: z.number().int().min(0) }),
+  z.object({
+    type: z.literal('stall_closed'),
+    stopIndex: z.number().int().min(0),
+    stallId: z.number().int().optional(),
+  }),
 ])
 
 export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -32,7 +37,12 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
         brand: await getSetting(ctx.db, 'brand_name'),
         ...(await getSetting(ctx.db, 'player_texts')),
       }
-      return { ...view, texts }
+      // The help button: who to reach on WhatsApp, and the prefilled text.
+      const support = {
+        whatsapp: await getSetting(ctx.db, 'support_whatsapp'),
+        message: await getSetting(ctx.db, 'support_message'),
+      }
+      return { ...view, texts, support }
     },
   )
 
@@ -49,6 +59,8 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
         p.data.token,
         body.data as PlayAction,
         await getSetting(ctx.db, 'poll_seconds'),
+        undefined,
+        ctx.services,
       )
       if (!res.ok) {
         if (res.error === 'not_found') return reply.code(404).send({ error: res.error })
@@ -56,7 +68,7 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
         // stale / expired: return the current view so the client can catch up.
         return reply.code(409).send({ error: res.error, view: res.view })
       }
-      return { view: res.view, correct: res.correct }
+      return { view: res.view, correct: res.correct, noBackup: res.noBackup }
     },
   )
 }

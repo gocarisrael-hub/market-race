@@ -7,6 +7,8 @@ import { dailyCode } from '../domain/dailycode.ts'
 import { israelDate } from '../domain/dates.ts'
 import { matchAnswer } from '../domain/matcher.ts'
 import type { GameSnapshot, Palette, SnapshotStall, SnapshotTasting, TextPart } from '../domain/types.ts'
+import type { Services } from './context.ts'
+import { alertOwner } from './delivery.ts'
 
 export type Step = 'opening' | 'riddle' | 'revealed' | 'redeem' | 'done'
 
@@ -145,7 +147,11 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     const stall = usingBackup ? stop.backup!.stall : stop.stall
     const tasting = usingBackup ? stop.backup!.tasting : stop.tasting
     let closedNote: string | null = null
-    if (usingBackup) closedNote = (await stallClosedToday(db, stop.stall.id, today)).note || null
+    if (usingBackup) {
+      // The admin's note only when the admin closed it today (a group's report carries no note).
+      const c = await stallClosedToday(db, stop.stall.id, today)
+      closedNote = (c.closed && c.note) || null
+    }
     current.reveal = {
       answer: stop.riddle.answer,
       afterText: stop.riddle.afterText,
@@ -176,9 +182,13 @@ export type PlayAction =
   | { type: 'hint'; stopIndex: number }
   | { type: 'arrived'; stopIndex: number }
   | { type: 'redeemed'; stopIndex: number }
+  // The group found the shown stall closed. `stallId` is the stall the phone shows, so a phone
+  // still showing a stall another phone already reported is stale, not a second report.
+  | { type: 'stall_closed'; stopIndex: number; stallId?: number }
 
 export type PlayResult =
-  | { ok: true; view: PlayerView; correct?: boolean }
+  // noBackup: a reported closed stall has no backup; the group is told to contact us.
+  | { ok: true; view: PlayerView; correct?: boolean; noBackup?: boolean }
   | { ok: false; error: 'not_found' | 'not_ready' | 'expired' | 'stale'; view?: PlayerView }
 
 export async function getView(db: DB, token: string, pollSeconds = 4, now = new Date()) {
@@ -198,6 +208,7 @@ export async function act(
   action: PlayAction,
   pollSeconds = 4,
   now = new Date(),
+  svc?: Services,
 ): Promise<PlayResult> {
   const l = await load(db, token)
   if (typeof l === 'string') return { ok: false, error: l }
@@ -287,6 +298,43 @@ export async function act(
         })
         .onConflictDoNothing()
       if (last) await db.update(orders).set({ status: 'done' }).where(eq(orders.id, order.id))
+      return reload()
+    }
+    case 'stall_closed': {
+      if (state.step !== 'revealed' && state.step !== 'redeem') return stale()
+      const usingBackup = state.backupStops.includes(stop.index) && !!stop.backup
+      const shown = usingBackup ? stop.backup!.stall : stop.stall
+      if (action.stallId != null && action.stallId !== shown.id) return stale()
+      const where = [
+        `הזמנה ${order.orderNo}, המירוץ של ${game.honoree}`,
+        `תחנה ${stop.index + 1} מתוך ${game.stops.length}`,
+        `הדוכן שדווח סגור: ${shown.name}`,
+      ]
+      const alert = async (subject: string, lines: string[]) => {
+        console.info(`[play] stall_closed order=${order.orderNo} stop=${stop.index} stall=${shown.id}`)
+        if (!svc) return
+        try {
+          await alertOwner(svc, subject, lines)
+        } catch (e) {
+          console.error('[play] stall_closed alert failed', e)
+        }
+      }
+      if (usingBackup || !stop.backup) {
+        // Nowhere to send them: the game stays as it is and the group is told to contact us.
+        await alert(`הזמנה ${order.orderNo}: דוכן סגור ואין דוכן חלופי`, [
+          ...where,
+          usingBackup ? 'זה כבר הדוכן החלופי.' : 'לתחנה אין דוכן חלופי.',
+          'הקבוצה התבקשה לפנות אלינו.',
+        ])
+        return { ok: true, view: await buildView(db, l, pollSeconds, now), noBackup: true }
+      }
+      if (!(await update({ step: 'revealed', backupStops: [...state.backupStops, stop.index] })))
+        return stale()
+      await alert(`הזמנה ${order.orderNo}: דוכן סגור, הקבוצה עברה לדוכן החלופי`, [
+        ...where,
+        `הדוכן החלופי: ${stop.backup.stall.name}`,
+        'הדוכן נשאר פתוח לשאר המשחקים. לסגור אותו להיום: בממשק הניהול.',
+      ])
       return reload()
     }
   }
