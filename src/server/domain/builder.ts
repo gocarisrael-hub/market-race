@@ -2,6 +2,7 @@
 // SPEC "Building the game": safety swap → backup stall → block and flag. Never silently shorten.
 import { fillTemplate } from './template.ts'
 import type {
+  Decor,
   Form,
   GameSnapshot,
   LetterNote,
@@ -51,6 +52,10 @@ export interface BuildInput {
     palette: Palette
     pins: Record<string, { x: number; y: number }>
   }
+  /** The palette the buyer chose for the map; null/absent plays the theme's own palette. */
+  palette?: { id: number; palette: Palette } | null
+  /** The occasion's doodle set. */
+  decor?: Decor
   stalls: CatalogStall[]
   tastings: CatalogTasting[]
   riddles: CatalogRiddle[]
@@ -274,12 +279,20 @@ export function buildGame(input: BuildInput): BuildResult {
     })
   })
 
-  const palette = order.company?.palette ?? input.theme.palette
+  // A company's colors win over the buyer's palette, which wins over the theme's own.
+  const palette = order.company?.palette ?? input.palette?.palette ?? input.theme.palette
   const game: GameSnapshot = {
     version: 1,
     builtAt: (input.now ?? new Date()).toISOString(),
     market: { ...input.market },
-    theme: { id: input.theme.id, name: input.theme.name, map: input.theme.mapFile, palette: { ...palette } },
+    theme: {
+      id: input.theme.id,
+      name: input.theme.name,
+      map: input.theme.mapFile,
+      palette: { ...palette },
+      paletteId: order.company?.palette ? null : (input.palette?.id ?? null),
+    },
+    decor: input.decor ?? 'generic',
     company: order.company ? { name: order.company.name, logo: order.company.logo } : null,
     form: order.form,
     honoree: order.honoreeName,

@@ -1,14 +1,19 @@
 // Step 1: which game (the occasion), theme, people, allergens and diets, live price.
 // About whom (she or he) is asked next to the name on step 2, only when the occasion allows both.
 import { useState } from 'react'
+import { Doodles } from '../../shared/decor.tsx'
 import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
 import {
   chooseOccasion,
+  chooseTheme,
   clampPeople,
+  currentPalette,
   type Draft,
+  decorFor,
   formatShekels,
   orderableThemes,
+  palettesFor,
   priceAgorot,
   privateOccasions,
   step1Error,
@@ -16,7 +21,7 @@ import {
 } from '../logic.ts'
 import { navigate } from '../router.ts'
 import { RouteTastings } from '../tastings.tsx'
-import { Cta, Deco, Link, Opt, Ring, Underline } from '../ui.tsx'
+import { Cta, Daub, Deco, Link, LookPreview, Opt, QNote, Ring, StepTrail, Tick, Underline } from '../ui.tsx'
 
 export const STEPS = 4
 
@@ -34,6 +39,9 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
     setDraft({ ...d, ...patch })
   }
   const [t1, t2] = copy.home.title(market)
+  const decor = decorFor(shop, d.occasionKey)
+  const pals = palettesFor(shop, theme?.id)
+  const pal = currentPalette(shop, d)
 
   const next = () => {
     const e = step1Error(d, shop)
@@ -42,7 +50,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
   }
 
   return (
-    <main className="page">
+    <main className="page" data-decor={decor ?? undefined}>
       <Deco icon="awning" className="sway" style={{ top: -30, left: -36, width: 210 }} />
       <Deco
         icon="fruit"
@@ -55,8 +63,21 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
         style={{ top: 1100, left: -40, width: 90, animationDelay: '-2s' }}
       />
 
+      {decor && (
+        <Doodles
+          key={decor}
+          className="deco"
+          decor={decor}
+          spots={[
+            { top: 200, left: 6, size: 50, rot: 10 },
+            { top: 560, left: 0, size: 44, rot: -12 },
+            { top: 960, right: 0, size: 42, rot: 8 },
+          ]}
+        />
+      )}
+
       <div style={{ marginTop: 74, marginLeft: 50 }}>
-        <div className="eyebrow">{copy.stepOf(1, STEPS)}</div>
+        <StepTrail step={1} total={STEPS} />
         <h1 className="title rise">
           {t1}
           <br />
@@ -70,9 +91,9 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
       ) : (
         <>
           <section className="section" aria-labelledby="l-occ">
-            <div className="label" id="l-occ">
+            <QNote id="l-occ" tilt={-1.5}>
               {copy.home.occasion}
-            </div>
+            </QNote>
             <div className="row" role="radiogroup" aria-labelledby="l-occ">
               {occasions.map((o) => (
                 <Opt
@@ -85,12 +106,17 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
                 </Opt>
               ))}
             </div>
+            {decor && (
+              <p className="cheer" aria-live="polite" key={decor}>
+                {copy.cheer[decor] ?? copy.cheer.generic}
+              </p>
+            )}
           </section>
 
           <section className="section" aria-labelledby="l-theme">
-            <div className="label" id="l-theme" style={{ marginBottom: 12 }}>
+            <QNote id="l-theme" tilt={-1}>
               {copy.home.theme}
-            </div>
+            </QNote>
             <div className="themes">
               {themes.map((t) => (
                 <button
@@ -98,9 +124,14 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
                   key={t.id}
                   className="theme"
                   aria-pressed={d.themeId === t.id}
-                  onClick={() => set({ themeId: t.id })}
+                  onClick={() => set(chooseTheme(shop, d, t.id))}
                 >
-                  {t.map && <img src={t.map} alt="" loading="lazy" decoding="async" />}
+                  <span className="thumb">
+                    {t.map && <img src={t.map} alt="" loading="lazy" decoding="async" />}
+                    {d.themeId === t.id && pal?.palette.mapTint && (
+                      <span className="map-tint" style={{ background: pal.palette.mapTint }} />
+                    )}
+                  </span>
                   <span className="name">
                     {t.name}
                     {d.themeId === t.id && (
@@ -114,10 +145,47 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
             </div>
           </section>
 
+          {theme && pals.length > 0 && (
+            <section className="section" aria-labelledby="l-palette">
+              <QNote id="l-palette" tilt={1.4}>
+                {copy.home.palette}
+              </QNote>
+              <div className="daubs" role="radiogroup" aria-labelledby="l-palette">
+                {pals.map((p, i) => {
+                  const on = pal?.id === p.id
+                  return (
+                    // biome-ignore lint/a11y/useSemanticElements: a drawn daub, like the other drawn options
+                    <button
+                      type="button"
+                      key={p.id}
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={p.name}
+                      className="daub"
+                      data-palette={p.id}
+                      onClick={() => set({ paletteId: p.id })}
+                    >
+                      <Daub palette={p.palette} index={i} />
+                      {on && <Ring />}
+                      {on && <Tick />}
+                    </button>
+                  )
+                })}
+              </div>
+              {pal && (
+                <p className="daub-name" aria-live="polite">
+                  {pal.name}
+                </p>
+              )}
+              {pal && <LookPreview map={theme.map} palette={pal.palette} name={pal.name} />}
+              <p className="hint">{copy.home.paletteHint}</p>
+            </section>
+          )}
+
           <section className="section" aria-labelledby="l-people">
-            <div className="label" id="l-people">
+            <QNote id="l-people" tilt={-1.2}>
               {copy.home.people}
-            </div>
+            </QNote>
             <div className="stepper">
               <button
                 type="button"
@@ -143,9 +211,9 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
           </section>
 
           <section className="section" aria-labelledby="l-all">
-            <div className="label" id="l-all">
+            <QNote id="l-all" tilt={1}>
               {copy.home.allergens}
-            </div>
+            </QNote>
             <div className="row" style={{ gap: '2px 10px' }}>
               {shop.allergens.map((a) => (
                 <Opt

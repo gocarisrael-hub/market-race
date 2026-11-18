@@ -1,6 +1,7 @@
 // The final letter: notes from friends with signatures, a collage of the photos taped between
-// and around the notes, falling food, and the route.
+// and around the notes, the occasion's doodles, falling food, and the route.
 import type { ReactNode } from 'react'
+import { Doodles } from '../../shared/decor.tsx'
 import { Paper } from '../draw.tsx'
 import { iconUrl, stopIcon } from '../logic.ts'
 import { TapedPhoto, useLightbox } from '../photo.tsx'
@@ -54,7 +55,7 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
       )
   }
   return (
-    <main className="scr letter">
+    <main className="scr letter" data-decor={view.decor}>
       <div className="falling" aria-hidden="true">
         {FALLING.map((f) => (
           <img
@@ -67,6 +68,13 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
       </div>
 
       <header className="letter-head">
+        <Doodles
+          decor={view.decor}
+          spots={[
+            { top: 4, left: '1%', size: 48, rot: -10 },
+            { top: 46, right: '1%', size: 42, rot: 12 },
+          ]}
+        />
         <div className="muted-label">{t('letter.kicker')}</div>
         <h1 className="letter-title pop">{t('letter.title', { name: view.honoree })}</h1>
         {view.company?.logo && (

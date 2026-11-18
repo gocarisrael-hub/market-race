@@ -9,6 +9,8 @@
   --accent: #b4161b;
   --accent-dark: #8a0f13;
   --display: "Amatic SC", Heebo, sans-serif;
+  --decor-ink: var(--ink);
+  --decor-accent: var(--accent);
   color-scheme: light;
 }
 * {
@@ -122,7 +124,7 @@ button {
   user-select: none;
   z-index: 0;
 }
-.page > *:not(.deco) {
+.page > *:not(.deco):not(.doodles) {
   position: relative;
   z-index: 1;
 }
@@ -241,10 +243,11 @@ h2.sub {
 .theme[aria-pressed="true"] {
   opacity: 1;
 }
-.theme img {
+.theme .thumb {
+  position: relative;
+  display: block;
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+  isolation: isolate;
   clip-path: polygon(
     3% 6%,
     22% 2%,
@@ -263,6 +266,12 @@ h2.sub {
     1% 42%
   );
   background: var(--paper);
+}
+.theme img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
 }
 .theme .name {
   position: relative;
@@ -926,6 +935,370 @@ ol.howto {
   font-weight: 500;
 }
 
+/* ---------- Game look in the order flow ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The map follows the chosen palette (same blend as the game). */
+.map-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  mix-blend-mode: color;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Progress trail: a dashed walk between the four steps, like the riddle trail of the game. */
+.step-trail {
+  position: relative;
+  height: 64px;
+  margin: 0 -8px 10px -40px;
+}
+.step-path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 48px;
+  overflow: visible;
+}
+.step-path path {
+  fill: none;
+  stroke: var(--dim);
+  stroke-width: 2;
+  stroke-dasharray: 5 8;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.step-trail ol {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step-trail li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 64px;
+}
+.step-trail li:nth-child(even) {
+  margin-top: 8px;
+}
+.step-trail .dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--dim);
+  background: var(--bg);
+  border-radius: 50%;
+}
+.step-trail .now .dot {
+  color: var(--accent);
+  font-size: 30px;
+}
+.step-trail .now .ring {
+  inset: -4px -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 8px);
+}
+.step-trail .dot-tick {
+  width: 22px;
+  height: 18px;
+  overflow: visible;
+}
+.step-trail .dot-tick path,
+.opt .tick path,
+.daub .tick path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.step-trail .word {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--dim);
+  margin-top: 2px;
+}
+.step-trail .now .word {
+  color: var(--ink);
+}
+
+/* A question on a torn scrap of paper. */
+.qnote {
+  position: relative;
+  display: inline-block;
+  margin: 0 -4px 10px;
+  padding: 6px 16px 8px;
+  transform: rotate(var(--r, -1.5deg));
+}
+.qnote svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.qnote path {
+  fill: var(--paper);
+  stroke: var(--dim);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.qnote span {
+  position: relative;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.cheer {
+  margin: 6px 0 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--accent);
+  animation: rise 0.5s ease both;
+  --r: -1deg;
+}
+
+/* A chosen option: the drawn circle and a small check at its corner. */
+.opt .tick {
+  position: absolute;
+  top: -10px;
+  left: -14px;
+  width: 22px;
+  height: 18px;
+  overflow: visible;
+}
+.opt.small .tick {
+  top: -8px;
+  left: -12px;
+  width: 18px;
+  height: 15px;
+}
+
+/* Palette: paint daubs, the chosen one circled. */
+.daubs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 6px;
+  padding: 4px 2px;
+}
+.daub {
+  position: relative;
+  width: 62px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.daub:nth-child(odd) {
+  transform: rotate(-6deg);
+}
+.daub:nth-child(even) {
+  transform: rotate(5deg);
+}
+.daub[aria-checked="true"] {
+  transform: scale(1.12) rotate(-3deg);
+}
+.daub-shape {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.daub .ring {
+  inset: -6px -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 12px);
+}
+.daub .tick {
+  position: absolute;
+  top: -8px;
+  left: -10px;
+  width: 22px;
+  height: 18px;
+  overflow: visible;
+}
+.daub-name {
+  margin: 6px 0 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+/* "How it will look": the game's opening, small. */
+.look-preview {
+  position: relative;
+  margin: 14px 0 0;
+  width: 100%;
+  max-width: 320px;
+  transform: rotate(-1.2deg);
+  clip-path: polygon(2% 2%, 30% 0, 64% 2%, 98% 0, 100% 40%, 99% 98%, 64% 100%, 30% 98%, 0 100%, 1% 50%);
+  background: var(--pv-bg);
+}
+.pv-map {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.pv-map img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 70%;
+}
+.pv-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 18px 16px;
+  background: var(--pv-bg);
+}
+.pv-edge {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% - 1px);
+  left: 0;
+  width: 100%;
+  height: 20px;
+}
+.pv-edge path {
+  fill: var(--pv-bg);
+}
+.pv-ribbon,
+.pv-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pv-ribbon {
+  width: 82%;
+  aspect-ratio: 330 / 92;
+}
+.pv-button {
+  width: 76%;
+  height: 40px;
+}
+.pv-ribbon svg,
+.pv-button svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pv-ribbon .main {
+  fill: var(--pv-ribbon);
+  stroke: var(--pv-ink);
+  stroke-width: 2;
+}
+.pv-ribbon .tail {
+  fill: var(--pv-ribbon-tail);
+  stroke: var(--pv-ink);
+  stroke-width: 2;
+}
+.pv-button path {
+  fill: var(--pv-accent);
+  stroke: var(--pv-ink);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.pv-ribbon span,
+.pv-button span {
+  position: relative;
+  font-family: var(--display);
+  font-weight: 700;
+  line-height: 1;
+}
+.pv-ribbon span {
+  margin-top: -6px;
+  font-size: 30px;
+  color: var(--pv-on-ribbon);
+}
+.pv-button span {
+  font-size: 24px;
+  color: var(--pv-on-accent);
+}
+
+/* Questions on torn paper notes. */
+.q.on-paper {
+  position: relative;
+  padding: 14px 18px 14px;
+  margin-top: 14px;
+  transform: rotate(var(--r, 0deg));
+}
+.q-paper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: visible;
+}
+.q-paper path {
+  fill: var(--paper);
+  stroke: var(--dim);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.q.on-paper:nth-of-type(odd) {
+  margin-left: 22px;
+}
+.q.on-paper:nth-of-type(even) {
+  margin-right: 18px;
+}
+.q.on-paper > :not(.q-paper) {
+  position: relative;
+}
+.q.on-paper .top {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.q.on-paper .req,
+.q.on-paper .count {
+  font-family: Heebo, sans-serif;
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cheer {
+    animation: none;
+  }
 /* Manage page: the "ערוך" word, circled by hand like the file picker. */
 .edit-btn {
   position: relative;

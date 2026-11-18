@@ -1,11 +1,20 @@
 // Step 4: buyer details, summary, pay.
 import { useEffect, useState } from 'react'
+import { Doodles } from '../../shared/decor.tsx'
 import { ApiError, getManage, type Manage, type Shop, updateOrder } from '../api.ts'
 import { copy } from '../copy.ts'
-import { buyerErrors, clearDraft, type Draft, errorText, formatShekels } from '../logic.ts'
+import {
+  buyerErrors,
+  clearDraft,
+  currentPalette,
+  type Draft,
+  decorFor,
+  errorText,
+  formatShekels,
+} from '../logic.ts'
 import { PayLayer, usePay } from '../pay.tsx'
 import { navigate } from '../router.ts'
-import { Back, Cta, Deco, Failed, Field, Link, Loading, TornPaper } from '../ui.tsx'
+import { Back, Cta, Deco, Failed, Field, Link, Loading, StepTrail, TornPaper } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDraft: (d: Draft) => void }) {
@@ -42,6 +51,8 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
   }
   const occasion = shop.occasions.find((o) => o.key === order.occasionKey)?.label ?? ''
   const theme = mine ? shop.themes.find((t) => t.id === draft.themeId)?.name : undefined
+  const palette = mine ? currentPalette(shop, draft)?.name : undefined
+  const decor = decorFor(shop, order.occasionKey)
   const allergens = mine ? [...draft.allergens, ...draft.diets.map((x) => copy.home.dietLabels[x] ?? x)] : []
   const amount = formatShekels(order.amountAgorot)
   const submit = () => {
@@ -53,7 +64,15 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
   const [t1, t2] = copy.checkout.title
 
   return (
-    <main className="page">
+    <main className="page" data-decor={decor ?? undefined}>
+      <Doodles
+        className="deco"
+        decor={decor}
+        spots={[
+          { top: 330, left: 8, size: 46, rot: 8 },
+          { top: 560, left: -10, size: 40, rot: -12 },
+        ]}
+      />
       <Deco
         icon="tomatoes"
         className="bob"
@@ -61,7 +80,7 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
       />
       <Back href={`/order/${token}/photos`} />
       <div style={{ marginTop: 18, marginLeft: 70 }}>
-        <div className="eyebrow">{copy.stepOf(4, STEPS)}</div>
+        <StepTrail step={4} total={STEPS} />
         <h1 className="title rise">
           {t1}
           <br />
@@ -117,6 +136,12 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
             <>
               <dt>{copy.checkout.theme}</dt>
               <dd>{theme}</dd>
+            </>
+          )}
+          {palette && (
+            <>
+              <dt>{copy.checkout.palette}</dt>
+              <dd>{palette}</dd>
             </>
           )}
           {allergens.length > 0 && (

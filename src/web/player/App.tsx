@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import type { Palette } from '../../server/domain/types.ts'
+import { DecorDefs } from '../shared/decor.tsx'
 import { tokenFromPath } from './api.ts'
 import { makeT } from './copy.ts'
 import { Help } from './screens/Help.tsx'
@@ -55,6 +56,7 @@ export function App() {
 
   return (
     <>
+      <DecorDefs />
       {offline && state.phase === 'view' && (
         <div className="offline" role="status">
           {t('offline')}

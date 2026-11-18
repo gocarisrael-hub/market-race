@@ -7,6 +7,7 @@ const view = (over: Partial<PlayerView> = {}): PlayerView => ({
   version: 3,
   pollSeconds: 4,
   theme: null,
+  decor: 'generic',
   company: null,
   honoree: 'מיכל',
   form: 'she',

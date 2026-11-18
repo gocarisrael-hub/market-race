@@ -1,6 +1,7 @@
 // Shared admin building blocks: hash router, list loading, a generic list + edit page, small inputs.
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import type {
+  Decor,
   Form,
   MarketHours,
   Palette,
@@ -63,6 +64,7 @@ export interface Occasion {
   audience: 'private' | 'company'
   questionSetId: number | null
   forms: Form[]
+  decor: Decor
   sort: number
   active: boolean
 }
@@ -72,6 +74,22 @@ export interface Route {
   name: string
   stops: RouteStop[]
   active: boolean
+}
+export interface PaletteRow {
+  id: number
+  name: string
+  palette: Palette
+  themeIds: number[]
+  sort: number
+  active: boolean
+}
+export const DECOR_LABELS: Record<Decor, string> = {
+  birthday: 'יום הולדת (בלונים, עוגה, כובע, קונפטי)',
+  love: 'אהבה (לבבות, טבעת, נשיקה, פרחים)',
+  family: 'משפחה (בית, משפחה, לב)',
+  friends: 'חברים וקבוצות (כיף, דגל, כוכבים)',
+  company: 'חברה (תיק, טיל, קפה)',
+  generic: 'כללי (כוכבים, נצנצים)',
 }
 export interface Theme {
   id: number

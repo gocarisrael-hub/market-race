@@ -24,6 +24,7 @@ import {
   MoneyInput,
   NumberInput,
   type Occasion,
+  type PaletteRow,
   type QuestionSet,
   type Route,
   Select,
@@ -1098,7 +1099,9 @@ export function TestGamePage() {
   const occasions = (useList<Occasion>('/catalog/occasions').items ?? []).filter((o) => o.active)
   const themes = (useList<Theme>('/catalog/themes').items ?? []).filter((t) => t.active)
   const routes = (useList<Route>('/catalog/routes').items ?? []).filter((r) => r.active)
+  const palettes = (useList<PaletteRow>('/catalog/palettes').items ?? []).filter((p) => p.active)
   const sets = useList<QuestionSet>('/catalog/question-sets').items ?? []
+  const [paletteId, setPaletteId] = useState<number | null>(null)
   const [occasionKey, setOccasionKey] = useState('')
   const [form, setForm] = useState<Form | ''>('')
   const [themeId, setThemeId] = useState<number | null>(null)
@@ -1116,6 +1119,7 @@ export function TestGamePage() {
   const occ = occasions.find((o) => o.key === occasionKey)
   const theme = themes.find((t) => t.id === themeId)
   const marketRoutes = routes.filter((r) => !theme || r.marketId === theme.marketId)
+  const themePalettes = palettes.filter((p) => theme && p.themeIds.includes(theme.id))
   const questions = sets.find((s) => s.id === occ?.questionSetId)?.questions ?? []
   const isCompany = occ?.audience === 'company'
   const f: Form = form || occ?.forms[0] || 'she'
@@ -1140,6 +1144,7 @@ export function TestGamePage() {
           honoreeName: isCompany ? '' : honoreeName,
           companyName: isCompany ? companyName : undefined,
           themeId,
+          paletteId: themePalettes.some((p) => p.id === paletteId) ? paletteId : null,
           routeId,
           people,
           allergens,
@@ -1191,6 +1196,13 @@ export function TestGamePage() {
             value={themeId}
             options={themes.map((t) => ({ value: t.id, label: t.name }))}
             onChange={setThemeId}
+          />
+          <Select
+            label="צבעים"
+            value={paletteId}
+            placeholder="של העיצוב"
+            options={themePalettes.map((p) => ({ value: p.id, label: p.name }))}
+            onChange={(v) => setPaletteId(v || null)}
           />
           <Select
             label="מסלול"

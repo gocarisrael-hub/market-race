@@ -12,6 +12,7 @@ const riddleView = (over: { version?: number; hint?: string | null } = {}): Play
   version: over.version ?? 2,
   pollSeconds: 4,
   theme: null,
+  decor: 'generic',
   company: null,
   honoree: 'מיכל',
   form: 'she',

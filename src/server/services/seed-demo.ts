@@ -1,9 +1,19 @@
 // Demo catalog for local dev, e2e and staging. Everything here is editable data in the admin;
 // the owner replaces it with the real stalls, riddles and prices. Never runs in production.
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
-import { markets, occasions, questionSets, riddles, routes, stalls, tastings, themes } from '../db/schema.ts'
-import type { Question } from '../domain/types.ts'
+import {
+  markets,
+  occasions,
+  palettes,
+  questionSets,
+  riddles,
+  routes,
+  stalls,
+  tastings,
+  themes,
+} from '../db/schema.ts'
+import type { Decor, Palette, Question } from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { setSetting } from './settings.ts'
 
@@ -94,6 +104,125 @@ const companyQuestions: Question[] = [
     maxLen: 40,
   },
 ]
+
+const WATERCOLOR = ['כרמל בצבעי מים', 'מחנה יהודה בצבעי מים']
+
+/** Demo palettes: which themes (by name) each one is offered on. Every one passes paletteIssues. */
+export const DEMO_PALETTES: { name: string; themes: string[]; palette: Palette }[] = [
+  {
+    name: 'אדום קלאסי',
+    themes: WATERCOLOR,
+    palette: { background: '#EADBC8', accent: '#B4161B', ink: '#2B2420', paper: '#FFFBF4' },
+  },
+  {
+    name: 'כחול ים',
+    themes: WATERCOLOR,
+    palette: {
+      background: '#DCE6EA',
+      accent: '#1F5E8C',
+      ink: '#14262F',
+      paper: '#FAFCFC',
+      mapTint: '#2F6E9E',
+    },
+  },
+  {
+    name: 'ירוק זית',
+    themes: WATERCOLOR,
+    palette: {
+      background: '#E4E2CC',
+      accent: '#5B6B1E',
+      ink: '#262A18',
+      paper: '#FDFCF4',
+      mapTint: '#6B7A2A',
+    },
+  },
+  {
+    name: 'כתום שקיעה',
+    themes: WATERCOLOR,
+    palette: {
+      background: '#F2DDC6',
+      accent: '#C2501A',
+      ink: '#2E2018',
+      paper: '#FFF9F2',
+      mapTint: '#D0621F',
+    },
+  },
+  {
+    name: 'ורוד פטל',
+    themes: WATERCOLOR,
+    palette: {
+      background: '#F1DDE2',
+      accent: '#A3245A',
+      ink: '#2E1A22',
+      paper: '#FFF8FA',
+      mapTint: '#B23A6E',
+    },
+  },
+  {
+    name: 'כחול-ורוד',
+    themes: ['כרמל כחול-ורוד'],
+    palette: {
+      background: '#8E99C6',
+      accent: '#F3859F',
+      accent2: '#0A297D',
+      ink: '#0A297D',
+      paper: '#F6EEF2',
+    },
+  },
+  {
+    name: 'לילה',
+    themes: ['מחנה יהודה בלילה'],
+    palette: { background: '#0B2B47', accent: '#AFC7AE', ink: '#08223A', paper: '#F3EFE4', dark: true },
+  },
+]
+
+/** Doodle set per demo occasion key. */
+export const DEMO_DECOR: Record<string, Decor> = {
+  bachelorette: 'love',
+  couple: 'love',
+  birthday_parent: 'birthday',
+  birthday_friend: 'birthday',
+  family: 'family',
+  friends: 'friends',
+  generic: 'generic',
+  team_day: 'company',
+  retirement: 'company',
+  new_employee: 'company',
+}
+
+/**
+ * Adds the demo palettes that are missing (by name) and links them to the themes they name.
+ * Idempotent: used by the seed and to top up a database seeded before palettes existed.
+ */
+export async function ensureDemoPalettes(db: DB): Promise<number> {
+  const have = new Set((await db.select({ name: palettes.name }).from(palettes)).map((p) => p.name))
+  const allThemes = await db.select({ id: themes.id, name: themes.name }).from(themes)
+  let added = 0
+  for (const [i, p] of DEMO_PALETTES.entries()) {
+    if (have.has(p.name)) continue
+    const themeIds = allThemes.filter((t) => p.themes.includes(t.name)).map((t) => t.id)
+    if (!themeIds.length) continue
+    await db.insert(palettes).values({ name: p.name, palette: p.palette, themeIds, sort: i + 1 })
+    added++
+  }
+  return added
+}
+
+/** Sets the demo doodle sets on the demo occasions that still have the generic one. */
+export async function ensureOccasionDecor(db: DB): Promise<number> {
+  const rows = await db
+    .select()
+    .from(occasions)
+    .where(inArray(occasions.key, Object.keys(DEMO_DECOR)))
+  let n = 0
+  for (const o of rows) {
+    const decor = DEMO_DECOR[o.key]
+    if (o.decor === decor || o.decor !== 'generic') continue
+    await db.update(occasions).set({ decor }).where(eq(occasions.id, o.id))
+    n++
+  }
+  return n
+}
 
 // ---------- Group games: family, friends (a unit, a class), generic ----------
 // The "group" form addresses a group in the plural, named by {group_name} (asked as the name field).
@@ -577,6 +706,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
   await db.insert(occasions).values([
     {
       key: 'bachelorette',
+      decor: DEMO_DECOR.bachelorette,
       label: 'רווקות',
       audience: 'private',
       questionSetId: qsPrivate.id,
@@ -585,6 +715,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     },
     {
       key: 'couple',
+      decor: DEMO_DECOR.couple,
       label: 'זוג',
       audience: 'private',
       questionSetId: qsPrivate.id,
@@ -593,6 +724,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     },
     {
       key: 'birthday_parent',
+      decor: DEMO_DECOR.birthday_parent,
       label: 'יום הולדת להורה',
       audience: 'private',
       questionSetId: qsPrivate.id,
@@ -601,6 +733,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     },
     {
       key: 'birthday_friend',
+      decor: DEMO_DECOR.birthday_friend,
       label: 'יום הולדת לחבר/ה',
       audience: 'private',
       questionSetId: qsPrivate.id,
@@ -613,10 +746,12 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
       audience: 'private' as const,
       questionSetId: groupSets[i].id,
       forms: ['group' as const],
+      decor: DEMO_DECOR[g.key] ?? 'generic',
       sort: 5 + i,
     })),
     {
       key: 'team_day',
+      decor: DEMO_DECOR.team_day,
       label: 'יום צוות',
       audience: 'company',
       questionSetId: qsCompany.id,
@@ -625,6 +760,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     },
     {
       key: 'retirement',
+      decor: DEMO_DECOR.retirement,
       label: 'פרישה',
       audience: 'company',
       questionSetId: qsCompany.id,
@@ -633,6 +769,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     },
     {
       key: 'new_employee',
+      decor: DEMO_DECOR.new_employee,
       label: 'עובד/ת חדש/ה',
       audience: 'company',
       questionSetId: qsCompany.id,
@@ -640,6 +777,8 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
       sort: 10,
     },
   ])
+
+  await ensureDemoPalettes(db)
 
   // Demo prices only. The owner sets the real ones in the admin (SPEC "Open").
   await setSetting(db, 'prices', {

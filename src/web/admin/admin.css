@@ -330,6 +330,25 @@ label.check {
   display: inline-block;
 }
 
+/* Palette contrast checks */
+ul.contrast {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+ul.contrast li.ok::before {
+  content: "✓ ";
+  color: #1a7f37;
+}
+ul.contrast li.bad {
+  color: #b42318;
+}
+ul.contrast li.bad::before {
+  content: "✗ ";
+}
+
 /* Printable daily-code sheet */
 .codes table {
   max-width: 420px;
