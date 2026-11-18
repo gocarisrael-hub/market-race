@@ -1299,6 +1299,8 @@ ol.howto {
   .cheer {
     animation: none;
   }
+}
+
 /* Manage page: the "ערוך" word, circled by hand like the file picker. */
 .edit-btn {
   position: relative;

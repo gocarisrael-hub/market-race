@@ -80,6 +80,13 @@ export type Manage = {
   editable: boolean
   honoreeName?: string
   letterNotes?: LetterNote[]
+  /** The color choice for the edit form: the map, its palettes (default first) and the chosen id. */
+  look?: {
+    map: string | null
+    themePalette: Palette
+    paletteId: number | null
+    palettes: ShopPalette[]
+  } | null
   answers?: Record<string, string>
   questions?: Question[]
 }
@@ -147,6 +154,7 @@ export const startPay = (token: string) =>
 export const getManage = (token: string) => api<Manage>(`/api/manage/${encodeURIComponent(token)}`)
 export type OrderEdit = {
   honoreeName?: string
+  paletteId?: number | null
   answers: Record<string, string>
   letterNotes: LetterNote[]
 }

@@ -363,6 +363,27 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   // Tranzila returns the pay window by POST; bounce it to a GET of the same page.
   app.post('/pay/done', async (req, reply) => reply.redirect(req.url, 303))
 
+  /** The map and the palettes an order can be played in (the default first), and its choice. */
+  async function lookFor(order: typeof orders.$inferSelect) {
+    if (!order.themeId) return null
+    const [theme] = await db.select().from(themes).where(eq(themes.id, order.themeId))
+    if (!theme) return null
+    const pal = await db
+      .select()
+      .from(palettes)
+      .where(eq(palettes.active, true))
+      .orderBy(asc(palettes.sort), asc(palettes.id))
+    const list = pal
+      .filter((p) => p.themeIds.includes(theme.id))
+      .map((p) => ({ id: p.id, name: p.name, palette: p.palette }))
+    return {
+      map: fileUrl(theme.mapFile),
+      themePalette: theme.palette,
+      paletteId: order.paletteId,
+      palettes: list,
+    }
+  }
+
   app.get('/api/manage/:token', async (req, reply) => {
     const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
     const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
@@ -408,6 +429,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       honoreeName: editable ? order.honoreeName : undefined,
       answers: needsAnswers || editable ? order.answers : undefined,
       letterNotes: editable ? order.letterNotes : undefined,
+      // The color: the palettes this order's map can be played in, and the chosen one.
+      look: editable ? await lookFor(order) : undefined,
       questions:
         needsAnswers || editable
           ? publicQuestions(await questionsForOccasion(db, order.occasionKey), order.form)
@@ -426,6 +449,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       const body = z
         .object({
           honoreeName: z.string().trim().min(1).max(40).optional(),
+          paletteId: z.number().int().nullable().optional(),
           answers: z.record(z.string(), z.string().max(300)),
           letterNotes: z.array(letterNote).max(10).default([]),
         })
@@ -436,10 +460,17 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       if (order.kind !== 'private') return reply.code(409).send({ error: 'not_editable' })
       const [state] = await db.select().from(gameStates).where(eq(gameStates.orderId, order.id))
       if (!isEditable(order, state)) return reply.code(409).send({ error: 'locked' })
+      const { paletteId } = body.data
+      if (paletteId != null) {
+        const [pal] = await db.select().from(palettes).where(eq(palettes.id, paletteId))
+        if (!pal?.active || !order.themeId || !pal.themeIds.includes(order.themeId))
+          return reply.code(400).send({ error: 'bad_palette' })
+      }
       const questions = await questionsForOccasion(db, order.occasionKey)
       await db
         .update(orders)
         .set({
+          ...(paletteId !== undefined ? { paletteId } : {}),
           honoreeName: body.data.honoreeName ?? order.honoreeName,
           answers: cleanAnswers(body.data.answers, questions),
           letterNotes: body.data.letterNotes.filter((n) => n.text.trim()),

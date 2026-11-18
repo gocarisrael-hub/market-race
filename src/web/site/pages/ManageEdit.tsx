@@ -1,10 +1,11 @@
-// The manage page's edit mode: the buyer changes the name, the answers and the letter notes (and
-// reaches the photos) any number of times until the game starts. Same fields as the order flow.
+// The manage page's edit mode: the buyer changes the name, the answers, the letter notes and the
+// color (palette, with a live preview), and reaches the photos, any number of times until the
+// game starts. Same fields as the order flow.
 import { useState } from 'react'
 import { ApiError, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
 import { copy, type SiteForm } from '../copy.ts'
 import { askedQuestions, cleanNotes, editError, errorText, MAX_NOTES, nameLabel } from '../logic.ts'
-import { Cta, Link, QField, TornPaper } from '../ui.tsx'
+import { Cta, Daub, Link, LookPreview, QField, QNote, Ring, Tick, TornPaper } from '../ui.tsx'
 
 export function ManageEdit(props: {
   token: string
@@ -24,6 +25,12 @@ export function ManageEdit(props: {
   const [notes, setNotes] = useState<LetterNote[]>(
     m.letterNotes?.length ? m.letterNotes : [{ text: '', signature: '' }],
   )
+  const look = m.look ?? null
+  const pals = look?.palettes ?? []
+  const [paletteId, setPaletteId] = useState<number | null>(
+    pals.find((p) => p.id === look?.paletteId)?.id ?? pals[0]?.id ?? null,
+  )
+  const pal = pals.find((p) => p.id === paletteId) ?? null
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -34,7 +41,12 @@ export function ManageEdit(props: {
     try {
       const sent = { ...answers }
       if (form === 'group' && all.some((q) => q.slot === 'group_name')) sent.group_name = name.trim()
-      await submitAnswers(token, { honoreeName: name.trim(), answers: sent, letterNotes: cleanNotes(notes) })
+      await submitAnswers(token, {
+        honoreeName: name.trim(),
+        answers: sent,
+        letterNotes: cleanNotes(notes),
+        ...(pals.length ? { paletteId } : {}),
+      })
       props.onDone()
     } catch (err) {
       setError(errorText(err instanceof ApiError ? err.code : 'generic'))
@@ -117,6 +129,44 @@ export function ManageEdit(props: {
           </button>
         )}
       </TornPaper>
+      {look && pals.length > 1 && (
+        <section className="section" aria-labelledby="l-edit-palette">
+          <QNote id="l-edit-palette" tilt={1.4}>
+            {copy.home.palette}
+          </QNote>
+          <div className="daubs" role="radiogroup" aria-labelledby="l-edit-palette">
+            {pals.map((p, i) => {
+              const on = paletteId === p.id
+              return (
+                // biome-ignore lint/a11y/useSemanticElements: a drawn daub, like the other drawn options
+                <button
+                  type="button"
+                  key={p.id}
+                  role="radio"
+                  aria-checked={on}
+                  aria-label={p.name}
+                  className="daub"
+                  data-palette={p.id}
+                  onClick={() => {
+                    setError(null)
+                    setPaletteId(p.id)
+                  }}
+                >
+                  <Daub palette={p.palette} index={i} />
+                  {on && <Ring />}
+                  {on && <Tick />}
+                </button>
+              )
+            })}
+          </div>
+          {pal && (
+            <p className="daub-name" aria-live="polite">
+              {pal.name}
+            </p>
+          )}
+          {pal && <LookPreview map={look.map} palette={pal.palette} name={pal.name} />}
+        </section>
+      )}
       {m.photos.editable && (
         <p>
           <Link href={`/order/${token}/photos`}>{copy.manage.photosLink(m.photos.count)}</Link>

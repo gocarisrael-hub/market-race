@@ -1,8 +1,8 @@
-// The buyer's edit link (/m/:token): name, answers and letter notes change any number of times
+// The buyer's edit link (/m/:token): name, answers, letter notes and the color change any number of times
 // until the game starts; a paid, built game is rebuilt so it shows the edit.
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { orders } from '../../src/server/db/schema.ts'
+import { orders, palettes } from '../../src/server/db/schema.ts'
 import type { GameSnapshot } from '../../src/server/domain/types.ts'
 import { approveOrder } from '../../src/server/services/orders.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
@@ -161,6 +161,31 @@ describe('buyer edits through the manage link', () => {
     await t.db.update(orders).set({ kind: 'company' }).where(eq(orders.id, o.id))
     expect((await edit(token, { answers: {} })).json().error).toBe('not_editable')
     expect((await t.app.inject({ url: `/api/manage/${token}` })).json().editable).toBe(false)
+  })
+
+  it('changes the color: offered palettes in the edit data, the choice in the rebuilt game', async () => {
+    const o = await paidOrder()
+    const m = (await t.app.inject({ url: `/api/manage/${o.manageToken}` })).json()
+    const offered = m.look.palettes as { id: number; name: string; palette: { accent: string } }[]
+    expect(offered.length).toBeGreaterThan(1)
+    expect(m.look.map).toMatch(/^\/static\/maps\//)
+    const other = offered.find((p) => p.id !== o.paletteId && p.id !== o.game!.theme.paletteId)!
+    const res = await edit(o.manageToken, { answers: o.answers, paletteId: other.id })
+    expect(res.json().status).toBe('ready')
+    const after = await reload(o.id)
+    expect(after.paletteId).toBe(other.id)
+    expect(after.game!.theme.paletteId).toBe(other.id)
+    expect(after.game!.theme.palette.accent).toBe(other.palette.accent)
+    expect(riddleText(after.game!, 0)).toContain('יואב')
+
+    // A palette this map is not offered in is refused, and nothing changes.
+    const foreign = await t.db
+      .insert(palettes)
+      .values({ name: 'אחר', palette: other.palette as never, themeIds: [], active: true })
+      .returning()
+    const bad = await edit(o.manageToken, { answers: o.answers, paletteId: foreign[0].id })
+    expect(bad.json().error).toBe('bad_palette')
+    expect((await reload(o.id)).paletteId).toBe(other.id)
   })
 
   it('rejects an empty name', async () => {
