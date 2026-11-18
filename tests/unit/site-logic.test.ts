@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Occasion, Question, Shop } from '../../src/web/site/api.ts'
 import {
   answersError,
+  askedQuestions,
   buyerErrors,
   chooseOccasion,
   chooseTheme,
@@ -12,11 +13,13 @@ import {
   emptyDraft,
   errorText,
   formatShekels,
+  formChoice,
   formsFor,
   isPayMessage,
   leadErrors,
   listedStops,
   loadDraft,
+  nameLabel,
   orderableThemes,
   orderPayload,
   PAY_MESSAGE,
@@ -44,6 +47,8 @@ const shop: Shop = {
   occasions: [
     occ('bachelorette', ['she']),
     occ('birthday', ['she', 'he']),
+    occ('family', ['group']),
+    occ('couple', ['couple']),
     occ('team', ['company'], 'company'),
   ],
   markets: [
@@ -115,16 +120,54 @@ describe('site logic', () => {
     expect(toggle(['a', 'b'], 'a')).toEqual(['b'])
   })
 
-  it('validates step 1', () => {
+  it('validates step 1: the game only, she or he is asked on step 2', () => {
     const d = emptyDraft()
-    expect(step1Error(d, shop)).toMatch(/לכבוד מה/)
+    expect(step1Error(d, shop)).toMatch(/איזה משחק/)
     const b = chooseOccasion(d, shop.occasions[1])
-    expect(step1Error(b, shop)).toMatch(/על מי/)
+    expect(b.form).toBeNull()
+    expect(step1Error({ ...b, themeId: 10 }, shop)).toMatch(/אין עדיין מחיר/)
     expect(step1Error({ ...b, form: 'she', themeId: 20 }, shop)).toMatch(/איך זה ייראה/)
     expect(step1Error({ ...b, form: 'she', themeId: 10 }, shop)).toMatch(/אין עדיין מחיר/)
     const ok = { ...chooseOccasion(d, shop.occasions[0]), themeId: 10 }
     expect(step1Error(ok, shop)).toBeNull()
     expect(step1Error({ ...ok, people: 21 }, shop)).toMatch(/טווח/)
+  })
+
+  it('picks the form by the occasion, asks she/he only when both are allowed', () => {
+    const pick = (key: string) => chooseOccasion(emptyDraft(), shop.occasions.find((o) => o.key === key)!)
+    expect(pick('bachelorette').form).toBe('she')
+    expect(pick('couple').form).toBe('couple')
+    expect(pick('family').form).toBe('group')
+    expect(pick('birthday').form).toBeNull()
+    expect(formChoice(shop, pick('birthday'))).toEqual(['she', 'he'])
+    expect(formChoice(shop, pick('family'))).toEqual([])
+    // Switching from a birthday (she chosen) to a family game drops the she.
+    expect(chooseOccasion({ ...pick('birthday'), form: 'she' }, shop.occasions[2]).form).toBe('group')
+    const b = { ...pick('birthday'), themeId: 10, honoreeName: 'דנה' }
+    expect(step2Error(b, [], ['she', 'he'])).toMatch(/עליה או עליו/)
+    expect(step2Error({ ...b, form: 'he' }, [], ['she', 'he'])).toBeNull()
+  })
+
+  it('asks a group its name in the name field, labelled by the group_name question', () => {
+    const qs: Question[] = [
+      { slot: 'group_name', text: 'שם המשפחה?', required: true, maxLen: 40 },
+      { slot: 'group_food', text: 'המאכל?', required: false, maxLen: 40 },
+    ]
+    const d = { ...chooseOccasion(emptyDraft(), shop.occasions[2]), themeId: 10 }
+    expect(nameLabel(qs, 'group')).toBe('שם המשפחה?')
+    expect(nameLabel([], 'group')).toBe('שם הקבוצה / המשפחה')
+    expect(nameLabel(qs, 'she')).toBe('איך קוראים לה?')
+    expect(askedQuestions(qs, 'group').map((q) => q.slot)).toEqual(['group_food'])
+    expect(askedQuestions(qs, 'she')).toHaveLength(2)
+    expect(step2Error(d, qs)).toMatch(/שם הקבוצה או המשפחה/)
+    // The required group_name is the name field: filled, nothing else is missing.
+    const named = { ...d, honoreeName: ' משפחת כהן ' }
+    expect(step2Error(named, qs)).toBeNull()
+    expect(orderPayload(named, qs)).toMatchObject({
+      form: 'group',
+      honoreeName: 'משפחת כהן',
+      answers: { group_name: 'משפחת כהן' },
+    })
   })
 
   it('validates step 2 and builds the payload', () => {
@@ -261,7 +304,11 @@ describe('palettes and decor', () => {
   })
 
   it('requires a palette of the chosen map and sends it with the order', () => {
-    const d = { ...chooseOccasion(emptyDraft(), withPalettes.occasions[3]), themeId: 10, paletteId: 99 }
+    const d = {
+      ...chooseOccasion(emptyDraft(), withPalettes.occasions.find((o) => o.key === 'bday')!),
+      themeId: 10,
+      paletteId: 99,
+    }
     expect(step1Error(d, withPalettes)).toBe('בחרו צבע')
     const ok = { ...d, paletteId: 2 }
     expect(step1Error(ok, withPalettes)).toBeNull()

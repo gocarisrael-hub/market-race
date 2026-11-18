@@ -65,6 +65,7 @@ const formText = z
     she: z.string().optional(),
     he: z.string().optional(),
     couple: z.string().optional(),
+    group: z.string().optional(),
     company: z.string().optional(),
   })
   .strict()
@@ -117,6 +118,7 @@ const question = z.object({
   required: z.boolean(),
   fallback: z.union([z.string(), formText]),
   maxLen: z.number().int().min(1).max(1000),
+  hidden: z.boolean().optional(),
 })
 const questionSetBase = z.object({
   name: str.min(1),

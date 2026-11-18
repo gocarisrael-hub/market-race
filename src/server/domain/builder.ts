@@ -79,6 +79,23 @@ export interface BuildResult {
   flags: OrderFlag[]
 }
 
+/**
+ * The answers riddles are filled from: the buyer's, plus the slots the order itself names.
+ * "name" is the honoree unless answered explicitly; a group's name is always the honoree field
+ * (the site asks it there); a company's name fills company_name.
+ */
+export function defaultAnswers(order: {
+  form: Form
+  honoreeName: string
+  answers: Record<string, string>
+  company?: { name: string } | null
+}): Record<string, string> {
+  const answers: Record<string, string> = { name: order.honoreeName, ...order.answers }
+  if (order.form === 'group' && order.honoreeName.trim()) answers.group_name = order.honoreeName
+  if (order.company && !answers.company_name) answers.company_name = order.company.name
+  return answers
+}
+
 export function isSafe(t: CatalogTasting, allergens: string[], diets: string[]): boolean {
   if (!t.active) return false
   if (t.allergens.some((a) => allergens.includes(a))) return false
@@ -151,8 +168,7 @@ export function buildGame(input: BuildInput): BuildResult {
   const riddleById = new Map(input.riddles.map((r) => [r.id, r]))
   const flags: OrderFlag[] = []
   // Slot "name" is the honoree unless the buyer answered it explicitly.
-  const answers: Record<string, string> = { name: order.honoreeName, ...order.answers }
-  if (order.company && !answers.company_name) answers.company_name = order.company.name
+  const answers = defaultAnswers(order)
 
   const snapStall = (s: CatalogStall): SnapshotStall => ({
     id: s.id,

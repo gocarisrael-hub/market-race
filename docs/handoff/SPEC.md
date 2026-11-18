@@ -26,6 +26,8 @@ Rules:
 - The fixed lines alone must lead to the answer. Slots add personal color, never the clue.
 - The answer can be the stall, its dish, the street it is on, or a landmark next to it.
 - Each riddle has a version per grammatical form: she / he / couple (and company).
+- Group games (family, friends or a unit, generic) use the `group` form: plural, about a group named by `{group_name}`. The site asks the group's name in the name field. The order flow's first choice is "which game" (the occasion); each occasion lists its forms, and she/he is asked next to the name only when an occasion allows both.
+- A question can be marked hidden ("not asked"): the buyer never sees it and riddles get its fallback. This lets one group template use slots that only some question sets ask.
 - Every slot has a fallback phrase used when its question was left empty.
 - One question can feed several riddles.
 - Hints are plain, no wordplay.

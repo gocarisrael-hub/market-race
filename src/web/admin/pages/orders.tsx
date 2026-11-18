@@ -1,6 +1,7 @@
 // Orders: list with filters, review queue, order detail (answers, game, links, payments,
 // messages, redemptions, company tools), test-game form, live games.
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { nameSlots, questionTextFor } from '../../../server/domain/template.ts'
 import {
   ALLERGENS,
   DIETS,
@@ -165,9 +166,11 @@ export function ago(s: string, now = Date.now()): string {
   return `לפני ${Math.round(h / 24)} ימים`
 }
 
-function questionText(q: Question, form: Form) {
-  return q.text[form] ?? q.text.she ?? Object.values(q.text)[0] ?? q.slot
-}
+const questionText = questionTextFor
+
+/** Questions with their own field in the admin forms: not hidden, not asked as the name field. */
+const ownField = (q: Question, form: Form, kind: 'private' | 'company') =>
+  !q.hidden && !nameSlots(form).includes(q.slot) && !(kind === 'company' && q.slot === 'company_name')
 
 function UsageText({ u }: { u: Usage | undefined }) {
   if (!u) return null
@@ -481,9 +484,15 @@ function AnswersEditor({
   }
   return (
     <Section title="תשובות">
-      {o.kind === 'private' && <Text label="שם החוגג/ת" value={honoree} onChange={setHonoree} />}
+      {o.kind === 'private' && (
+        <Text
+          label={o.form === 'group' ? 'שם הקבוצה / המשפחה' : 'שם החוגג/ת'}
+          value={honoree}
+          onChange={setHonoree}
+        />
+      )}
       {d.questions
-        .filter((q) => q.slot !== 'name' && !(o.kind === 'company' && q.slot === 'company_name'))
+        .filter((q) => ownField(q, o.form, o.kind))
         .map((q) => (
           <label key={q.slot} className={flagged.has(q.slot) ? 'flagged' : ''}>
             {questionText(q, o.form)} {q.required && <span className="error">*</span>}{' '}
@@ -1206,7 +1215,12 @@ export function TestGamePage() {
         {isCompany ? (
           <Text label="שם החברה" value={companyName} onChange={setCompanyName} required />
         ) : (
-          <Text label="שם החוגג/ת" value={honoreeName} onChange={setHonoreeName} required />
+          <Text
+            label={f === 'group' ? 'שם הקבוצה / המשפחה' : 'שם החוגג/ת'}
+            value={honoreeName}
+            onChange={setHonoreeName}
+            required
+          />
         )}
         <fieldset>
           <legend>אלרגנים</legend>
@@ -1238,7 +1252,7 @@ export function TestGamePage() {
           <fieldset>
             <legend>שאלות</legend>
             {questions
-              .filter((q) => q.slot !== 'name' && !(isCompany && q.slot === 'company_name'))
+              .filter((q) => ownField(q, f, isCompany ? 'company' : 'private'))
               .map((q) => (
                 <Text
                   key={q.slot}

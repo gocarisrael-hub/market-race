@@ -13,7 +13,7 @@ import {
   tastings,
   themes,
 } from '../db/schema.ts'
-import { buildGame } from '../domain/builder.ts'
+import { buildGame, defaultAnswers } from '../domain/builder.ts'
 import { addYears, israelDate } from '../domain/dates.ts'
 import { checkAnswers } from '../domain/oddcheck.ts'
 import type { Form, LetterNote, OrderFlag, OrderStatus, Palette, Question } from '../domain/types.ts'
@@ -154,12 +154,8 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
   order.letterNotes.forEach((n, i) => {
     extra[`letter_${i}`] = `${n.text} ${n.signature}`
   })
-  // Same defaults as the builder: a company's name fills the company_name slot.
-  const checked = {
-    name: order.honoreeName,
-    ...(company ? { company_name: company.name } : {}),
-    ...order.answers,
-  }
+  // Same defaults as the builder (honoree, group name, company name).
+  const checked = defaultAnswers({ ...order, company })
   const answerFlags = checkAnswers(checked, questions, rules, extra)
   // De-duplicate: the builder and the checker can both report the same empty slot.
   const seen = new Set<string>()

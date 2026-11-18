@@ -27,7 +27,6 @@ const cssVar = (page: Page, name: string) =>
 test('step 1 recolors the map preview live, in three palettes', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('radio', { name: 'יום הולדת לחבר/ה' }).click()
-  await page.getByRole('radio', { name: 'עליו' }).click()
   // The occasion's doodles and a playful line appear once it is picked.
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
   await expect(page.locator('.doodles [data-doodle="balloons"]')).toHaveCount(1)
@@ -68,13 +67,13 @@ test('step 1 recolors the map preview live, in three palettes', async ({ page })
 test('the occasion and palette picked on the site open the game in that look', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('radio', { name: 'יום הולדת לחבר/ה' }).click()
-  await page.getByRole('radio', { name: 'עליה' }).click()
   await page.getByRole('radio', { name: 'כחול ים' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
+  await page.getByRole('button', { name: 'ממשיכים לשאלות', exact: true }).click()
 
   // Steps 2 to 4 keep the drawn trail and the occasion's doodles.
   await expect(page.getByRole('navigation', { name: 'שלב 2 מתוך 4' })).toBeVisible()
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
+  await page.getByRole('radiogroup', { name: 'המשחק' }).getByRole('radio', { name: 'עליה' }).click()
   await page.getByLabel(/איך קוראים לה/).fill('שירה')
   await page.screenshot({ path: `${SHOTS}/site-2-questions.png`, fullPage: true, animations: 'disabled' })
   await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
@@ -106,26 +105,12 @@ test('game openings for birthday, love and family', async ({ page, request }) =>
     data: { email: 'owner@example.com', password: 'e2e-password' },
   })
   expect(login.ok()).toBe(true)
-  // Family is not a demo occasion yet: add one the way the owner would.
-  const sets = (await (await request.get('/admin/api/catalog/question-sets')).json()).items
-  const questionSetId = sets.find((q: { name: string }) => q.name === 'שאלות פרטיות').id
-  const occ = await request.post('/admin/api/catalog/occasions', {
-    data: {
-      key: 'family_e2e',
-      label: 'משפחה',
-      audience: 'private',
-      questionSetId,
-      forms: ['she', 'he'],
-      decor: 'family',
-    },
-  })
-  expect(occ.ok()).toBe(true)
   const { theme, route, palette } = await carmelWatercolor(request)
 
   for (const [name, occasionKey, form, honoree, pal, decor, doodle] of [
     ['birthday', 'birthday_friend', 'he', 'יואב', 'כתום שקיעה', 'birthday', 'cake'],
     ['love', 'couple', 'couple', 'מיכל ודני', 'ורוד פטל', 'love', 'heart'],
-    ['family', 'family_e2e', 'she', 'סבתא רחל', 'ירוק זית', 'family', 'house'],
+    ['family', 'family', 'group', 'משפחת לוי', 'ירוק זית', 'family', 'house'],
   ] as const) {
     const p = palette(pal)
     const res = await request.post('/admin/api/orders/test', {

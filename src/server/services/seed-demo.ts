@@ -184,6 +184,7 @@ export const DEMO_DECOR: Record<string, Decor> = {
   birthday_friend: 'birthday',
   family: 'family',
   friends: 'friends',
+  generic: 'generic',
   team_day: 'company',
   retirement: 'company',
   new_employee: 'company',
@@ -222,6 +223,108 @@ export async function ensureOccasionDecor(db: DB): Promise<number> {
   }
   return n
 }
+
+// ---------- Group games: family, friends (a unit, a class), generic ----------
+// The "group" form addresses a group in the plural, named by {group_name} (asked as the name field).
+// One group template per riddle serves all three sets, so every set defines every group slot: the
+// ones it asks, and the others as "hidden" (never asked, the riddle gets the set's own fallback).
+
+const gq = (
+  slot: string,
+  text: string,
+  fallback: string,
+  maxLen = 40,
+  extra: Partial<Question> = {},
+): Question => ({ slot, text: { group: text }, required: false, fallback, maxLen, ...extra })
+const hidden = (slot: string, fallback: string): Question => ({
+  slot,
+  text: {},
+  required: false,
+  fallback,
+  maxLen: 40,
+  hidden: true,
+})
+
+export const familyQuestions: Question[] = [
+  gq('group_name', 'שם המשפחה?', '', 40, { required: true }),
+  gq('group_food', 'המאכל שתמיד יש בארוחת שישי?', 'ארוחת שישי'),
+  gq('group_saying', 'המשפט הכי מוכר של אבא או אמא?', 'מי רוצה עוד?', 60),
+  gq('group_place', 'הטיול המשפחתי שכולם זוכרים?', 'הטיול ההוא'),
+  gq('family_tradition', 'מסורת משפחתית?', 'הקידוש של שישי בערב', 50),
+  gq('who_late', 'מי הכי מאחר/ת במשפחה?', 'מישהו מהמשפחה', 30),
+  gq('group_wish', 'משאלה למשפחה?', 'עוד הרבה שנים ביחד', 60),
+  hidden('group_moment', 'היום הראשון'),
+  hidden('group_legend', 'סבא וסבתא'),
+  hidden('group_years', 'כל השנים האלה'),
+  hidden('who_cheeky', 'הקטנים במשפחה'),
+  hidden('who_hungry', 'הרעבים של המשפחה'),
+  hidden('who_phone', 'מכורי הטלפון'),
+  hidden('who_laugh', 'הצחקנים של המשפחה'),
+]
+
+export const friendsQuestions: Question[] = [
+  gq('group_name', 'איך קוראים לקבוצה או ליחידה?', '', 40, { required: true }),
+  gq('group_saying', 'משפט שכולם אמרו כל הזמן?', 'יאללה, זזים', 60),
+  gq('group_place', 'המקום שבו הכול התחיל (בסיס, שכונה, טיול)?', 'המקום שבו הכול התחיל'),
+  gq('group_food', 'האוכל של הקבוצה?', 'פיצה באמצע הלילה'),
+  gq('group_moment', 'רגע שכולם זוכרים?', 'היום הראשון', 50),
+  gq('group_legend', 'מישהו שכולם זוכרים, ומה הכינוי שלו?', 'מי שכולם זוכרים'),
+  gq('group_years', 'כמה זמן אתם ביחד?', 'כל השנים האלה', 30),
+  gq('group_wish', 'משאלה לקבוצה לשנים הבאות?', 'עוד הרבה שנים ביחד', 60),
+  hidden('family_tradition', 'הקפה של הבוקר'),
+  hidden('who_late', "מישהו מהחבר'ה"),
+  hidden('who_cheeky', 'החוצפן של החבורה'),
+  hidden('who_hungry', 'הרעבים של החבורה'),
+  hidden('who_phone', 'מכורי הטלפון'),
+  hidden('who_laugh', 'הצחקנים של החבורה'),
+]
+
+export const genericQuestions: Question[] = [
+  gq('group_name', 'איך קוראים לקבוצה?', '', 40, { required: true }),
+  gq('group_saying', 'משפט שכולם אומרים כל הזמן?', 'יאללה, זזים', 60),
+  gq('who_late', 'מי הכי מאחר/ת בקבוצה?', 'מישהו', 30),
+  gq('who_cheeky', 'מי הכי חוצפן/ית?', 'החוצפן של החבורה', 30),
+  gq('who_hungry', 'מי תמיד רעב/ה?', 'הרעבים של החבורה', 30),
+  gq('who_phone', 'מי לא מוריד/ה את העיניים מהטלפון?', 'מכורי הטלפון', 30),
+  gq('who_laugh', 'מי צוחק/ת הכי חזק?', 'הצחקנים של החבורה', 30),
+  hidden('group_food', 'ארוחת שישי'),
+  hidden('group_place', 'המקום שבו הכול התחיל'),
+  hidden('family_tradition', 'הקפה של הבוקר'),
+  hidden('group_moment', 'היום הראשון'),
+  hidden('group_legend', 'מי שכולם זוכרים'),
+  hidden('group_years', 'כל השנים האלה'),
+  hidden('group_wish', 'עוד הרבה שנים ביחד'),
+]
+
+/** The group occasions with their question sets. */
+export const GROUP_OCCASIONS = [
+  { key: 'family', label: 'משפחתי', setName: 'שאלות למשפחה', questions: familyQuestions },
+  { key: 'friends', label: "חבר'ה", setName: "שאלות לחבר'ה וליחידות", questions: friendsQuestions },
+  { key: 'generic', label: 'כללי', setName: 'שאלות כלליות לקבוצה', questions: genericQuestions },
+]
+
+/**
+ * The group version of each demo riddle, by answer. The fixed lines still lead to the answer;
+ * the slots add color. Across the five route stops every set's asked slots appear at least once.
+ */
+export const GROUP_TEMPLATES: Record<string, string> = {
+  תקווה:
+    '{who_late} עוד בדרך, אבל {group_name} כבר יודעים: לא מוותרים עליה. מאז {group_moment}, היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
+  מיץ: 'סוחטים אותי עד הטיפה האחרונה, כמו ש{group_name} סוחטים כל רגע ביחד. כתום, קר ומתוק. מה אני?',
+  "ג'חנון":
+    '{group_food}? אצל {group_name} מחכים לזה כמו שאני מחכה בתנור: כל הלילה. אני מסורת, בדיוק כמו {family_tradition}: נכנסים ביום שישי, יוצאים בשבת בבוקר, מגולגלים, עם ביצה חומה ורסק עגבניות לידי. ו{who_hungry}? כבר עם מזלג ביד. מה אני?',
+  בוריק:
+    'אני קצת כמו {group_name} אחרי {group_years} ביחד: מבחוץ פריך, ומבפנים לב גדול. לפי {who_cheeky}, אני המאפה הכי טוב בשוק. באתי מתוניסיה, דק כמו נייר ומטוגן, ובביס הראשון נשברת לי ביצה בפנים. מה אני?',
+  פלאפל:
+    'אצל {group_name} תמיד אומרים: "{group_saying}". ככה גם אני: קטן, עגול ומתפוצץ מטעם. ירוק מבפנים, חום מבחוץ, עשוי מחומוס אבל אני לא חומוס, ואני נכנס לפיתה עם סלטים. בשבילי שווה אפילו להניח את הטלפון, נכון, {who_phone}? מה אני?',
+  קבב: 'אצל {group_name} תמיד אומרים: "{group_saying}". אני בשר טחון על שיפוד, מעל גחלים, בתוך פיתה עם טחינה. מה אני?',
+  לחיים:
+    'הגעתם לסוף. לכבוד {group_name}, לכבוד {group_place}, לכבוד {group_legend} ולכבוד {group_wish}, מרימים כוסות. כשהן נפגשות, כולם אומרים מילה אחת, ו{who_laugh} הכי חזק. מה היא?',
+  קפה: 'שחור או הפוך, {group_name} לא מתחילים בלעדיי בוקר. מה אני?',
+}
+
+/** Demo price of the group occasions (same as the private ones). */
+export const GROUP_PRICE = { base: 0, perPerson: 9900 }
 
 export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelThemeId: number }> {
   const existing = await db.select().from(markets).limit(1)
@@ -350,7 +453,16 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     'coffee',
   )
 
-  const r = async (v: typeof riddles.$inferInsert) => (await db.insert(riddles).values(v).returning())[0]
+  const r = async (v: typeof riddles.$inferInsert) => {
+    const group = GROUP_TEMPLATES[v.answer]
+    const templates = group ? { ...v.templates, group } : v.templates
+    return (
+      await db
+        .insert(riddles)
+        .values({ ...v, templates })
+        .returning()
+    )[0]
+  }
   const rTikva = await r({
     stallId: tikva.id,
     title: 'תקווה',
@@ -586,6 +698,11 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     .insert(questionSets)
     .values({ name: 'שאלות לחברות', questions: companyQuestions })
     .returning()
+  const groupSets: (typeof questionSets.$inferSelect)[] = []
+  for (const g of GROUP_OCCASIONS)
+    groupSets.push(
+      (await db.insert(questionSets).values({ name: g.setName, questions: g.questions }).returning())[0],
+    )
   await db.insert(occasions).values([
     {
       key: 'bachelorette',
@@ -623,6 +740,15 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
       forms: ['she', 'he'],
       sort: 4,
     },
+    ...GROUP_OCCASIONS.map((g, i) => ({
+      key: g.key,
+      label: g.label,
+      audience: 'private' as const,
+      questionSetId: groupSets[i].id,
+      forms: ['group' as const],
+      decor: DEMO_DECOR[g.key] ?? 'generic',
+      sort: 5 + i,
+    })),
     {
       key: 'team_day',
       decor: DEMO_DECOR.team_day,
@@ -630,7 +756,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
       audience: 'company',
       questionSetId: qsCompany.id,
       forms: ['company'],
-      sort: 5,
+      sort: 8,
     },
     {
       key: 'retirement',
@@ -639,7 +765,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
       audience: 'company',
       questionSetId: qsCompany.id,
       forms: ['company'],
-      sort: 6,
+      sort: 9,
     },
     {
       key: 'new_employee',
@@ -648,7 +774,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
       audience: 'company',
       questionSetId: qsCompany.id,
       forms: ['company'],
-      sort: 7,
+      sort: 10,
     },
   ])
 
@@ -660,6 +786,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     couple: { base: 0, perPerson: 9900 },
     birthday_parent: { base: 0, perPerson: 9900 },
     birthday_friend: { base: 0, perPerson: 9900 },
+    ...Object.fromEntries(GROUP_OCCASIONS.map((g) => [g.key, GROUP_PRICE])),
   })
   await setSetting(db, 'odd_rules', { profanity: ['זונה', 'מניאק', 'קוקסינל'], maxRepeatedChars: 4 })
 

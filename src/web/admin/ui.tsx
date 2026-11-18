@@ -102,7 +102,13 @@ export interface Theme {
   active: boolean
 }
 
-export const FORM_LABELS: Record<Form, string> = { she: 'היא', he: 'הוא', couple: 'זוג', company: 'חברה' }
+export const FORM_LABELS: Record<Form, string> = {
+  she: 'היא',
+  he: 'הוא',
+  couple: 'זוג',
+  group: 'קבוצה',
+  company: 'חברה',
+}
 export const DIET_LABELS: Record<string, string> = {
   vegan: 'טבעוני',
   vegetarian: 'צמחוני',

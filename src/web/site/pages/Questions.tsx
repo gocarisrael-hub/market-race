@@ -1,4 +1,5 @@
-// Step 2: the honoree's name, the occasion's questions, letter notes, or "answer later".
+// Step 2: the honoree's name (with she/he when the occasion allows both), the occasion's
+// questions, letter notes, or "answer later". For a group the name field is the group's name.
 // Leaving this step creates (or updates) the order, so the next steps have a manage token.
 import { useEffect, useState } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
@@ -13,10 +14,13 @@ import {
 } from '../api.ts'
 import { copy } from '../copy.ts'
 import {
+  askedQuestions,
   type Draft,
   decorFor,
   errorText,
+  formChoice,
   MAX_NOTES,
+  nameLabel,
   orderPayload,
   payloadKey,
   saveAction,
@@ -34,16 +38,20 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const incomplete = step1Error(d, shop)
+  const forms = formChoice(shop, d)
+  const form = d.form
 
   useEffect(() => {
     if (incomplete) return navigate('/', { replace: true })
-    getQuestions(d.occasionKey!, d.form!).then(setQuestions, () => setLoadError(true))
+    // Until she/he is picked there is nothing to ask beyond the name.
+    if (!d.form) return setQuestions([])
+    getQuestions(d.occasionKey!, d.form).then(setQuestions, () => setLoadError(true))
   }, [d.occasionKey, d.form, incomplete])
 
   if (incomplete) return null
   if (loadError) return <Failed text={copy.loadFailed} />
   if (!questions) return <Loading />
-  const form = d.form!
+  const asked = askedQuestions(questions, form)
 
   const set = (patch: Partial<Draft>) => {
     setError(null)
@@ -54,7 +62,7 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
     set({ letterNotes: notes.map((n, j) => (j === i ? { ...n, ...patch } : n)) })
 
   const next = async () => {
-    const e = step2Error(d, questions)
+    const e = step2Error(d, questions, forms)
     if (e) return setError(e)
     const payload = orderPayload(d, questions)
     const key = payloadKey(payload)
@@ -114,9 +122,18 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
       </div>
 
       <div className="section">
+        {forms.length > 0 && (
+          <div className="row form-choice" role="radiogroup" aria-label={copy.questions.formLabel}>
+            {forms.map((f) => (
+              <Opt key={f} small role="radio" pressed={form === f} onClick={() => set({ form: f })}>
+                {copy.questions.forms[f]}
+              </Opt>
+            ))}
+          </div>
+        )}
         <QField
           name="honoreeName"
-          label={copy.questions.name(form)}
+          label={nameLabel(questions, form)}
           placeholder={copy.questions.namePlaceholder(form)}
           value={d.honoreeName}
           onChange={(v) => set({ honoreeName: v })}
@@ -125,7 +142,7 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
           paper={-1.2}
         />
         {!d.answersLater &&
-          questions.map((q, i) => (
+          asked.map((q, i) => (
             <QField
               paper={i % 2 ? -0.9 : 1.1}
               key={q.slot}

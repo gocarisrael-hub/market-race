@@ -1,4 +1,5 @@
-// Step 1: occasion, about whom, theme, people, allergens and diets, live price.
+// Step 1: which game (the occasion), theme, people, allergens and diets, live price.
+// About whom (she or he) is asked next to the name on step 2, only when the occasion allows both.
 import { useState } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
 import type { Shop } from '../api.ts'
@@ -11,7 +12,6 @@ import {
   type Draft,
   decorFor,
   formatShekels,
-  formsFor,
   orderableThemes,
   palettesFor,
   priceAgorot,
@@ -29,8 +29,6 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
   const { shop, draft: d, setDraft } = props
   const [error, setError] = useState<string | null>(null)
   const occasions = privateOccasions(shop)
-  const occ = occasions.find((o) => o.key === d.occasionKey)
-  const forms = formsFor(occ)
   const themes = orderableThemes(shop)
   const theme = themes.find((t) => t.id === d.themeId)
   const market = shop.markets.find((m) => m.id === (theme ?? themes[0])?.marketId)?.name ?? ''
@@ -114,21 +112,6 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
               </p>
             )}
           </section>
-
-          {forms.length > 0 && (
-            <section className="section" aria-labelledby="l-form">
-              <QNote id="l-form" tilt={1.2}>
-                {copy.home.about}
-              </QNote>
-              <div className="row" role="radiogroup" aria-labelledby="l-form">
-                {forms.map((f) => (
-                  <Opt key={f} role="radio" pressed={d.form === f} onClick={() => set({ form: f })}>
-                    {copy.home.forms[f]}
-                  </Opt>
-                ))}
-              </div>
-            </section>
-          )}
 
           <section className="section" aria-labelledby="l-theme">
             <QNote id="l-theme" tilt={-1}>

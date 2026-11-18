@@ -17,6 +17,7 @@ import {
   themes,
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
+import { questionTextFor } from '../domain/template.ts'
 import { ALLERGENS, DIETS, FORMS, type Form } from '../domain/types.ts'
 import { iconUrl } from '../lib/icons.ts'
 import { cardEnabled } from '../services/context.ts'
@@ -189,7 +190,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   })
   const orderBody = z.object({
     occasionKey: z.string().min(1),
-    form: z.enum(['she', 'he', 'couple']),
+    form: z.enum(['she', 'he', 'couple', 'group']),
     honoreeName: z.string().trim().min(1).max(40),
     themeId: z.number().int(),
     paletteId: z.number().int().nullable().default(null),
@@ -469,12 +470,14 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   )
 }
 
+// The questions the buyer sees. "name" is the name field. A group's group_name is also asked as
+// the name field; it stays in the list so the site can label that field with its text.
 function publicQuestions(questions: Awaited<ReturnType<typeof questionsForOccasion>>, form: Form) {
   return questions
-    .filter((q) => q.slot !== 'name')
+    .filter((q) => q.slot !== 'name' && !q.hidden)
     .map((q) => ({
       slot: q.slot,
-      text: q.text[form] ?? q.text.she ?? Object.values(q.text)[0] ?? q.slot,
+      text: questionTextFor(q, form),
       required: q.required,
       maxLen: q.maxLen,
     }))
@@ -487,6 +490,7 @@ function cleanAnswers(
 ) {
   const out: Record<string, string> = {}
   for (const q of questions) {
+    if (q.hidden) continue
     const v = (answers[q.slot] ?? '').trim()
     if (v) out[q.slot] = q.maxLen > 0 ? [...v].slice(0, q.maxLen * 2).join('') : v
   }
