@@ -1,0 +1,384 @@
+// Question sets and riddles (with live preview per form and an answer tester).
+import { useEffect, useMemo, useState } from 'react'
+import { extractSlots } from '../../../server/domain/template.ts'
+import { FORMS, type Form, type Question, type TextPart } from '../../../server/domain/types.ts'
+import { api } from '../api.ts'
+import {
+  Check,
+  CrudPage,
+  type EditorProps,
+  FORM_LABELS,
+  type Market,
+  NumberInput,
+  type QuestionSet,
+  type Riddle,
+  Select,
+  type Stall,
+  Text,
+  useDebounced,
+  useList,
+} from '../ui.tsx'
+
+// ---------- Question sets ----------
+
+function blankQuestion(): Question {
+  return { slot: '', text: {}, required: false, fallback: '', maxLen: 60 }
+}
+
+function move<T>(list: T[], i: number, by: number): T[] {
+  const j = i + by
+  if (j < 0 || j >= list.length) return list
+  const next = [...list]
+  ;[next[i], next[j]] = [next[j], next[i]]
+  return next
+}
+
+function QuestionEditor({
+  q,
+  index,
+  onChange,
+  onMove,
+  onRemove,
+}: {
+  q: Question
+  index: number
+  onChange: (q: Question) => void
+  onMove: (by: number) => void
+  onRemove: () => void
+}) {
+  const perForm = typeof q.fallback !== 'string'
+  return (
+    <fieldset className="question" data-testid={`question-${index}`}>
+      <legend>שאלה {index + 1}</legend>
+      <div className="row">
+        <Text label="מפתח" value={q.slot} onChange={(slot) => onChange({ ...q, slot })} dir="ltr" required />
+        <NumberInput
+          label="אורך מקסימלי"
+          value={q.maxLen}
+          onChange={(maxLen) => onChange({ ...q, maxLen })}
+        />
+        <Check label="חובה" checked={q.required} onChange={(required) => onChange({ ...q, required })} />
+      </div>
+      {FORMS.map((f) => (
+        <Text
+          key={f}
+          label={`שאלה (${FORM_LABELS[f]})`}
+          value={q.text[f]}
+          onChange={(v) => onChange({ ...q, text: { ...q.text, [f]: v } })}
+        />
+      ))}
+      <Check
+        label="ברירת מחדל לפי צורת פנייה"
+        checked={perForm}
+        onChange={(on) =>
+          onChange({
+            ...q,
+            fallback: on
+              ? { she: typeof q.fallback === 'string' ? q.fallback : '' }
+              : typeof q.fallback === 'string'
+                ? q.fallback
+                : (q.fallback.she ?? ''),
+          })
+        }
+      />
+      {typeof q.fallback === 'string' ? (
+        <Text label="ברירת מחדל" value={q.fallback} onChange={(fallback) => onChange({ ...q, fallback })} />
+      ) : (
+        FORMS.map((f) => {
+          const fb = q.fallback as Partial<Record<Form, string>>
+          return (
+            <Text
+              key={f}
+              label={`ברירת מחדל (${FORM_LABELS[f]})`}
+              value={fb[f]}
+              onChange={(v) => onChange({ ...q, fallback: { ...fb, [f]: v } })}
+            />
+          )
+        })
+      )}
+      <div className="actions">
+        <button type="button" onClick={() => onMove(-1)}>
+          למעלה
+        </button>
+        <button type="button" onClick={() => onMove(1)}>
+          למטה
+        </button>
+        <button type="button" className="danger" onClick={onRemove}>
+          הסרת שאלה
+        </button>
+      </div>
+    </fieldset>
+  )
+}
+
+function QuestionSetEditor({ value, set }: EditorProps<QuestionSet>) {
+  const qs = value.questions ?? []
+  return (
+    <>
+      <Text label="שם השאלון" value={value.name} onChange={(name) => set({ name })} required />
+      {qs.map((q, i) => (
+        <QuestionEditor
+          // biome-ignore lint/suspicious/noArrayIndexKey: questions have no stable id while being edited
+          key={i}
+          q={q}
+          index={i}
+          onChange={(nq) => set({ questions: qs.map((x, j) => (j === i ? nq : x)) })}
+          onMove={(by) => set({ questions: move(qs, i, by) })}
+          onRemove={() => set({ questions: qs.filter((_, j) => j !== i) })}
+        />
+      ))}
+      <button type="button" onClick={() => set({ questions: [...qs, blankQuestion()] })}>
+        הוספת שאלה
+      </button>
+    </>
+  )
+}
+
+/** Drops empty per-form texts so the stored JSON stays clean. */
+function cleanForms<T extends Partial<Record<Form, string>>>(o: T): T {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v?.trim())) as T
+}
+
+export function QuestionSetsPage() {
+  return (
+    <CrudPage<QuestionSet>
+      section="question-sets"
+      title="שאלונים"
+      path="/catalog/question-sets"
+      newLabel="שאלון חדש"
+      blank={() => ({ name: '', questions: [] })}
+      toBody={(v) => ({
+        name: v.name,
+        questions: (v.questions ?? []).map((q) => ({
+          ...q,
+          text: cleanForms(q.text),
+          fallback: typeof q.fallback === 'string' ? q.fallback : cleanForms(q.fallback),
+        })),
+      })}
+      columns={[
+        { label: 'שם', render: (q) => q.name },
+        { label: 'שאלות', render: (q) => q.questions.length },
+      ]}
+      Editor={QuestionSetEditor}
+    />
+  )
+}
+
+// ---------- Riddles ----------
+
+type Preview = { parts: TextPart[]; missing: string[] }
+type Match = { ok: true; via: 'exact' | 'fuzzy'; matched: string } | { ok: false }
+
+function RiddlePreview({
+  template,
+  form,
+  questionSetId,
+}: {
+  template: string
+  form: Form
+  questionSetId: number | null
+}) {
+  const req = useDebounced(JSON.stringify({ template, form, questionSetId }))
+  const [preview, setPreview] = useState<Preview | null>(null)
+  useEffect(() => {
+    let live = true
+    api<Preview>('/catalog/riddles/preview', { method: 'POST', json: JSON.parse(req) })
+      .then((p) => live && setPreview(p))
+      .catch(() => live && setPreview(null))
+    return () => {
+      live = false
+    }
+  }, [req])
+  return (
+    <div className="preview">
+      <div className="muted">
+        תצוגה מקדימה ({FORM_LABELS[form]}), עם תשובות לדוגמה מברירות המחדל של השאלון:
+      </div>
+      <p data-testid="riddle-preview">
+        {preview?.parts.map((p, i) =>
+          p.t === 'slot' ? (
+            // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
+            <span key={i} className="slot" title={p.slot}>
+              {p.v}
+            </span>
+          ) : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
+            <span key={i}>{p.v}</span>
+          ),
+        )}
+      </p>
+      {!!preview?.missing.length && (
+        <p className="error">ריק בתצוגה (אין תשובה וגם אין ברירת מחדל): {preview.missing.join(', ')}</p>
+      )}
+    </div>
+  )
+}
+
+function AnswerTester({ answer, accepted }: { answer: string; accepted: string[] }) {
+  const [input, setInput] = useState('')
+  const req = useDebounced(JSON.stringify({ answer, accepted, input }))
+  const [result, setResult] = useState<Match | null>(null)
+  useEffect(() => {
+    const body = JSON.parse(req)
+    if (!body.input.trim() || !body.answer.trim()) return setResult(null)
+    let live = true
+    api<Match>('/catalog/riddles/test-answer', { method: 'POST', json: body })
+      .then((r) => live && setResult(r))
+      .catch(() => live && setResult(null))
+    return () => {
+      live = false
+    }
+  }, [req])
+  return (
+    <fieldset>
+      <legend>בדיקת תשובה</legend>
+      <Text label="תשובה של שחקן" value={input} onChange={setInput} />
+      <p data-testid="answer-result" className={result ? (result.ok ? 'ok' : 'error') : 'muted'}>
+        {!result
+          ? 'הקלידו תשובה לבדיקה'
+          : result.ok
+            ? `מתקבלת (${result.via === 'exact' ? 'התאמה מדויקת' : 'טעות קטנה'}: ${result.matched})`
+            : 'לא מתקבלת'}
+      </p>
+    </fieldset>
+  )
+}
+
+function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
+  const markets = useList<Market>('/catalog/markets')
+  const stalls = useList<Stall>('/catalog/stalls')
+  const sets = useList<QuestionSet>('/catalog/question-sets')
+  const [form, setForm] = useState<Form>('she')
+  const [qsId, setQsId] = useState<number | null>(null)
+  useEffect(() => {
+    if (qsId === null && sets.items?.length) setQsId(sets.items[0].id)
+  }, [sets.items, qsId])
+
+  const templates = value.templates ?? {}
+  const accepted = value.accepted ?? []
+  const marketName = (id: number) => markets.items?.find((m) => m.id === id)?.name ?? ''
+  const qset = sets.items?.find((s) => s.id === qsId)
+  const used = useMemo(
+    () => [...new Set(FORMS.flatMap((f) => extractSlots(templates[f] ?? '')))],
+    [templates],
+  )
+  const defined = new Set(qset?.questions.map((q) => q.slot) ?? [])
+  const undefinedSlots = qset ? used.filter((s) => !defined.has(s)) : []
+
+  return (
+    <>
+      <Select
+        label="דוכן"
+        value={value.stallId}
+        disabled={!isNew}
+        options={(stalls.items ?? []).map((s) => ({
+          value: s.id,
+          label: `${s.name} (${marketName(s.marketId)})`,
+        }))}
+        onChange={(stallId) => set({ stallId })}
+      />
+      <Text label="כותרת פנימית" value={value.title} onChange={(title) => set({ title })} />
+      <Text label="תשובה" value={value.answer} onChange={(answer) => set({ answer })} required />
+      <label>
+        תשובות נוספות שמתקבלות (שורה לכל תשובה)
+        <textarea
+          rows={3}
+          value={accepted.join('\n')}
+          onChange={(e) => set({ accepted: e.target.value.split('\n') })}
+        />
+      </label>
+      <Text label="רמז" value={value.hint} onChange={(hint) => set({ hint })} />
+      <Text label="טקסט אחרי פתרון" value={value.afterText} onChange={(afterText) => set({ afterText })} />
+      <Check label="פעיל" checked={value.active} onChange={(active) => set({ active })} />
+
+      <fieldset>
+        <legend>נוסח החידה</legend>
+        <div className="tabs" role="tablist">
+          {FORMS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              role="tab"
+              aria-selected={f === form}
+              className={f === form ? 'on' : ''}
+              onClick={() => setForm(f)}
+            >
+              {FORM_LABELS[f]}
+              {templates[f] ? '' : ' (ריק)'}
+            </button>
+          ))}
+        </div>
+        <label>
+          נוסח ({FORM_LABELS[form]})
+          <textarea
+            rows={4}
+            value={templates[form] ?? ''}
+            onChange={(e) => set({ templates: { ...templates, [form]: e.target.value } })}
+            placeholder="לדוגמה: מאז {first_love}, {name} יודעת ש..."
+          />
+        </label>
+        <Select
+          label="שאלון לתצוגה"
+          value={qsId}
+          placeholder="ללא שאלון"
+          options={(sets.items ?? []).map((s) => ({ value: s.id, label: s.name }))}
+          onChange={(v) => setQsId(v || null)}
+        />
+        <RiddlePreview template={templates[form] ?? ''} form={form} questionSetId={qsId} />
+        <p className="muted">
+          משבצות בשימוש:{' '}
+          {used.length ? (
+            used.map((s) => (
+              <code key={s} className={undefinedSlots.includes(s) ? 'error' : ''}>
+                {`{${s}}`}{' '}
+              </code>
+            ))
+          ) : (
+            <span>אין</span>
+          )}
+        </p>
+        {undefinedSlots.length > 0 && (
+          <p className="error" data-testid="undefined-slots">
+            לא מוגדרות בשאלון "{qset?.name}": {undefinedSlots.join(', ')}
+          </p>
+        )}
+      </fieldset>
+      <AnswerTester answer={value.answer ?? ''} accepted={accepted.filter((a) => a.trim())} />
+    </>
+  )
+}
+
+export function RiddlesPage() {
+  const stalls = useList<Stall>('/catalog/stalls')
+  const stallName = (id: number) => stalls.items?.find((s) => s.id === id)?.name ?? `#${id}`
+  return (
+    <CrudPage<Riddle>
+      section="riddles"
+      title="חידות"
+      path="/catalog/riddles"
+      newLabel="חידה חדשה"
+      blank={() => ({
+        stallId: stalls.items?.[0]?.id,
+        title: '',
+        answer: '',
+        accepted: [],
+        hint: '',
+        templates: {},
+        afterText: '',
+        active: true,
+      })}
+      toBody={(v) => ({
+        ...v,
+        accepted: (v.accepted ?? []).map((a) => a.trim()).filter(Boolean),
+        templates: cleanForms(v.templates ?? {}),
+      })}
+      columns={[
+        { label: 'כותרת', render: (r) => r.title || r.answer },
+        { label: 'תשובה', render: (r) => r.answer },
+        { label: 'דוכן', render: (r) => stallName(r.stallId) },
+        { label: 'מצב', render: (r) => (r.active ? 'פעיל' : 'לא פעיל') },
+      ]}
+      Editor={RiddleEditor}
+    />
+  )
+}
