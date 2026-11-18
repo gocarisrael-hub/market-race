@@ -116,6 +116,17 @@ export const copy = {
     done: 'רגע, חוזרים לאתר...',
   },
 
+  mockPay: {
+    label: 'תשלום לדוגמה, לא נגבה כסף',
+    title: 'דף תשלום לדוגמה',
+    amount: (a: string) => `סכום: ${a}`,
+    order: (n: string) => `הזמנה ${n}`,
+    pay: 'לשלם (לדוגמה)',
+    fail: 'לדמות תשלום שנכשל',
+    missing: 'חלון התשלום הזה לא קיים או לא פעיל.',
+    paying: 'מאשרים...',
+  },
+
   manage: {
     title: (honoree: string) => ['ההזמנה של', honoree],
     orderNo: (n: string) => `הזמנה ${n}`,

@@ -744,3 +744,49 @@ ol.howto {
     font-size: 72px;
   }
 }
+
+/* Mock payment page (staging only): deliberately plain so nobody mistakes it for the real card page. */
+.mock-pay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 48px;
+  text-align: center;
+}
+.mock-pay h1 {
+  font-family: Heebo, sans-serif;
+  font-size: 22px;
+  margin: 0;
+}
+.mock-label {
+  margin: 0;
+  padding: 8px 14px;
+  border: 2px dashed currentColor;
+  font-weight: 700;
+}
+.mock-amount {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+.mock-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 320px);
+  margin-top: 12px;
+}
+.mock-btn {
+  font:
+    700 17px Heebo,
+    sans-serif;
+  padding: 12px 16px;
+  border: 2px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.mock-btn.secondary {
+  font-weight: 500;
+}

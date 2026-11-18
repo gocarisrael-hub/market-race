@@ -15,6 +15,9 @@ if ((process.env.SEED_DEMO === '1' || process.env.E2E_SEED === '1') && config.en
   await seedDemo(db)
 }
 const services = servicesFromEnv()
+if (services.paymentProvider === 'mock' && !services.mockAllowed) {
+  console.error('[payment] PAYMENT_PROVIDER=mock is refused in production: card payment is OFF')
+}
 // Payments settle only from the terminal's own rows: sweep at boot (reads back a deploy gap),
 // then on a cadence, and whenever a notify asks.
 const sweeper =

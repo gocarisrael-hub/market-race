@@ -212,6 +212,7 @@ export type Route =
   | { page: 'photos'; token: string }
   | { page: 'checkout'; token: string }
   | { page: 'payDone' }
+  | { page: 'payMock' }
   | { page: 'companyPay'; token: string }
   | { page: 'manage'; token: string }
   | { page: 'companies' }
@@ -223,6 +224,7 @@ export function parseRoute(pathname: string): Route {
   if (p === '/order/questions') return { page: 'questions' }
   if (p === '/companies') return { page: 'companies' }
   if (p === '/pay/done') return { page: 'payDone' }
+  if (p === '/pay/mock') return { page: 'payMock' }
   let m = p.match(/^\/order\/([A-Za-z0-9_-]{10,64})\/(photos|pay)$/)
   if (m) return { page: m[2] === 'photos' ? 'photos' : 'checkout', token: m[1] }
   m = p.match(/^\/pay\/([A-Za-z0-9_-]{10,64})$/)

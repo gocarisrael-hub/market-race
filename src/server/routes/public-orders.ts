@@ -9,6 +9,7 @@ import { cardEnabled } from '../services/context.ts'
 import { links, qrPng } from '../services/delivery.ts'
 import { buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
 import { afterBuilt, handleNotify, PaymentError, priceFor, startPayment } from '../services/payments.ts'
+import { completeMockPayment, mockPaymentInfo } from '../services/payments-mock.ts'
 import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
 import { fileUrl } from '../services/play.ts'
 import { getSetting } from '../services/settings.ts'
@@ -211,6 +212,21 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     )
     if (outcome === 'retry') return reply.code(502).send({ error: 'verification failed' })
     return { ok: true }
+  })
+
+  // Mock payment (staging only): the page reads the window, then completes it.
+  app.get('/api/payment/mock/:token', async (req, reply) => {
+    const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
+    const info = await mockPaymentInfo(db, services, token)
+    if (!info) return reply.code(404).send({ error: 'not_found' })
+    return info
+  })
+  app.post('/api/payment/mock/complete', async (req, reply) => {
+    const body = z.object({ token: z.string().min(10).max(64) }).safeParse(req.body)
+    if (!body.success) return reply.code(400).send({ error: 'invalid' })
+    const done = await completeMockPayment(db, services, base, body.data.token)
+    if (!done) return reply.code(404).send({ error: 'not_found' })
+    return { ok: true, redirect: `/pay/done?o=${encodeURIComponent(done.manageToken)}` }
   })
 
   app.post('/api/payment/tranzila/notify', async (req) => {
