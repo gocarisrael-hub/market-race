@@ -11,8 +11,8 @@ async function stepOne(page: Page) {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /מירוץ טעימות/ })).toBeVisible()
   await page.getByRole('radio', { name: 'רווקות' }).click()
-  // Bachelorette allows one form only: picked for the buyer.
-  await expect(page.getByRole('radio', { name: 'עליה' })).toHaveAttribute('aria-checked', 'true')
+  // Bachelorette allows one form only: picked for the buyer, no she/he question.
+  await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
   await expect(page.getByTestId('price')).toContainText('396 ₪')
 }
 
@@ -25,7 +25,7 @@ test('buyer orders a game up to the pay step', async ({ page }) => {
   await page.goto('/')
   // Nothing picked yet: the button says what is missing.
   await page.getByRole('button', { name: /ממשיכים לשאלות/ }).click()
-  await expect(page.getByText('בחרו לכבוד מה חוגגים')).toBeVisible()
+  await expect(page.getByText('בחרו איזה משחק')).toBeVisible()
 
   await stepOne(page)
   await page.getByRole('button', { name: 'עוד משתתף' }).click()
@@ -268,4 +268,65 @@ test('a mock payment settles the order and the manage page shows the game link',
 
   await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })
   await expect(page.locator('a.big-link')).toHaveAttribute('href', /\/g\//, { timeout: 30_000 })
+})
+
+test('a family game: no she/he choice, the name field is the family name, family questions', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page.getByText('איזה משחק?')).toBeVisible()
+  await page.getByRole('radio', { name: 'משפחתי' }).click()
+  await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
+  await expect(page.getByTestId('price')).toContainText('396 ₪')
+  await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
+  await page.getByRole('button', { name: 'ממשיכים לשאלות עליכם' }).click()
+
+  await expect(page).toHaveURL(/\/order\/questions$/)
+  await expect(page.getByRole('heading', { name: /ספרו לנו/ })).toContainText('עליכם')
+  await expect(page.getByRole('radiogroup', { name: 'המשחק' })).toHaveCount(0)
+  // The family's name is asked once, in the name field, with the question set's own wording.
+  await expect(page.getByLabel(/שם המשפחה\?/)).toHaveCount(1)
+  await expect(page.getByLabel(/המאכל שתמיד יש בארוחת שישי/)).toBeVisible()
+  await expect(page.getByLabel(/המשפט הכי מוכר של אבא או אמא/)).toBeVisible()
+  await expect(page.getByLabel(/מי הכי מאחר\/ת במשפחה/)).toBeVisible()
+  // Hidden questions of the set are never asked.
+  await expect(page.getByLabel(/כינוי/)).toHaveCount(0)
+  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+  await expect(page.getByText('כתבו את שם הקבוצה או המשפחה')).toBeVisible()
+  await page.getByLabel(/שם המשפחה\?/).fill('משפחת כהן')
+  await page.getByLabel(/מי הכי מאחר\/ת במשפחה/).fill('דוד שמעון')
+  await shot(page, '2-questions-family')
+  const created = page.waitForResponse(
+    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+  const body = (await created).request().postDataJSON()
+  expect(body).toMatchObject({
+    occasionKey: 'family',
+    form: 'group',
+    honoreeName: 'משפחת כהן',
+    answers: { group_name: 'משפחת כהן', who_late: 'דוד שמעון' },
+  })
+  await toToken(page)
+  await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלכם' })).toBeVisible()
+})
+
+test('a birthday asks she or he next to the name, only there', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: 'יום הולדת לחבר/ה' }).click()
+  await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
+  await page.getByRole('button', { name: 'ממשיכים לשאלות', exact: true }).click()
+  await expect(page).toHaveURL(/\/order\/questions$/)
+  const choice = page.getByRole('radiogroup', { name: 'המשחק' })
+  await expect(choice.getByRole('radio')).toHaveText(['עליה', 'עליו'])
+  await page.getByLabel(/איך קוראים למי שחוגגים/).fill('יואב')
+  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+  await expect(page.getByText('בחרו: עליה או עליו?')).toBeVisible()
+  await choice.getByRole('radio', { name: 'עליו' }).click()
+  await expect(page.getByLabel(/איך קוראים לו\?/)).toHaveValue('יואב')
+  await expect(page.getByLabel('מה האוכל האהוב עליו?')).toBeVisible()
+  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+  await toToken(page)
+  await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלו' })).toBeVisible()
 })

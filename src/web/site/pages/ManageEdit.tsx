@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ApiError, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
 import { copy, type SiteForm } from '../copy.ts'
-import { cleanNotes, editError, errorText, MAX_NOTES } from '../logic.ts'
+import { askedQuestions, cleanNotes, editError, errorText, MAX_NOTES, nameLabel } from '../logic.ts'
 import { Cta, Link, QField, TornPaper } from '../ui.tsx'
 
 export function ManageEdit(props: {
@@ -16,7 +16,9 @@ export function ManageEdit(props: {
 }) {
   const { token, m, first } = props
   const form = (m.form || 'she') as SiteForm
-  const questions = m.questions ?? []
+  const all = m.questions ?? []
+  // A group's name is the name field; its group_name question is not asked twice.
+  const questions = askedQuestions(all, form)
   const [name, setName] = useState(m.honoreeName ?? m.honoree)
   const [answers, setAnswers] = useState<Record<string, string>>(m.answers ?? {})
   const [notes, setNotes] = useState<LetterNote[]>(
@@ -30,7 +32,9 @@ export function ManageEdit(props: {
     if (e) return setError(e)
     setBusy(true)
     try {
-      await submitAnswers(token, { honoreeName: name.trim(), answers, letterNotes: cleanNotes(notes) })
+      const sent = { ...answers }
+      if (form === 'group' && all.some((q) => q.slot === 'group_name')) sent.group_name = name.trim()
+      await submitAnswers(token, { honoreeName: name.trim(), answers: sent, letterNotes: cleanNotes(notes) })
       props.onDone()
     } catch (err) {
       setError(errorText(err instanceof ApiError ? err.code : 'generic'))
@@ -48,7 +52,7 @@ export function ManageEdit(props: {
       <p className="hint">{first ? copy.manage.answersIntro : copy.manage.editHint}</p>
       <QField
         name="honoreeName"
-        label={copy.questions.name(form)}
+        label={nameLabel(all, form)}
         value={name}
         maxLen={40}
         required
