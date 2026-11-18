@@ -62,6 +62,7 @@ export type Manage = {
   qr: string | null
   progress: { step: string; stopIndex: number; total: number; redeemed: number } | null
   needsAnswers: boolean
+  photos: { count: number; editable: boolean }
   answers?: Record<string, string>
   questions?: Question[]
 }
@@ -136,7 +137,9 @@ export const sendLead = (lead: Record<string, unknown>) =>
   api<{ ok: true }>('/api/leads', { method: 'POST', json: lead })
 
 export const listPhotos = (token: string) =>
-  api<{ photos: Photo[] }>(`/api/orders/${encodeURIComponent(token)}/photos`).then((r) => r.photos)
+  api<{ photos: Photo[]; paid: boolean; editable: boolean }>(
+    `/api/orders/${encodeURIComponent(token)}/photos`,
+  )
 export const uploadPhoto = (token: string, file: File) => {
   const body = new FormData()
   body.append('file', file)

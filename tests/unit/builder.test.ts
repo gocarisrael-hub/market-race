@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGame } from '../../src/server/domain/builder.ts'
+import { attachPhotos, buildGame } from '../../src/server/domain/builder.ts'
 import { partsToString } from '../../src/server/domain/template.ts'
 import { catalog, order } from '../helpers/fixtures.ts'
 
@@ -67,5 +67,46 @@ describe('buildGame', () => {
     expect(game.letter.photos).toEqual(['a.jpg', 'b.jpg', 'c.jpg'])
     expect(game.theme.palette.accent).toBe('#123456')
     expect(game.company).toEqual({ name: 'אקמה', logo: 'logo.png' })
+  })
+
+  describe('photos', () => {
+    const build = (photos: string[]) => buildGame({ ...catalog(), order: order({ photos }) }).game
+
+    it('no photos: no stop and no letter photo', () => {
+      const game = build([])
+      expect(game.stops.map((s) => s.photo)).toEqual([null, null, null])
+      expect(game.letter.photos).toEqual([])
+    })
+
+    it('fewer photos than riddles: the first stops get them, in order', () => {
+      expect(build(['a.jpg']).stops.map((s) => s.photo)).toEqual(['a.jpg', null, null])
+    })
+
+    it('more photos than riddle stops: the extra ones are only in the letter', () => {
+      const game = build(['a', 'b', 'c', 'd', 'e'])
+      expect(game.stops.map((s) => s.photo)).toEqual(['a', 'b', null])
+      expect(game.letter.photos).toEqual(['a', 'b', 'c', 'd', 'e'])
+    })
+
+    it('caps at five, drops blanks and duplicates', () => {
+      expect(build(['a', '', 'a', 'b', 'c', 'd', 'e', 'f']).letter.photos).toEqual(['a', 'b', 'c', 'd', 'e'])
+    })
+
+    it('attachPhotos replaces the photos of a built game without touching the rest', () => {
+      const game = build(['a', 'b'])
+      const next = attachPhotos(game, ['x'])
+      expect(next.stops.map((s) => s.photo)).toEqual(['x', null, null])
+      expect(next.letter).toEqual({ notes: game.letter.notes, photos: ['x'] })
+      expect(next.stops.map((s) => s.riddle)).toEqual(game.stops.map((s) => s.riddle))
+      // Pure: the original is unchanged.
+      expect(game.stops[0].photo).toBe('a')
+    })
+
+    it('a one-stop route (finale only) shows photos only in the letter', () => {
+      const game = build(['a'])
+      const single = attachPhotos({ ...game, stops: [{ ...game.stops[2] }] }, ['a'])
+      expect(single.stops[0].photo).toBeNull()
+      expect(single.letter.photos).toEqual(['a'])
+    })
   })
 })
