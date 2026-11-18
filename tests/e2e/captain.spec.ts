@@ -28,6 +28,17 @@ async function paidOrder(request: APIRequestContext, people = 5) {
   return { manageToken, gameUrl: m.gameLink as string }
 }
 
+/** Every visible action is drawn (brush or outline), none is a bare underlined text link. */
+async function noBareLinks(page: Page) {
+  const bare = await page.$$eval('a, button', (els) =>
+    els
+      .filter((el) => (el as HTMLElement).offsetParent !== null)
+      .filter((el) => getComputedStyle(el).textDecorationLine.includes('underline'))
+      .map((el) => el.textContent?.trim()),
+  )
+  expect(bare).toEqual([])
+}
+
 const riddle1 = (p: Page) => p.getByRole('heading', { name: 'חידה ראשונה', exact: true })
 
 test('the captain starts with the players who came, shares the link, and everyone joins', async ({
@@ -46,7 +57,7 @@ test('the captain starts with the players who came, shares the link, and everyon
   await expect(friend.getByRole('heading', { name: 'המשחק עוד לא התחיל' })).toBeVisible()
   await expect(friend.getByText('מי שהזמין את המשחק מתחיל אותו בשוק')).toBeVisible()
   await expect(friend.getByRole('button', { name: /לדרך/ })).toHaveCount(0)
-  await expect(friend.getByLabel('התשובה שלכן')).toHaveCount(0)
+  await expect(friend.getByLabel(/התשובה שלכן/)).toHaveCount(0)
   await expect(friend.locator('.trail')).toHaveCount(0)
 
   // The manage page: no game link to pass around yet, no WhatsApp share before the start.
@@ -63,11 +74,18 @@ test('the captain starts with the players who came, shares the link, and everyon
   await page.getByRole('button', { name: 'פחות משתתפים' }).click()
   await expect(page.getByTestId('players')).toHaveText('3')
   await expect(page.getByText('3 משתתפים מתוך 5')).toBeVisible()
+  await noBareLinks(page)
 
   // A clear confirm first; "not yet" goes back without starting.
   await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
   await expect(page.getByRole('heading', { name: 'בטוחים?' })).toBeVisible()
   await expect(page.getByText('הולכים לתחנה הראשונה עם 3 משתתפים')).toBeVisible()
+  await noBareLinks(page)
+  await page.screenshot({
+    path: 'docs/screens/site/6a-manage-confirm.png',
+    fullPage: true,
+    animations: 'disabled',
+  })
   await page.getByRole('button', { name: 'עוד לא' }).click()
   await expect(friend.getByRole('heading', { name: 'המשחק עוד לא התחיל' })).toBeVisible()
   await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
@@ -76,13 +94,14 @@ test('the captain starts with the players who came, shares the link, and everyon
   // The share step: a brush-stroke WhatsApp button with the owner's invite and the players' link.
   await expect(page.getByRole('heading', { name: 'המשחק התחיל!' })).toBeVisible()
   await expect(page.getByText('משחקים עם 3 משתתפים.')).toBeVisible()
-  const share = page.getByRole('link', { name: 'שולחים לכולם בוואטסאפ' })
+  const share = page.getByRole('link', { name: 'שולחים בוואטסאפ' })
   await expect(share).toHaveClass(/brush/)
   const href = (await share.getAttribute('href'))!
   expect(href.startsWith('https://wa.me/?text=')).toBe(true)
   const text = decodeURIComponent(href.split('text=')[1])
   expect(text).toContain('המירוץ של מיכל בשוק התחיל!')
   expect(text).toContain(gameUrl)
+  await noBareLinks(page)
   // Started: the edit is locked.
   await expect(page.getByRole('button', { name: 'ערוך' })).toHaveCount(0)
 
@@ -133,6 +152,8 @@ test('a hint behind a personal question: wrong keeps it hidden, right opens it',
   await box.fill('במבה')
   await page.getByRole('button', { name: 'פותחים את הרמז' }).click()
   await expect(page.getByText('לא בדיוק. נסו שוב או דלגו')).toBeVisible()
+  await noBareLinks(page)
+  await page.screenshot({ path: 'docs/screens/look/player-hint-question.png', animations: 'disabled' })
   await expect(page.getByText('רמז: זה גם שם של המנון')).toHaveCount(0)
   await page.getByRole('button', { name: 'דילוג, בלי רמז' }).click()
   await expect(page.getByText('איך קוראים לכלב שלה?')).toHaveCount(0)

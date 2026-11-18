@@ -203,7 +203,7 @@ test('manage page: a ready game offers the captain’s start; the link, QR and W
   await page.getByRole('button', { name: 'כן, מתחילים!' }).click()
   await expect(page.getByRole('link', { name: 'ממשיכים למשחק' })).toHaveAttribute('href', links.game)
   await expect(page.getByRole('img', { name: 'קוד QR לקישור המשחק' })).toBeVisible()
-  const wa = await page.getByRole('link', { name: 'שולחים לכולם בוואטסאפ' }).getAttribute('href')
+  const wa = await page.getByRole('link', { name: 'שולחים בוואטסאפ' }).getAttribute('href')
   expect(wa).toContain('https://wa.me/?text=')
   expect(decodeURIComponent(wa!.split('text=')[1])).toContain(links.game)
   await shot(page, '6b-manage-started')

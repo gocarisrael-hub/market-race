@@ -3,7 +3,7 @@
 import type { HintQuestion } from './api.ts'
 import { copy, type SiteForm } from './copy.ts'
 import { MAX_HINT_QUESTIONS } from './logic.ts'
-import { QField, TornPaper } from './ui.tsx'
+import { QField, SectionHead, Sketch, TornPaper } from './ui.tsx'
 
 export function HintQuestions(props: {
   value: HintQuestion[]
@@ -15,7 +15,9 @@ export function HintQuestions(props: {
     props.onChange(list.map((q, j) => (j === i ? { ...q, ...patch } : q)))
   return (
     <TornPaper tilt="l" id="hint-questions">
-      <h2 className="sub">{copy.hintQuestions.title}</h2>
+      <SectionHead icon="question" tilt={8}>
+        {copy.hintQuestions.title}
+      </SectionHead>
       <p className="hint" style={{ margin: '4px 0 0' }}>
         {copy.hintQuestions.intro} ({copy.optional})
       </p>
@@ -38,23 +40,19 @@ export function HintQuestions(props: {
             maxLen={60}
             onChange={(v) => set(i, { answer: v })}
           />
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => props.onChange(list.filter((_, j) => j !== i))}
-          >
+          <Sketch small icon="scissors" onClick={() => props.onChange(list.filter((_, j) => j !== i))}>
             {copy.hintQuestions.remove}
-          </button>
+          </Sketch>
         </div>
       ))}
       {list.length < MAX_HINT_QUESTIONS && (
-        <button
-          type="button"
-          className="add-link"
+        <Sketch
+          className="add-note"
+          icon="key"
           onClick={() => props.onChange([...list, { question: '', answer: '' }])}
         >
           {copy.hintQuestions.add(list.length)}
-        </button>
+        </Sketch>
       )}
     </TornPaper>
   )

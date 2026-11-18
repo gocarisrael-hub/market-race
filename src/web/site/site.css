@@ -1695,27 +1695,73 @@ ol.howto.drawn li {
 }
 .file-drop > .drop-word {
   position: relative;
+}
 
-
-/* Manage page: the captain's start and the share step after it. */
+/* Manage page: the captain's start (players stepper, confirm) and the share step after it. */
+.start-game .torn-paper,
+.share-game .torn-paper {
+  position: relative;
+}
+.players-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
 .start-game .stepper {
   margin-top: 10px;
 }
-.share-game .share-title {
-  margin-top: 6px;
-  font-size: 48px;
+.players-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.players-hint .doodle {
+  flex: none;
+}
+.start-confirm {
+  margin-top: 10px;
+}
+.confirm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+.start-confirm .cta-wrap {
+  position: static;
+  background: none;
+  margin-top: 14px;
+  padding-bottom: 0;
+}
+.confirm-back,
+.share-continue {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+.share-players {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 18px;
+  font-weight: 600;
 }
 .share-brush {
-  margin: 22px -4px 8px;
+  margin-top: 18px;
 }
-.share-continue {
-  margin: 18px 0 0;
-  text-align: center;
-}
-.share-game .game-link {
-  justify-content: center;
+.share-qr {
+  display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
 }
 .hint-q + .hint-q {
   margin-top: 6px;

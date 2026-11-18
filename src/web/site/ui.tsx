@@ -282,21 +282,6 @@ export function Cta(props: {
   )
 }
 
-/** The brush-stroke look on an outside link (e.g. WhatsApp), in the flow of the page. */
-export function BrushAnchor(props: { href: string; children: ReactNode; className?: string }) {
-  return (
-    <a
-      className={`brush ${props.className ?? ''}`}
-      href={props.href}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <BrushShape />
-      <span>{props.children}</span>
-    </a>
-  )
-}
-
 export function TornPaper(props: { children: ReactNode; tilt?: 'r' | 'l'; id?: string }) {
   return (
     <div className={`torn-paper${props.tilt ? ` tilt-${props.tilt}` : ''}`} id={props.id}>

@@ -4,7 +4,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
 import { riddleTitle } from '../copy.ts'
-import { Arrow, BrushButton, HandCircle, Paper, Tick, Trail } from '../draw.tsx'
+import { Arrow, BrushButton, HandCircle, Paper, SketchButton, Tick, Trail } from '../draw.tsx'
 import { splitQuestion, stopIcon } from '../logic.ts'
 import { TapedPhoto, useLightbox } from '../photo.tsx'
 import type { ScreenProps } from './types.ts'
@@ -132,12 +132,18 @@ export function Riddle({ view, t, act }: ScreenProps) {
       {showQuestion && (
         <form className="hintq-form" onSubmit={answerHint} noValidate>
           <Paper className="hintq rise" tilt={-1}>
-            <p className="hintq-kicker">{t('hintq.title')}</p>
+            <p className="hintq-kicker">
+              <Icon name="key" size={30} tilt={-8} />
+              <span>{t('hintq.title')}</span>
+            </p>
             <p className="hintq-question" id="hintq-question">
               {cur.riddle.hintQuestion}
             </p>
             <label className="answer">
-              <span>{t('hintq.answerLabel')}</span>
+              <span className="answer-label">
+                <Icon name="pencil" size={22} tilt={-6} />
+                {t('hintq.answerLabel')}
+              </span>
               <input
                 value={hintAnswer}
                 onChange={(e) => {
@@ -163,11 +169,10 @@ export function Riddle({ view, t, act }: ScreenProps) {
               )}
             </p>
             <div className="hintq-actions">
-              <button type="submit" className="hintq-go" disabled={busy}>
+              <SketchButton type="submit" className="hintq-go accent" disabled={busy}>
                 {t('hintq.submit')}
-              </button>
-              <button
-                type="button"
+              </SketchButton>
+              <SketchButton
                 className="hintq-skip"
                 onClick={() => {
                   setAsking(false)
@@ -176,7 +181,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
                 }}
               >
                 {t('hintq.skip')}
-              </button>
+              </SketchButton>
             </div>
           </Paper>
         </form>

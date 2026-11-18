@@ -1,6 +1,6 @@
 // Opening: the market map and the race title on a ribbon, waiting for the captain. There is no
 // start here: the buyer starts the game from the manage page, and every phone follows by polling.
-import { Doodles } from '../../shared/decor.tsx'
+import { Doodles, Icon } from '../../shared/decor.tsx'
 import { joinList } from '../copy.ts'
 import { Paper, Ribbon, TornEdge } from '../draw.tsx'
 import { iconUrl, ribbonFontSize } from '../logic.ts'
@@ -55,7 +55,14 @@ export function Opening({ view, t }: Omit<ScreenProps, 'act'>) {
         <p className="opening-summary">{summary}</p>
         <p className="opening-together">{t('start.together')}</p>
         <Paper className="wait-note rise" tilt={-1.4}>
-          <h2 className="wait-title">{t('wait.title')}</h2>
+          <span className="wait-doodles" aria-hidden="true">
+            <Icon name="clock" size={40} tilt={-12} className="wait-d1" />
+            <Icon name="ticket" size={36} tilt={10} className="wait-d2" />
+          </span>
+          <h2 className="wait-title">
+            <Icon name="hourglass" size={38} tilt={-8} />
+            <span>{t('wait.title')}</span>
+          </h2>
           <p className="wait-body" role="status">
             {t('wait.body')}
           </p>

@@ -401,10 +401,31 @@ h2 {
   width: min(100%, 340px);
   margin: 10px 0 calc(18px + env(safe-area-inset-bottom));
 }
+.opening .wait-note {
+  position: relative;
+}
+.wait-doodles .wait-d1,
+.wait-doodles .wait-d2 {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+.wait-doodles .wait-d1 {
+  top: -20px;
+  left: -10px;
+}
+.wait-doodles .wait-d2 {
+  bottom: -14px;
+  right: -8px;
+}
 .opening .wait-note .paper-body {
   padding: 20px 22px 16px;
 }
 .wait-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin: 0;
   font-family: var(--hand);
   font-weight: 700;
@@ -781,6 +802,9 @@ h2 {
   padding: 16px 18px 14px;
 }
 .hintq-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   color: var(--ink-soft);
   font-family: var(--hand);
@@ -804,31 +828,12 @@ h2 {
   gap: 6px 16px;
   margin-top: 10px;
 }
-.hintq-go,
-.hintq-skip {
-  position: relative;
-  border: 0;
-  background: none;
-  padding: 6px 10px;
-  font-family: var(--hand);
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
+.hintq-actions .sketch {
+  font-size: 24px;
 }
-.hintq-go {
-  color: var(--mark);
-  font-size: 28px;
-}
-.hintq-skip {
-  color: var(--ink-soft);
-  font-size: 22px;
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 4px;
-}
-.hintq-go:disabled {
-  opacity: 0.6;
-  cursor: wait;
+.hintq-actions .hintq-go {
+  --sketch-ink: var(--mark);
+  --sketch-line: var(--mark);
 }
 .hintq-feedback {
   min-height: 26px;
