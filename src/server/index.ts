@@ -3,6 +3,7 @@ import { loadConfig } from './config.ts'
 import { openDb } from './db/index.ts'
 import { ensureBootstrapOwner } from './lib/auth.ts'
 import { servicesFromEnv } from './services/context.ts'
+import { createErrorAlerter, expireOrders } from './services/jobs.ts'
 import { createPaymentSweeper } from './services/payments.ts'
 import { seedDemo } from './services/seed-demo.ts'
 
@@ -19,10 +20,17 @@ const services = servicesFromEnv()
 const sweeper = services.tranzila.isConfigured()
   ? await createPaymentSweeper(db, services, config.publicBaseUrl)
   : null
-const app = await buildApp({ db, config, services, sweeper })
+const reportError = createErrorAlerter(services)
+const app = await buildApp({ db, config, services, sweeper, reportError })
 await app.listen({ port: config.port, host: '0.0.0.0' })
 if (sweeper) {
   const logSweep = (e: unknown) => console.error(`[tranzila] sweep failed: ${(e as Error)?.message ?? e}`)
   sweeper.sweep().catch(logSweep)
   setInterval(() => sweeper.tick().catch(logSweep), 15_000).unref()
 }
+
+// Hourly housekeeping.
+const housekeeping = () =>
+  expireOrders(db).catch((e) => console.error(`[jobs] expire failed: ${(e as Error)?.message ?? e}`))
+housekeeping()
+setInterval(housekeeping, 60 * 60_000).unref()
