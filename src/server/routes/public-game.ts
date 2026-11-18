@@ -26,7 +26,10 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
       if (view === 'not_found') return reply.code(404).send({ error: 'not_found' })
       if (view === 'not_ready') return reply.code(409).send({ error: 'not_ready' })
       reply.header('cache-control', 'no-store')
-      return view
+      // The owner's text overrides ride along with the view (PlayerView itself stays unchanged).
+      // The brand name setting fills the "brand" text unless player_texts overrides it.
+      const texts = { brand: await getSetting(ctx.db, 'brand_name'), ...(await getSetting(ctx.db, 'player_texts')) }
+      return { ...view, texts }
     },
   )
 
