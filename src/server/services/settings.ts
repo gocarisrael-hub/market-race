@@ -18,6 +18,9 @@ export interface SettingsShape {
   message_templates: Record<MessageKey, { subject: string; text: string }>
   // Messaging customers' numbers over WhatsApp can get the number banned; off until the owner decides.
   whatsapp_to_customers: boolean
+  // Player-facing text overrides, { copyKey: text }. Keys are those of src/web/player/copy.ts;
+  // a key may end in .she/.he/.couple/.company to override one form only.
+  player_texts: Record<string, string>
 }
 
 export type MessageKey = 'paid_answers_needed' | 'game_ready' | 'company_payment_link'
@@ -46,6 +49,7 @@ export const SETTING_DEFAULTS: SettingsShape = {
     },
   },
   whatsapp_to_customers: false,
+  player_texts: {},
 }
 
 export async function getSetting<K extends keyof SettingsShape>(db: DB, key: K): Promise<SettingsShape[K]> {
