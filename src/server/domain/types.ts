@@ -1,6 +1,8 @@
 // Shared domain types. Pure: no DB or framework imports, safe to use from the web bundles.
 
-export const FORMS = ['she', 'he', 'couple', 'company'] as const
+// she / he / couple: one person or a couple is celebrated. group: a family, a unit or a group of
+// friends, addressed in the plural and named by the {group_name} slot. company: a company game.
+export const FORMS = ['she', 'he', 'couple', 'group', 'company'] as const
 export type Form = (typeof FORMS)[number]
 
 // Fixed lists (SPEC: allergens are never free text).
@@ -44,6 +46,11 @@ export interface Question {
   required: boolean
   fallback: Partial<Record<Form, string>> | string
   maxLen: number
+  /**
+   * Not asked: the buyer never sees it, riddles get the fallback. Lets one riddle template use
+   * slots that only some question sets ask (e.g. a family set gives {group_legend} a fixed phrase).
+   */
+  hidden?: boolean
 }
 
 export interface RouteStop {

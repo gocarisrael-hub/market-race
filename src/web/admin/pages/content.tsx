@@ -1,6 +1,7 @@
 // Question sets and riddles (with live preview per form and an answer tester).
 import { useEffect, useMemo, useState } from 'react'
-import { extractSlots } from '../../../server/domain/template.ts'
+import { extractSlots, nameSlots } from '../../../server/domain/template.ts'
+import type { RiddleTemplates } from '../../../server/domain/types.ts'
 import { FORMS, type Form, type Question, type TextPart } from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
 import {
@@ -10,6 +11,7 @@ import {
   FORM_LABELS,
   type Market,
   NumberInput,
+  type Occasion,
   type QuestionSet,
   type Riddle,
   Select,
@@ -33,15 +35,29 @@ function move<T>(list: T[], i: number, by: number): T[] {
   return next
 }
 
+/** "תקווה (היא, קבוצה)": the riddles whose text uses a slot, with the forms that use it. */
+export function slotUsage(
+  slot: string,
+  riddles: { title: string; answer: string; templates: RiddleTemplates }[],
+) {
+  if (!slot) return []
+  return riddles.flatMap((r) => {
+    const forms = FORMS.filter((f) => extractSlots(r.templates[f] ?? '').includes(slot))
+    return forms.length ? [`${r.title || r.answer} (${forms.map((f) => FORM_LABELS[f]).join(', ')})`] : []
+  })
+}
+
 function QuestionEditor({
   q,
   index,
+  usedIn,
   onChange,
   onMove,
   onRemove,
 }: {
   q: Question
   index: number
+  usedIn: string[] | null
   onChange: (q: Question) => void
   onMove: (by: number) => void
   onRemove: () => void
@@ -49,7 +65,10 @@ function QuestionEditor({
   const perForm = typeof q.fallback !== 'string'
   return (
     <fieldset className="question" data-testid={`question-${index}`}>
-      <legend>שאלה {index + 1}</legend>
+      <legend>
+        שאלה {index + 1}
+        {q.slot && <code dir="ltr">{` {${q.slot}}`}</code>}
+      </legend>
       <div className="row">
         <Text label="מפתח" value={q.slot} onChange={(slot) => onChange({ ...q, slot })} dir="ltr" required />
         <NumberInput
@@ -58,7 +77,17 @@ function QuestionEditor({
           onChange={(maxLen) => onChange({ ...q, maxLen })}
         />
         <Check label="חובה" checked={q.required} onChange={(required) => onChange({ ...q, required })} />
+        <Check
+          label="לא לשאול (רק ברירת מחדל)"
+          checked={!!q.hidden}
+          onChange={(hidden) => onChange({ ...q, hidden: hidden || undefined })}
+        />
       </div>
+      {usedIn && (
+        <p className="muted" data-testid="slot-usage">
+          {usedIn.length ? `בשימוש בחידות: ${usedIn.join(' · ')}` : 'לא בשימוש באף חידה'}
+        </p>
+      )}
       {FORMS.map((f) => (
         <Text
           key={f}
@@ -113,15 +142,21 @@ function QuestionEditor({
 
 function QuestionSetEditor({ value, set }: EditorProps<QuestionSet>) {
   const qs = value.questions ?? []
+  const riddles = useList<Riddle>('/catalog/riddles')
   return (
     <>
       <Text label="שם השאלון" value={value.name} onChange={(name) => set({ name })} required />
+      <p className="muted">
+        לכל שאלה: נוסח לכל צורת פנייה, חובה או לא, ברירת מחדל כשלא עונים ואורך מקסימלי. שאלה שמסומנת "לא
+        לשאול" לא מוצגת לקונה, והחידות מקבלות את ברירת המחדל שלה.
+      </p>
       {qs.map((q, i) => (
         <QuestionEditor
           // biome-ignore lint/suspicious/noArrayIndexKey: questions have no stable id while being edited
           key={i}
           q={q}
           index={i}
+          usedIn={riddles.items ? slotUsage(q.slot, riddles.items) : null}
           onChange={(nq) => set({ questions: qs.map((x, j) => (j === i ? nq : x)) })}
           onMove={(by) => set({ questions: move(qs, i, by) })}
           onRemove={() => set({ questions: qs.filter((_, j) => j !== i) })}
@@ -248,11 +283,18 @@ function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
   const markets = useList<Market>('/catalog/markets')
   const stalls = useList<Stall>('/catalog/stalls')
   const sets = useList<QuestionSet>('/catalog/question-sets')
+  const occasions = useList<Occasion>('/catalog/occasions')
   const [form, setForm] = useState<Form>('she')
   const [qsId, setQsId] = useState<number | null>(null)
   useEffect(() => {
     if (qsId === null && sets.items?.length) setQsId(sets.items[0].id)
   }, [sets.items, qsId])
+  // Switching form: preview with a question set an occasion of that form uses, when the current one isn't.
+  const pickForm = (f: Form) => {
+    setForm(f)
+    const setsFor = (occasions.items ?? []).filter((o) => o.forms.includes(f)).map((o) => o.questionSetId)
+    if (setsFor.length && !setsFor.includes(qsId)) setQsId(setsFor[0])
+  }
 
   const templates = value.templates ?? {}
   const accepted = value.accepted ?? []
@@ -262,8 +304,9 @@ function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
     () => [...new Set(FORMS.flatMap((f) => extractSlots(templates[f] ?? '')))],
     [templates],
   )
-  const defined = new Set(qset?.questions.map((q) => q.slot) ?? [])
-  const undefinedSlots = qset ? used.filter((s) => !defined.has(s)) : []
+  const defined = new Set([...(qset?.questions.map((q) => q.slot) ?? []), ...nameSlots(form)])
+  // Checked for the form being edited: other forms are usually answered by other question sets.
+  const undefinedSlots = qset ? extractSlots(templates[form] ?? '').filter((s) => !defined.has(s)) : []
 
   return (
     <>
@@ -301,7 +344,7 @@ function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
               role="tab"
               aria-selected={f === form}
               className={f === form ? 'on' : ''}
-              onClick={() => setForm(f)}
+              onClick={() => pickForm(f)}
             >
               {FORM_LABELS[f]}
               {templates[f] ? '' : ' (ריק)'}
@@ -339,7 +382,7 @@ function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
         </p>
         {undefinedSlots.length > 0 && (
           <p className="error" data-testid="undefined-slots">
-            לא מוגדרות בשאלון "{qset?.name}": {undefinedSlots.join(', ')}
+            לא מוגדרות בשאלון "{qset?.name}" (יישארו ריקות): {undefinedSlots.join(', ')}
           </p>
         )}
       </fieldset>

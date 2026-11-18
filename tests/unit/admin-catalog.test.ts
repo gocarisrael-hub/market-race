@@ -172,6 +172,28 @@ describe('admin catalog API', () => {
     expect(badSlot.statusCode).toBe(400)
     const upd = await call('PATCH', `/question-sets/${questionSetId}`, { name: 'רווקות 2' })
     expect(upd.json().name).toBe('רווקות 2')
+
+    // Group texts and fallback-only (hidden) questions are stored as is.
+    const group = [
+      { slot: 'group_name', text: { group: 'שם המשפחה?' }, required: true, fallback: '', maxLen: 40 },
+      { slot: 'group_legend', text: {}, required: false, fallback: 'סבא וסבתא', maxLen: 40, hidden: true },
+    ]
+    const g = await call('POST', '/question-sets', { name: 'משפחה', questions: group })
+    expect(g.statusCode).toBe(201)
+    expect(g.json().questions).toEqual(group)
+    const preview = await call('POST', '/riddles/preview', {
+      template: 'לכבוד {group_name} ו{group_legend}',
+      form: 'group',
+      questionSetId: g.json().id,
+    })
+    expect(preview.json().unknownSlots).toEqual([])
+    expect(
+      preview
+        .json()
+        .parts.map((p: { v: string }) => p.v)
+        .join(''),
+    ).toBe('לכבוד [group_name] וסבא וסבתא')
+    expect((await call('DELETE', `/question-sets/${g.json().id}`)).statusCode).toBe(200)
   })
 
   it('creates riddles, previews templates and tests answers', async () => {

@@ -60,6 +60,38 @@ test('owner creates a test game from the form and finds it in the orders', async
   await expect(page.getByRole('button', { name: 'שליחת קישור המשחק שוב' })).toBeVisible()
 })
 
+test('owner builds a family test game (group form) and plays its first riddle', async ({ page }) => {
+  const FAMILY = `משפחת כהן ${run}`
+  await login(page)
+  await nav(page, 'משחק בדיקה')
+  const form = page.locator('form.editor')
+  await form.getByRole('combobox', { name: /^אירוע/ }).selectOption({ label: 'משפחתי' })
+  await expect(form.getByRole('combobox', { name: /^צורת פנייה/ })).toHaveValue('group')
+  await form.getByRole('combobox', { name: /^עיצוב/ }).selectOption({ label: 'כרמל בצבעי מים' })
+  await expect(form.getByRole('combobox', { name: /^מסלול/ })).not.toHaveValue('')
+  await form.getByLabel('שם הקבוצה / המשפחה').fill(FAMILY)
+  // The family's name is the name field; its question is not asked twice. Hidden ones never.
+  await expect(form.getByLabel(/^שם המשפחה\?/)).toHaveCount(0)
+  await expect(form.getByLabel(/כינוי/)).toHaveCount(0)
+  await form.getByLabel(/מי הכי מאחר/).fill('דוד שמעון')
+  await form.getByRole('button', { name: 'יצירת משחק' }).click()
+
+  const result = page.locator('section.result')
+  await expect(result.getByText('(מוכנה)')).toBeVisible()
+  const href = await result.getByRole('link', { name: /\/g\// }).getAttribute('href')
+
+  await page.goto(href!)
+  await expect(page.getByRole('heading', { name: `המירוץ של ${FAMILY}` })).toBeVisible()
+  await page.getByRole('button', { name: 'יוצאים לדרך!' }).click()
+  await expect(page.getByRole('heading', { name: 'חידה ראשונה', exact: true })).toBeVisible()
+  await expect(page.locator('.slot', { hasText: 'דוד שמעון' })).toBeVisible()
+  await expect(page.locator('.slot', { hasText: FAMILY })).toBeVisible()
+  await expect(page.getByText(/כבר יודעים: לא מוותרים עליה/)).toBeVisible()
+  await page.getByLabel('התשובה שלכם').fill('תקווה')
+  await page.getByRole('button', { name: 'בודקים!' }).click()
+  await expect(page.getByRole('heading', { name: 'נכון!' })).toBeVisible()
+})
+
 test('owner turns a company lead into a quote', async ({ page }) => {
   const lead = await page.request.post('/api/leads', {
     data: {

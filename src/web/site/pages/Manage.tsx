@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, getManage, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
 import { copy } from '../copy.ts'
-import { answersError, cleanNotes, errorText, MAX_NOTES, whatsappShare } from '../logic.ts'
+import { answersError, askedQuestions, cleanNotes, errorText, MAX_NOTES, whatsappShare } from '../logic.ts'
 import { Cta, Deco, Failed, Link, Loading, QField, TornPaper } from '../ui.tsx'
 
 const ACTIVE_POLL_MS = 15_000
@@ -151,7 +151,7 @@ export function Manage({ token, search }: { token: string; search: string }) {
 }
 
 function LateAnswers({ token, m, onDone }: { token: string; m: M; onDone: () => void }) {
-  const questions = m.questions ?? []
+  const questions = askedQuestions(m.questions ?? [], m.form)
   const [answers, setAnswers] = useState<Record<string, string>>(m.answers ?? {})
   const [notes, setNotes] = useState<LetterNote[]>([{ text: '', signature: '' }])
   const [error, setError] = useState<string | null>(null)
