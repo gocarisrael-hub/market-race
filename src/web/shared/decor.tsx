@@ -4,8 +4,9 @@
 // makes the strokes slightly wobbly, like a pen on paper.
 import type { CSSProperties, ReactNode } from 'react'
 import type { Decor } from '../../server/domain/types.ts'
+import { MORE_DRAWINGS, type MoreDoodle } from './drawings.tsx'
 
-export type DoodleName =
+type BaseDoodle =
   | 'balloons'
   | 'cake'
   | 'partyHat'
@@ -24,14 +25,74 @@ export type DoodleName =
   | 'coffee'
   | 'sparkle'
 
+export type DoodleName = BaseDoodle | MoreDoodle
+
 /** The doodles of each set, in the order screens place them. */
 export const DECOR_SETS: Record<Decor, DoodleName[]> = {
-  birthday: ['balloons', 'cake', 'partyHat', 'confetti'],
-  love: ['heart', 'ring', 'lips', 'flower'],
-  family: ['house', 'family', 'heart', 'flower'],
-  friends: ['highFive', 'flag', 'star', 'sparkle'],
-  company: ['briefcase', 'rocket', 'coffee', 'star'],
-  generic: ['star', 'sparkle', 'confetti', 'sparkle'],
+  birthday: [
+    'balloons',
+    'cake',
+    'partyHat',
+    'confetti',
+    'gift',
+    'cupcake',
+    'garland',
+    'partyHorn',
+    'star',
+    'crown',
+    'sparkle',
+  ],
+  love: [
+    'heart',
+    'ring',
+    'lips',
+    'flower',
+    'loveLetter',
+    'twoHearts',
+    'toast',
+    'heartArrow',
+    'moon',
+    'sparkle',
+  ],
+  family: ['house', 'family', 'heart', 'flower', 'tree', 'sun', 'kite', 'basket', 'frame', 'coffee'],
+  friends: [
+    'highFive',
+    'flag',
+    'star',
+    'sparkle',
+    'toast',
+    'music',
+    'sunglasses',
+    'ticket',
+    'camera',
+    'pizza',
+    'cocktail',
+  ],
+  company: [
+    'briefcase',
+    'rocket',
+    'coffee',
+    'star',
+    'trophy',
+    'bulb',
+    'target',
+    'chart',
+    'flagStart',
+    'sparkle',
+  ],
+  generic: [
+    'star',
+    'sparkle',
+    'confetti',
+    'sun',
+    'flag',
+    'music',
+    'kite',
+    'crown',
+    'ticket',
+    'gift',
+    'basket',
+  ],
 }
 
 export const decorSet = (d: string | null | undefined): DoodleName[] =>
@@ -49,7 +110,7 @@ const HAND =
   'M18 58 L 19 38 C 16 33, 11 26, 9 21 C 8 17, 12 16, 14 19 L 19 27 L 19 11 C 19 7, 24 7, 24 11 L 24 25 L 25 8 C 25 4, 30 4, 30 8 L 30 25 L 32 12 C 32 8, 37 9, 36 13 L 35 31 C 35 42, 32 50, 31 58'
 const STAR = 'M32 7 L 38 24 L 56 25 L 42 36 L 47 54 L 32 44 L 17 54 L 22 36 L 8 25 L 26 24 Z'
 
-const DRAWINGS: Record<DoodleName, ReactNode> = {
+const BASE_DRAWINGS: Record<BaseDoodle, ReactNode> = {
   balloons: (
     <>
       {F('M24 8 C 14 8, 10 18, 12 26 C 14 33, 20 38, 24 38 C 29 38, 35 32, 36 24 C 37 15, 32 8, 24 8 Z')}
@@ -233,6 +294,11 @@ const DRAWINGS: Record<DoodleName, ReactNode> = {
   ),
 }
 
+const DRAWINGS: Record<DoodleName, ReactNode> = { ...BASE_DRAWINGS, ...MORE_DRAWINGS }
+
+/** Every doodle that has a drawing. */
+export const DOODLES = Object.keys(DRAWINGS) as DoodleName[]
+
 /** The shared wobble filter. Render once per page (both apps do it at the root). */
 export function DecorDefs() {
   return (
@@ -256,6 +322,35 @@ export function Doodle(props: { name: DoodleName; className?: string; style?: CS
       style={props.style}
     >
       <g filter="url(#doodle-wobble)">{DRAWINGS[props.name]}</g>
+    </svg>
+  )
+}
+
+/**
+ * A doodle used as an icon: inline, a fixed size, still (no bobbing). Decorative, so it is hidden
+ * from screen readers; the text next to it carries the meaning.
+ */
+export function Icon(props: { name: DoodleName; size?: number; className?: string; tilt?: number }) {
+  const size = props.size ?? 34
+  return (
+    <Doodle
+      name={props.name}
+      className={`icon ${props.className ?? ''}`}
+      style={{ width: size, height: size, ['--r' as string]: `${props.tilt ?? 0}deg` }}
+    />
+  )
+}
+
+// A rough rectangle drawn twice over, for secondary buttons (an outline, not a filled brush).
+const SKETCH = 'M6 9 C 60 5, 140 8, 194 6 C 196 20, 193 34, 195 45 C 140 48, 60 45, 5 47 C 3 34, 7 20, 6 9 Z'
+const SKETCH_2 = 'M9 6 C 70 9, 130 4, 191 9 M192 42 C 130 46, 70 43, 8 44'
+
+/** The hand-drawn outline of a secondary button (put it inside an element with class `sketch`). */
+export function SketchShape() {
+  return (
+    <svg className="sketch-shape" viewBox="0 0 200 52" preserveAspectRatio="none" aria-hidden="true">
+      <path d={SKETCH} vectorEffect="non-scaling-stroke" />
+      <path className="again" d={SKETCH_2} vectorEffect="non-scaling-stroke" />
     </svg>
   )
 }
@@ -297,6 +392,44 @@ export function Doodles(props: { decor: string | null | undefined; spots: Spot[]
             height: s.size,
             ['--r' as string]: `${s.rot ?? 0}deg`,
             animationDelay: `${s.delay ?? -i * 1.3}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Where the burst's doodles land around a heading (percent of its box), and how they turn.
+const BURST_SPOTS = [
+  { left: '-12%', top: '6%', size: 34, rot: -16 },
+  { right: '-12%', top: '2%', size: 30, rot: 14 },
+  { left: '-4%', top: '70%', size: 24, rot: 8 },
+  { right: '-6%', top: '72%', size: 26, rot: -10 },
+  { left: '22%', top: '-22%', size: 22, rot: 20 },
+  { right: '22%', top: '-20%', size: 22, rot: -18 },
+]
+
+/**
+ * A one-time pop of small doodles around a heading: stars and sparkles mixed with the occasion's
+ * set. Used on a correct answer.
+ */
+export function Burst(props: { decor: string | null | undefined }) {
+  const set = decorSet(props.decor)
+  const names: DoodleName[] = ['sparkle', set[0], 'star', set[1], set[2] ?? 'sparkle', 'sparkle']
+  return (
+    <div className="burst" aria-hidden="true" data-decor={props.decor ?? 'generic'}>
+      {BURST_SPOTS.map((s, i) => (
+        <Doodle
+          key={`${names[i]}-${s.rot}`}
+          name={names[i]}
+          style={{
+            left: s.left,
+            right: s.right,
+            top: s.top,
+            width: s.size,
+            height: s.size,
+            ['--r' as string]: `${s.rot}deg`,
+            animationDelay: `${0.15 + i * 0.08}s`,
           }}
         />
       ))}

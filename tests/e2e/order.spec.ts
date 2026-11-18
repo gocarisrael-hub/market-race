@@ -267,7 +267,9 @@ test('a mock payment settles the order and the manage page shows the game link',
   await sheet.getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
 
   await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })
-  await expect(page.locator('a.big-link')).toHaveAttribute('href', /\/g\//, { timeout: 30_000 })
+  await expect(page.getByRole('link', { name: 'לפתוח את המשחק' })).toHaveAttribute('href', /\/g\//, {
+    timeout: 30_000,
+  })
 })
 
 test('a family game: no she/he choice, the name field is the family name, family questions', async ({

@@ -32,10 +32,13 @@ test('an order with two photos: on the riddles, in a lightbox, and in the letter
   await page.getByRole('button', { name: /^לתשלום/ }).click()
   await page.frameLocator('iframe').getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
   await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })
-  const link = page.locator('a.big-link')
+  const link = page.getByRole('link', { name: 'לפתוח את המשחק' })
   await expect(link).toHaveAttribute('href', /\/g\//, { timeout: 30_000 })
   // Until the game starts, the manage page offers to change the photos.
   await expect(page.getByRole('link', { name: 'להוסיף או להחליף תמונות (2 מתוך 5)' })).toBeVisible()
+  // Taped prints of the drawn photos in the drop area's slots.
+  await expect(page.locator('.photo-drop .drop-count')).toHaveText('2/5')
+  await expect(page.locator('.photo-drop .slot img')).toHaveCount(2)
   const gameUrl = (await link.getAttribute('href'))!
   const gameToken = gameUrl.split('/g/')[1]
 

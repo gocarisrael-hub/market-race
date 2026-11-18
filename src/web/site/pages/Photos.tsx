@@ -1,15 +1,18 @@
 // Step 3: optional photos, each shown next to its illustrated version (a taped polaroid, as it
 // appears in the game). Also reachable from the manage page until the game starts.
 import { useEffect, useState } from 'react'
-import { Doodles } from '../../shared/decor.tsx'
+import { Doodles, Icon } from '../../shared/decor.tsx'
 import { ApiError, deletePhoto, listPhotos, type Photo, type Shop, uploadPhoto } from '../api.ts'
 import { copy } from '../copy.ts'
 import { type Draft, decorFor, errorText, MAX_PHOTOS } from '../logic.ts'
 import { BackgroundChoice } from '../photo-background.tsx'
-import { Arrow, Back, Cta, Deco, Polaroid, Ring, Spinner, StepTrail } from '../ui.tsx'
+import { Arrow, Back, Cta, Deco, Polaroid, Sketch, Spinner, StepTrail, TitleIcon } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 type Item = Photo & { local?: string }
+
+const DROP_EDGE =
+  'M8 10 C 90 4, 210 9, 292 6 C 296 40, 293 80, 295 112 C 210 117, 90 113, 6 115 C 3 80, 7 40, 8 10 Z'
 
 export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
   const { token, shop, draft } = props
@@ -77,9 +80,12 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
       <Back href={paid ? `/m/${token}` : '/order/questions'} />
       <div style={{ marginTop: 18, marginLeft: 40 }}>
         <StepTrail step={3} total={STEPS} />
-        <h1 className="title rise" style={{ fontSize: 56 }}>
-          {copy.photos.title(draft.manageToken === token ? draft.form : null)}
-        </h1>
+        <div className="title-row">
+          <h1 className="title rise" style={{ fontSize: 56 }}>
+            {copy.photos.title(draft.manageToken === token ? draft.form : null)}
+          </h1>
+          <TitleIcon icon="camera" />
+        </div>
         <p className="lead">{copy.photos.intro}</p>
         <p className="hint">{copy.photos.bgHint}</p>
         <p className="photos-where">
@@ -100,9 +106,9 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
               source={p.local}
               onChange={(next) => setItems((xs) => xs.map((x) => (x.id === next.id ? { ...x, ...next } : x)))}
             />
-            <button type="button" className="link-btn remove" onClick={() => remove(p)}>
+            <Sketch small icon="scissors" className="remove" onClick={() => remove(p)}>
               {copy.photos.remove}
-            </button>
+            </Sketch>
           </div>
         ))}
         {uploading > 0 && (
@@ -115,11 +121,14 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
         )}
       </div>
 
-      <div className="section" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+      <div className="section">
         {room > 0 && (
-          <label className="file-label">
-            {copy.photos.add(items.length)}
-            <Ring />
+          <label className="file-drop">
+            <svg className="drop-edge" viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d={DROP_EDGE} vectorEffect="non-scaling-stroke" />
+            </svg>
+            <Icon name="camera" size={52} tilt={-8} />
+            <span className="drop-word">{copy.photos.add(items.length)}</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -131,7 +140,10 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
             />
           </label>
         )}
-        <span className="hint">{copy.photos.count(items.length, MAX_PHOTOS)}</span>
+        <p className="hint photo-count">
+          <Icon name="frame" size={26} />
+          <span>{copy.photos.count(items.length, MAX_PHOTOS)}</span>
+        </p>
       </div>
       {room <= 0 && !uploading && <p className="hint">{copy.photos.full}</p>}
       {unavailable && !items.length && !error && <p className="hint">{copy.photos.unavailable}</p>}

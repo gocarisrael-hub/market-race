@@ -2,10 +2,27 @@
 // color (palette, with a live preview), and reaches the photos, any number of times until the
 // game starts. Same fields as the order flow.
 import { useState } from 'react'
+import { Icon } from '../../shared/decor.tsx'
 import { ApiError, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
 import { copy, type SiteForm } from '../copy.ts'
 import { askedQuestions, cleanNotes, editError, errorText, MAX_NOTES, nameLabel } from '../logic.ts'
-import { Cta, Daub, Link, LookPreview, QField, QNote, Ring, Tick, TornPaper } from '../ui.tsx'
+import {
+  Cta,
+  Daub,
+  LookPreview,
+  PhotoDrop,
+  QField,
+  QNote,
+  Ring,
+  SectionHead,
+  Sketch,
+  Tick,
+  TornPaper,
+} from '../ui.tsx'
+
+// A notebook page: straight top (torn off the pad), ragged bottom.
+const NOTEBOOK =
+  'M4 6 C 80 4, 200 7, 296 5 C 298 80, 295 180, 297 286 L 280 292 L 262 285 L 240 294 L 220 286 L 198 293 L 176 285 L 154 294 L 132 286 L 110 293 L 88 285 L 66 294 L 44 286 L 22 293 L 3 287 C 5 180, 2 80, 4 6 Z'
 
 export function ManageEdit(props: {
   token: string
@@ -57,38 +74,51 @@ export function ManageEdit(props: {
     setNotes(notes.map((n, j) => (j === i ? { ...n, ...patch } : n)))
 
   return (
-    <section className="section" id="answers" aria-labelledby="answers-title">
-      <h2 className="sub" id="answers-title">
+    <section className="section m-edit" id="answers" aria-labelledby="answers-title">
+      <SectionHead icon="pencil" id="answers-title">
         {first ? copy.manage.answersTitle : copy.manage.editTitle}
-      </h2>
+      </SectionHead>
       <p className="hint">{first ? copy.manage.answersIntro : copy.manage.editHint}</p>
-      <QField
-        name="honoreeName"
-        label={nameLabel(all, form)}
-        value={name}
-        maxLen={40}
-        required
-        onChange={(v) => {
-          setError(null)
-          setName(v)
-        }}
-      />
-      {questions.map((q) => (
+      <div className="notebook">
+        <svg className="notebook-edge" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true">
+          <path d={NOTEBOOK} vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span className="notebook-holes" aria-hidden="true" />
+        <h3 className="notebook-title">
+          <Icon name="question" size={30} tilt={-8} />
+          {copy.manage.answersSection}
+        </h3>
         <QField
-          key={q.slot}
-          name={q.slot}
-          label={q.text}
-          value={answers[q.slot] ?? ''}
-          maxLen={q.maxLen || undefined}
-          required={q.required}
+          name="honoreeName"
+          label={nameLabel(all, form)}
+          value={name}
+          maxLen={40}
+          required
           onChange={(v) => {
             setError(null)
-            setAnswers({ ...answers, [q.slot]: v })
+            setName(v)
           }}
         />
-      ))}
+        {questions.map((q) => (
+          <QField
+            key={q.slot}
+            name={q.slot}
+            label={q.text}
+            value={answers[q.slot] ?? ''}
+            maxLen={q.maxLen || undefined}
+            required={q.required}
+            onChange={(v) => {
+              setError(null)
+              setAnswers({ ...answers, [q.slot]: v })
+            }}
+          />
+        ))}
+      </div>
       <TornPaper tilt="r">
-        <h2 className="sub">{copy.questions.notes}</h2>
+        <h2 className="sub section-head">
+          <Icon name="loveLetter" size={40} tilt={6} />
+          <span>{copy.questions.notes}</span>
+        </h2>
         <p className="hint" style={{ margin: '4px 0 0' }}>
           {copy.questions.notesHint} ({copy.optional})
         </p>
@@ -109,31 +139,26 @@ export function ManageEdit(props: {
               onChange={(v) => setNote(i, { signature: v })}
             />
             {notes.length > 1 && (
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => setNotes(notes.filter((_, j) => j !== i))}
-              >
+              <Sketch small icon="scissors" onClick={() => setNotes(notes.filter((_, j) => j !== i))}>
                 {copy.questions.removeNote}
-              </button>
+              </Sketch>
             )}
           </div>
         ))}
         {notes.length < MAX_NOTES && (
-          <button
-            type="button"
-            className="add-link"
-            onClick={() => setNotes([...notes, { text: '', signature: '' }])}
-          >
+          <Sketch className="add-note" onClick={() => setNotes([...notes, { text: '', signature: '' }])}>
             {copy.questions.addNote}
-          </button>
+          </Sketch>
         )}
       </TornPaper>
       {look && pals.length > 1 && (
-        <section className="section" aria-labelledby="l-edit-palette">
-          <QNote id="l-edit-palette" tilt={1.4}>
-            {copy.home.palette}
-          </QNote>
+        <section className="section m-palette" aria-labelledby="l-edit-palette">
+          <div className="palette-head">
+            <Icon name="palette" size={46} tilt={-8} />
+            <QNote id="l-edit-palette" tilt={1.4}>
+              {copy.home.palette}
+            </QNote>
+          </div>
           <div className="daubs" role="radiogroup" aria-labelledby="l-edit-palette">
             {pals.map((p, i) => {
               const on = paletteId === p.id
@@ -168,15 +193,18 @@ export function ManageEdit(props: {
         </section>
       )}
       {m.photos.editable && (
-        <p>
-          <Link href={`/order/${token}/photos`}>{copy.manage.photosLink(m.photos.count)}</Link>
-        </p>
+        <section className="section">
+          <SectionHead icon="camera" tilt={6}>
+            {copy.manage.photosTitle}
+          </SectionHead>
+          <PhotoDrop token={token} count={m.photos.count} />
+        </section>
       )}
       {props.onCancel && (
-        <p>
-          <button type="button" className="link-btn" onClick={props.onCancel}>
+        <p className="m-cancel">
+          <Sketch small onClick={props.onCancel}>
             {copy.manage.cancel}
-          </button>
+          </Sketch>
         </p>
       )}
       <Cta onClick={save} busy={busy} error={error}>

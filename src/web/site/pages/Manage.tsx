@@ -1,15 +1,45 @@
 // /m/:token: the buyer's manage page. Status, the game link and QR, progress, and the edit mode
-// (name, answers, letter notes, photos) until the game starts.
+// (name, answers, letter notes, photos) until the game starts. Drawn as a page of a market
+// notebook: torn-paper sections with drawn headers, the occasion's doodles in the margins.
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { type DoodleName, Doodles, Icon } from '../../shared/decor.tsx'
 import { ApiError, getManage, type Manage as M } from '../api.ts'
 import { copy } from '../copy.ts'
 import { errorText, whatsappShare } from '../logic.ts'
 import { ManagePhotos } from '../photo-background.tsx'
-import { Deco, Failed, Link, Loading, Ring } from '../ui.tsx'
+import { Brush, Deco, Failed, Loading, PhotoDrop, SectionHead, Sketch, TornPaper } from '../ui.tsx'
 import { ManageEdit } from './ManageEdit.tsx'
 
 const ACTIVE_POLL_MS = 15_000
 const PAID_POLL_MS = 4000
+
+// The drawn icon beside each status line.
+const STATUS_ICON: Record<string, DoodleName> = {
+  quoted: 'clock',
+  pending_payment: 'clock',
+  awaiting_answers: 'pencil',
+  review: 'magnifier',
+  ready: 'check',
+  active: 'flagStart',
+  done: 'trophy',
+  expired: 'hourglass',
+  cancelled: 'alert',
+}
+const HOWTO_ICONS: DoodleName[] = ['pin', 'phone', 'basket']
+
+// Doodles down both margins of the page; each takes the next doodle of the occasion's set.
+const MARGIN_SPOTS = [
+  { top: 18, right: 6, size: 36, rot: 10 },
+  { top: 190, left: 4, size: 30, rot: -12 },
+  { top: 420, right: -4, size: 28, rot: 14 },
+  { top: 640, left: -6, size: 32, rot: -8 },
+  { top: 880, right: -2, size: 26, rot: 6 },
+  { top: 1100, left: -4, size: 30, rot: 12 },
+  { top: 1340, right: -6, size: 28, rot: -10 },
+  { top: 1600, left: -2, size: 26, rot: 8 },
+  { top: 1860, right: -4, size: 30, rot: -14 },
+  { top: 2120, left: -6, size: 28, rot: 10 },
+]
 
 export function Manage({ token, search }: { token: string; search: string }) {
   const [m, setM] = useState<M | null>(null)
@@ -65,73 +95,94 @@ export function Manage({ token, search }: { token: string; search: string }) {
   const first = m.needsAnswers && m.status !== 'review'
   const showForm = m.editable && !!m.questions && (editing || first)
   const canPay = !m.paid && (m.status === 'pending_payment' || m.status === 'quoted') && m.amountAgorot > 0
+  const decor = m.decor ?? 'generic'
 
   return (
-    <main className="page">
+    <main className="page manage" data-decor={decor}>
+      <Doodles className="deco margin-doodles" decor={decor} spots={MARGIN_SPOTS} />
       <Deco
         icon="gate"
         className="bob"
         style={{ top: 10, left: -30, width: 130, ['--r' as string]: '-6deg' }}
       />
-      <div style={{ marginTop: 70, marginLeft: 80 }}>
-        <div className="eyebrow">{copy.manage.orderNo(m.orderNo)}</div>
+      <header className="m-head">
+        <div className="eyebrow order-tag">
+          <Icon name="ticket" size={26} tilt={-10} />
+          {copy.manage.orderNo(m.orderNo)}
+        </div>
         <h1 className="title rise">
           {t1}
           <br />
           {t2}
         </h1>
-      </div>
+      </header>
 
-      <p className="status" data-testid="status">
-        {waitingPay ? copy.manage.checking : (copy.manage.status[m.status] ?? '')}
-      </p>
-      {canPay && !waitingPay && (
-        <p>
-          <Link href={payHref} className="big-link">
-            {copy.manage.payNow}
-          </Link>
+      <div className="m-status">
+        <Icon name={STATUS_ICON[waitingPay ? 'pending_payment' : m.status] ?? 'star'} size={40} tilt={-6} />
+        <p className="status" data-testid="status">
+          {waitingPay ? copy.manage.checking : (copy.manage.status[m.status] ?? '')}
         </p>
+      </div>
+      {canPay && !waitingPay && (
+        <div className="m-action">
+          <Brush href={payHref}>{copy.manage.payNow}</Brush>
+        </div>
       )}
 
       {m.progress && (m.status === 'active' || m.status === 'done') && m.progress.total > 0 && (
-        <p className="hint">
-          {copy.manage.progress(Math.min(m.progress.stopIndex + 1, m.progress.total), m.progress.total)}
-          {' · '}
-          {copy.manage.redeemed(m.progress.redeemed)}
+        <p className="hint m-progress">
+          <Icon name="basket" size={28} />
+          <span>
+            {copy.manage.progress(Math.min(m.progress.stopIndex + 1, m.progress.total), m.progress.total)}
+            {' · '}
+            {copy.manage.redeemed(m.progress.redeemed)}
+          </span>
         </p>
       )}
 
       {m.gameLink && (
-        <section className="section">
-          <h2 className="sub">{copy.manage.gameTitle}</h2>
+        <TornPaper tilt="l">
+          <SectionHead icon="map">{copy.manage.gameTitle}</SectionHead>
           <div className="game-link">
-            {m.qr && <img className="qr" src={m.qr} alt={copy.manage.qrAlt} />}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <a className="big-link" href={m.gameLink}>
+            {m.qr && (
+              <span className="taped-qr">
+                <span className="washi washi-a" aria-hidden="true" />
+                <span className="washi washi-b" aria-hidden="true" />
+                <img className="qr" src={m.qr} alt={copy.manage.qrAlt} />
+              </span>
+            )}
+            <div className="game-actions">
+              <Brush href={m.gameLink} external small>
                 {copy.manage.openGame}
-              </a>
-              <a href={whatsappShare(copy.manage.shareText(m.gameLink))} target="_blank" rel="noopener">
+              </Brush>
+              <Sketch href={whatsappShare(copy.manage.shareText(m.gameLink))} external icon="chat" small>
                 {copy.manage.share}
-              </a>
+              </Sketch>
             </div>
           </div>
-          <ol className="howto">
-            {copy.manage.howTo.map((l) => (
-              <li key={l}>{l}</li>
+          <h3 className="howto-title">{copy.manage.howToTitle}</h3>
+          <ol className="howto drawn">
+            {copy.manage.howTo.map((l, i) => (
+              <li key={l}>
+                <Icon name={HOWTO_ICONS[i % HOWTO_ICONS.length]} size={34} tilt={i % 2 ? 6 : -6} />
+                <span>{l}</span>
+              </li>
             ))}
           </ol>
           {m.validUntil && (
-            <p className="hint">
+            <p className="hint valid-until">
+              <Icon name="hourglass" size={24} />
               {copy.manage.validUntil(
                 new Date(m.validUntil).toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }),
               )}
             </p>
           )}
-        </section>
+        </TornPaper>
       )}
 
       {submitted && !editing && (
-        <p className="status" role="status">
+        <p className="status saved-note" role="status">
+          <Icon name="check" size={32} />
           {submitted === 'first' ? copy.manage.submitted : copy.manage.saved}
         </p>
       )}
@@ -149,32 +200,40 @@ export function Manage({ token, search }: { token: string; search: string }) {
         />
       ) : (
         m.editable && (
-          <section className="section">
-            <button
-              type="button"
-              className="big-link link-btn edit-btn"
-              onClick={() => {
-                setSubmitted(null)
-                setEditing(true)
-              }}
-            >
-              {copy.manage.edit}
-              <Ring />
-            </button>
-            <p className="hint">{copy.manage.editHint}</p>
+          <section className="section m-edit-entry">
+            <Icon name="pencil" size={54} tilt={-10} className="entry-icon" />
+            <div>
+              <p className="entry-ask">{copy.manage.editIntro}</p>
+              <Brush
+                small
+                icon="pencil"
+                onClick={() => {
+                  setSubmitted(null)
+                  setEditing(true)
+                }}
+              >
+                {copy.manage.edit}
+              </Brush>
+              <p className="hint">{copy.manage.editHint}</p>
+            </div>
           </section>
         )
       )}
       {!showForm && m.photos?.editable && (
         <section className="section">
-          <h2 className="sub">{copy.manage.photosTitle}</h2>
+          <SectionHead icon="frame" tilt={6}>
+            {copy.manage.photosTitle}
+          </SectionHead>
+          <PhotoDrop token={token} count={m.photos.count} />
           {m.photos.count > 0 && <ManagePhotos token={token} />}
-          <p>
-            <Link href={`/order/${token}/photos`}>{copy.manage.photosLink(m.photos.count)}</Link>
-          </p>
           <p className="hint">{copy.manage.photosHint}</p>
         </section>
       )}
+      <Deco
+        icon="spices"
+        className="bob foot-deco"
+        style={{ bottom: 6, left: -18, width: 86, ['--r' as string]: '10deg' }}
+      />
     </main>
   )
 }

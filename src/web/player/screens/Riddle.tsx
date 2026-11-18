@@ -1,6 +1,7 @@
 // Riddle: the note with personal slots, an optional taped photo, a hint, and the answer box.
 // The component is keyed by stop, so a poll for the same step never clears what is being typed.
 import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { Icon } from '../../shared/decor.tsx'
 import { riddleTitle } from '../copy.ts'
 import { Arrow, BrushButton, HandCircle, Paper, Tick, Trail } from '../draw.tsx'
 import { splitQuestion, stopIcon } from '../logic.ts'
@@ -74,7 +75,10 @@ export function Riddle({ view, t, act }: ScreenProps) {
       </header>
 
       <Paper className={`note rise ${cur.photo ? 'with-photo' : ''}`} tilt={cur.index % 2 ? -1.2 : 1.2}>
-        <h1 className="note-kicker">{riddleTitle(t, cur.index, cur.finale)}</h1>
+        <h1 className="note-kicker">
+          <Icon name={cur.finale ? 'trophy' : 'magnifier'} size={30} tilt={-8} />
+          {riddleTitle(t, cur.index, cur.finale)}
+        </h1>
         {cur.photo && (
           <TapedPhoto
             className="riddle-photo"
@@ -106,6 +110,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
         <div className="answer-block">
           {cur.riddle.hint && (
             <div className="hint-line rise" role="note">
+              <Icon name="bulb" size={30} tilt={8} />
               <Arrow />
               <span>
                 {t('riddle.hintPrefix')} {cur.riddle.hint}
@@ -114,7 +119,10 @@ export function Riddle({ view, t, act }: ScreenProps) {
           )}
           <div className="answer-row">
             <label className="answer">
-              <span>{t('riddle.answerLabel')}</span>
+              <span className="answer-label">
+                <Icon name="pencil" size={24} tilt={-6} />
+                {t('riddle.answerLabel')}
+              </span>
               <input
                 ref={inputRef}
                 value={answer}

@@ -1,6 +1,7 @@
 // Hand-drawn pieces shared by the screens. Paths come from the mockup (docs/mockup/*.dc.html).
 // Colors come from the theme's CSS variables (see theme.ts).
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
+import { SketchShape } from '../shared/decor.tsx'
 
 const BRUSH =
   'M9 12 C 70 4, 180 9, 262 5 C 300 3, 330 6, 339 9 C 344 26, 341 44, 343 58 C 262 64, 150 59, 60 63 C 36 64, 16 62, 5 60 C 2 44, 7 28, 9 12 Z'
@@ -28,6 +29,16 @@ export function BrushLink({ children, className = '', ...rest }: AnchorHTMLAttri
       </svg>
       <span>{children}</span>
     </a>
+  )
+}
+
+/** A secondary action: a handwritten word in a hand-drawn outline (never a bare underlined link). */
+export function SketchButton({ children, className = '', ...rest }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button type="button" className={`sketch small ${className}`} {...rest}>
+      <SketchShape />
+      <span>{children}</span>
+    </button>
   )
 }
 

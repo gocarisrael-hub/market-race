@@ -2,7 +2,7 @@
 // WhatsApp to us and, while a stall is shown, "the stall is closed" (sends the group to the backup).
 import { useCallback, useEffect, useId, useState } from 'react'
 import type { Support } from '../api.ts'
-import { BrushButton, BrushLink, HandCircle, Paper, Underline } from '../draw.tsx'
+import { BrushButton, BrushLink, HandCircle, Paper, SketchButton, Underline } from '../draw.tsx'
 import { canReportClosed, supportHref } from '../support.ts'
 import type { ScreenProps } from './types.ts'
 import { useBusy } from './useBusy.ts'
@@ -104,9 +104,9 @@ export function Help({ view, t, act, support }: ScreenProps & { support: Support
                       {t('help.failed')}
                     </p>
                   )}
-                  <button type="button" className="help-plain" onClick={() => setMode('menu')}>
+                  <SketchButton className="help-plain" onClick={() => setMode('menu')}>
                     {t('help.cancel')}
-                  </button>
+                  </SketchButton>
                 </div>
               )}
 
@@ -117,9 +117,9 @@ export function Help({ view, t, act, support }: ScreenProps & { support: Support
                       {t('help.whatsapp')}
                     </BrushLink>
                   )}
-                  <button type="button" className="help-plain" onClick={close}>
+                  <SketchButton className="help-plain" onClick={close}>
                     {t('help.dismiss')}
-                  </button>
+                  </SketchButton>
                 </div>
               )}
             </Paper>

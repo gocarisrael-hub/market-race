@@ -1,8 +1,11 @@
 // Hand-drawn building blocks, SVG paths taken from docs/mockup.
-import type { CSSProperties, ReactNode } from 'react'
+import { type CSSProperties, type ReactNode, useEffect, useState } from 'react'
 import { themeVars } from '../../server/domain/look.ts'
 import type { Palette } from '../../server/domain/types.ts'
+import { type DoodleName, Icon, SketchShape } from '../shared/decor.tsx'
+import { listPhotos, type Photo } from './api.ts'
 import { copy } from './copy.ts'
+import { MAX_PHOTOS } from './logic.ts'
 import { navigate } from './router.ts'
 
 const BRUSH =
@@ -144,13 +147,16 @@ const NOTE =
   'M3 9 L 12 6 L 20 8.5 L 31 5 L 40 7.5 L 52 4.5 L 63 7 L 75 5 L 88 8 L 99 4.5 L 112 7.5 L 124 5 L 137 8 L 149 5 L 160 7.5 L 172 4.5 L 184 7 L 197 6 L 195 18 L 198 31 L 196 44 L 185 46.5 L 173 43.5 L 161 47 L 148 44 L 136 47 L 123 44.5 L 111 46.5 L 98 43.5 L 86 47 L 73 44 L 61 46.5 L 48 43.5 L 36 47 L 24 44 L 13 46.5 L 4 44 L 6 31 L 2 19 Z'
 
 /** A question on a scrap of torn paper, handwritten (the section titles of the order flow). */
-export function QNote(props: { id?: string; children: ReactNode; tilt?: number }) {
+export function QNote(props: { id?: string; children: ReactNode; tilt?: number; icon?: DoodleName }) {
   return (
     <div className="qnote" id={props.id} style={{ ['--r' as string]: `${props.tilt ?? -1.5}deg` }}>
       <svg viewBox="0 0 200 50" preserveAspectRatio="none" aria-hidden="true">
         <path d={NOTE} vectorEffect="non-scaling-stroke" />
       </svg>
-      <span>{props.children}</span>
+      <span>
+        {props.icon && <Icon name={props.icon} size={30} tilt={-8} className="qnote-icon" />}
+        {props.children}
+      </span>
     </div>
   )
 }
@@ -318,6 +324,172 @@ export function Back({ href }: { href: string }) {
   )
 }
 
+/**
+ * A secondary action: a handwritten word in a hand-drawn outline, with an optional drawn icon.
+ * An in-app link with `href`, an outside link with `external`, otherwise a button.
+ */
+export function Sketch(props: {
+  children: ReactNode
+  href?: string
+  external?: boolean
+  onClick?: () => void
+  icon?: DoodleName
+  small?: boolean
+  className?: string
+  disabled?: boolean
+  label?: string
+}) {
+  const cls = `sketch${props.small ? ' small' : ''} ${props.className ?? ''}`
+  const inner = (
+    <>
+      <SketchShape />
+      {props.icon && <Icon name={props.icon} />}
+      <span>{props.children}</span>
+    </>
+  )
+  if (props.href && props.external)
+    return (
+      <a className={cls} href={props.href} target="_blank" rel="noopener" aria-label={props.label}>
+        {inner}
+      </a>
+    )
+  if (props.href)
+    return (
+      <Link href={props.href} className={cls}>
+        {inner}
+      </Link>
+    )
+  return (
+    <button
+      type="button"
+      className={cls}
+      onClick={props.onClick}
+      disabled={props.disabled}
+      aria-label={props.label}
+    >
+      {inner}
+    </button>
+  )
+}
+
+/** The brush-stroke button inline in the page (not sticky). In-app link, outside link or button. */
+export function Brush(props: {
+  children: ReactNode
+  href?: string
+  external?: boolean
+  onClick?: () => void
+  small?: boolean
+  icon?: DoodleName
+}) {
+  const cls = `brush inline${props.small ? ' small' : ''}`
+  const inner = (
+    <>
+      <BrushShape />
+      <span>
+        {props.icon && <Icon name={props.icon} className="on-brush" />}
+        {props.children}
+      </span>
+    </>
+  )
+  if (props.href && props.external)
+    return (
+      <a className={cls} href={props.href}>
+        {inner}
+      </a>
+    )
+  if (props.href)
+    return (
+      <a
+        className={cls}
+        href={props.href}
+        onClick={(e) => {
+          e.preventDefault()
+          navigate(props.href!)
+        }}
+      >
+        {inner}
+      </a>
+    )
+  return (
+    <button type="button" className={cls} onClick={props.onClick}>
+      {inner}
+    </button>
+  )
+}
+
+/** A section title in the handwritten face, with a drawn icon and a brush underline. */
+export function SectionHead(props: { icon: DoodleName; children: ReactNode; id?: string; tilt?: number }) {
+  return (
+    <h2 className="sub section-head" id={props.id}>
+      <Icon name={props.icon} size={40} tilt={props.tilt ?? -6} />
+      <span>{props.children}</span>
+    </h2>
+  )
+}
+
+/** The big title of a page with the step's own drawn icon beside it. */
+export function TitleIcon({ icon }: { icon: DoodleName }) {
+  return (
+    <span className="title-icon" aria-hidden="true">
+      <Icon name={icon} size={58} tilt={8} />
+      <Ring />
+    </span>
+  )
+}
+
+// The paper slots of the photo control: dashes for empty ones.
+const SLOT = 'M4 5 C 20 3, 40 6, 56 4 C 58 22, 55 44, 57 62 C 40 64, 20 61, 3 63 C 5 44, 2 22, 4 5 Z'
+const DROP =
+  'M8 10 C 90 4, 210 9, 292 6 C 296 40, 293 80, 295 112 C 210 117, 90 113, 6 115 C 3 80, 7 40, 8 10 Z'
+
+/**
+ * The photo control of the manage page: a dashed, hand-drawn drop area with a camera, a row of
+ * taped slots (filled with the drawn versions) and a "1/5" count. It leads to the photos page.
+ */
+export function PhotoDrop({ token, count }: { token: string; count: number }) {
+  const [photos, setPhotos] = useState<Photo[]>([])
+  useEffect(() => {
+    if (!count) return
+    listPhotos(token).then(
+      (r) => setPhotos(r.photos),
+      () => setPhotos([]),
+    )
+  }, [token, count])
+  const n = Math.max(count, photos.length)
+  return (
+    <Link href={`/order/${token}/photos`} className="photo-drop">
+      <svg className="drop-edge" viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+        <path d={DROP} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span className="sr-only">{copy.manage.photosLink(count)}</span>
+      <span className="drop-top" aria-hidden="true">
+        <Icon name="camera" size={52} tilt={-8} />
+        <span className="drop-word">{n ? copy.manage.photosChange : copy.manage.photosAdd}</span>
+        <span className="drop-count">{copy.manage.photosCount(n, MAX_PHOTOS)}</span>
+      </span>
+      <span className="drop-slots" aria-hidden="true">
+        {Array.from({ length: MAX_PHOTOS }, (_, i) => {
+          const p = photos[i]
+          return (
+            <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional
+              key={i}
+              className={p || i < n ? 'slot full' : 'slot'}
+              style={{ ['--r' as string]: `${[-5, 3, -2, 4, -3][i]}deg` }}
+            >
+              <svg viewBox="0 0 60 66" preserveAspectRatio="none" aria-hidden="true">
+                <path d={SLOT} vectorEffect="non-scaling-stroke" />
+              </svg>
+              {p ? <img src={p.previewUrl} alt="" /> : i >= n && <span className="plus">+</span>}
+              {(p || i < n) && <span className="washi" />}
+            </span>
+          )
+        })}
+      </span>
+    </Link>
+  )
+}
+
 /** Decorative illustration from assets/icons. */
 export function Deco(props: { icon: string; style: CSSProperties; className?: string }) {
   return (
@@ -440,7 +612,9 @@ export function Failed({ text }: { text: string }) {
       <p className="status" role="alert" style={{ marginTop: 80 }}>
         {text}
       </p>
-      <Link href="/">{copy.toHome}</Link>
+      <Sketch href="/" icon="house" small>
+        {copy.toHome}
+      </Sketch>
     </main>
   )
 }

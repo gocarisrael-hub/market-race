@@ -603,28 +603,6 @@ h2.sub {
 .note + .note {
   margin-top: 6px;
 }
-.link-btn {
-  background: none;
-  border: none;
-  padding: 6px 0;
-  color: var(--ink);
-  text-decoration: underline;
-  font-size: 15px;
-  cursor: pointer;
-}
-.add-link {
-  position: relative;
-  display: inline-block;
-  margin-top: 14px;
-  font-family: var(--display);
-  font-size: 30px;
-  font-weight: 700;
-  color: var(--accent);
-  background: none;
-  border: none;
-  padding: 4px 12px;
-  cursor: pointer;
-}
 
 /* Summary lines. */
 dl.summary {
@@ -766,23 +744,6 @@ dl.summary dd {
   height: 42px;
   animation: spin 1.4s linear infinite;
 }
-.file-label {
-  position: relative;
-  display: inline-block;
-  font-family: var(--display);
-  font-size: 34px;
-  font-weight: 700;
-  color: var(--accent);
-  padding: 4px 12px;
-  cursor: pointer;
-}
-.file-label input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-}
 
 /* Full-screen pay sheet. */
 .sheet {
@@ -863,12 +824,6 @@ dl.summary dd {
     3% 62%,
     1% 30%
   );
-}
-.big-link {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 34px;
-  line-height: 1.1;
 }
 ol.howto {
   margin: 10px 0 0;
@@ -1301,14 +1256,445 @@ ol.howto {
   }
 }
 
-/* Manage page: the "ערוך" word, circled by hand like the file picker. */
-.edit-btn {
+/* ---------- Drawn buttons and headers (shared by the order flow and the manage page) ---------- */
+
+:root {
+  --sketch-ink: var(--ink);
+  --sketch-line: var(--ink);
+  --sketch-fill: rgba(255, 251, 244, 0.7);
+}
+.sketch.accent {
+  --sketch-ink: var(--accent);
+  --sketch-line: var(--accent);
+}
+.sketch:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* The brush, inline in the page instead of sticky at the bottom. */
+.brush.inline {
+  display: inline-flex;
+  width: auto;
+  min-width: 220px;
+  max-width: 100%;
+  height: 62px;
+  padding: 0 30px;
+  font-size: 32px;
+}
+.brush.inline.small {
+  min-width: 180px;
+  height: 54px;
+  padding: 0 24px;
+  font-size: 29px;
+}
+.brush span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.brush .on-brush {
+  --decor-ink: #fff;
+  --decor-accent: #fff;
+  width: 28px;
+  height: 28px;
+}
+
+/* A section title: drawn icon, handwritten words. */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-head .doodle.icon {
+  margin-top: -4px;
+}
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+.title-icon {
+  position: relative;
+  flex: none;
+  width: 74px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  margin-top: 6px;
+}
+.title-icon .ring {
+  inset: -2px -6px;
+  opacity: 0.6;
+}
+
+/* ---------- Manage page: a page of a market notebook ---------- */
+
+.page.manage {
+  padding-bottom: 96px;
+}
+.margin-doodles {
+  overflow: hidden;
+  opacity: 0.85;
+}
+.m-head {
+  margin: 70px 0 0 80px;
+}
+.order-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.m-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.m-status .status {
+  margin: 0;
+}
+.m-action {
+  margin-top: 14px;
+}
+.m-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.manage .torn-paper {
+  margin-top: 26px;
+  padding: 20px 20px 18px;
+}
+.game-link {
+  margin-top: 12px;
+}
+.game-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.game-actions .brush.inline {
+  min-width: 0;
+}
+.taped-qr {
   position: relative;
   display: inline-block;
-  color: var(--accent);
+  transform: rotate(-3deg);
+}
+.taped-qr .qr {
+  display: block;
+  width: 124px;
+  height: 124px;
+  transform: none;
+}
+.taped-qr .washi {
+  position: absolute;
+  z-index: 1;
+  width: 46px;
+  height: 15px;
+  background: rgba(244, 199, 95, 0.72);
+  clip-path: polygon(0 8%, 6% 0, 12% 10%, 20% 2%, 100% 0, 96% 50%, 100% 100%, 8% 96%, 0 100%, 4% 50%);
+}
+.taped-qr .washi-a {
+  top: -6px;
+  right: -12px;
+  transform: rotate(36deg);
+}
+.taped-qr .washi-b {
+  bottom: -6px;
+  left: -12px;
+  transform: rotate(32deg);
+  background: rgba(180, 22, 27, 0.3);
+}
+.howto-title {
+  margin: 18px 0 0;
+  font-family: var(--display);
+  font-size: 28px;
+  line-height: 1;
+}
+ol.howto.drawn {
+  list-style: none;
+  padding: 0;
+  margin-top: 6px;
+}
+ol.howto.drawn li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.valid-until {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+.saved-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.m-edit-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 30px;
+}
+.entry-icon {
+  margin-top: 4px;
+}
+.entry-ask {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+}
+.m-edit-entry .hint {
+  margin: 8px 0 0;
+}
+.palette-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.palette-head .qnote {
+  margin-bottom: 0;
+}
+.m-cancel {
+  margin: 20px 0 0;
+}
+.add-note {
+  margin-top: 14px;
+  --sketch-ink: var(--accent);
+}
+
+/* The answers on a page torn off a notebook: ruled lines, a red margin, binder holes. */
+.notebook {
+  position: relative;
+  margin-top: 14px;
+  padding: 18px 40px 30px 18px;
+  --rule: rgba(73, 109, 160, 0.16);
+}
+.notebook-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+.notebook-edge path {
+  fill: var(--paper);
+  stroke: var(--dim);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.notebook::before {
+  /* Ruled lines and the margin, painted on the paper. */
+  content: "";
+  position: absolute;
+  inset: 8px 4px 14px;
+  z-index: 0;
+  background:
+    linear-gradient(
+      to left,
+      transparent 30px,
+      rgba(180, 22, 27, 0.35) 30px,
+      rgba(180, 22, 27, 0.35) 31.5px,
+      transparent 31.5px
+    ),
+    repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px);
+  pointer-events: none;
+}
+.notebook-holes {
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  right: 9px;
+  width: 12px;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 50%, var(--bg) 0 4.5px, rgba(94, 81, 72, 0.4) 5px, transparent 6px) 0 0 /
+    12px 70px repeat-y;
+}
+.notebook > :not(.notebook-edge):not(.notebook-holes) {
+  position: relative;
+  z-index: 1;
+}
+.notebook-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 30px;
+  line-height: 1;
+}
+.notebook .q:first-of-type {
+  margin-top: 8px;
+}
+
+/* The photo control: a dashed drawn area with a camera, taped slots and the count. */
+.photo-drop {
+  position: relative;
+  display: block;
+  margin-top: 12px;
+  padding: 16px 18px 18px;
+  color: var(--ink);
   text-decoration: none;
-  padding: 4px 18px;
   cursor: pointer;
+}
+.drop-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.drop-edge path {
+  fill: rgba(255, 251, 244, 0.55);
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-dasharray: 9 7;
+  stroke-linecap: round;
+}
+.drop-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drop-word {
+  flex: 1;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--accent);
+}
+.drop-count {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--ink);
+  transform: rotate(-4deg);
+}
+.drop-slots {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.drop-slots .slot {
+  position: relative;
+  flex: 1;
+  max-width: 64px;
+  aspect-ratio: 60 / 66;
+  display: grid;
+  place-items: center;
+  transform: rotate(var(--r, 0deg));
+}
+.drop-slots .slot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.drop-slots .slot path {
+  fill: none;
+  stroke: var(--dim);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 4;
+}
+.drop-slots .slot.full path {
+  fill: #fffefa;
+  stroke: var(--ink);
+  stroke-dasharray: none;
+  opacity: 0.85;
+}
+.drop-slots .slot img {
+  position: relative;
+  width: 82%;
+  height: 74%;
+  margin-top: -6%;
+  object-fit: cover;
+}
+.drop-slots .plus {
+  position: relative;
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--dim);
+}
+.drop-slots .washi {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 34px;
+  height: 11px;
+  margin-left: -17px;
+  background: rgba(244, 199, 95, 0.75);
+  transform: rotate(-6deg);
+  clip-path: polygon(0 8%, 6% 0, 12% 10%, 20% 2%, 100% 0, 96% 50%, 100% 100%, 8% 96%, 0 100%, 4% 50%);
+}
+@media (hover: hover) {
+  .photo-drop:hover .drop-edge path {
+    stroke-width: 2.8;
+  }
+}
+
+/* The order flow's photo picker, the same drawn drop area around the file input. */
+.file-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  cursor: pointer;
+}
+.file-drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  z-index: 2;
+}
+.file-drop:focus-within .drop-edge path {
+  stroke-width: 3;
+}
+
+@media (max-width: 380px) {
+  .m-head {
+    margin-left: 64px;
+  }
+  .notebook {
+    padding-left: 12px;
+  }
+  .drop-word {
+    font-size: 28px;
+  }
+}
+
+.qnote .qnote-icon {
+  margin-inline-end: 6px;
+  margin-top: -6px;
+}
+.photo-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.photo-pair .remove {
+  margin-top: 4px;
+}
+.file-drop > .drop-word {
+  position: relative;
 }
 
 /* With / without background, under each photo. */
