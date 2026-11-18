@@ -13,7 +13,9 @@ import type { Config } from './config.ts'
 import type { DB } from './db/index.ts'
 import { adminAuthRoutes } from './routes/admin-auth.ts'
 import { adminCatalogRoutes } from './routes/admin-catalog.ts'
+import { adminCompanyRoutes } from './routes/admin-companies.ts'
 import { adminOrderRoutes } from './routes/admin-orders.ts'
+import { adminSettlementRoutes } from './routes/admin-settlement.ts'
 import { publicGameRoutes } from './routes/public-game.ts'
 import { publicOrderRoutes } from './routes/public-orders.ts'
 import { publicPhotoRoutes } from './routes/public-photos.ts'
@@ -40,7 +42,8 @@ export async function buildApp(ctx: AppContext) {
 
   await app.register(cookie)
   await app.register(formbody)
-  await app.register(rateLimit, { global: false })
+  // Every e2e test logs in from localhost; limits would trip the suite, never a real client.
+  await app.register(rateLimit, { global: false, allowList: () => ctx.config.env === 'test' })
   await app.register(multipart, { limits: { fileSize: 15 * 1024 * 1024, files: 5 } })
   await mkdir(ctx.config.uploadDir, { recursive: true })
 
@@ -55,6 +58,8 @@ export async function buildApp(ctx: AppContext) {
   await adminAuthRoutes(app, ctx)
   await adminCatalogRoutes(app, ctx)
   await adminOrderRoutes(app, ctx)
+  await adminCompanyRoutes(app, ctx)
+  await adminSettlementRoutes(app, ctx)
   await publicGameRoutes(app, ctx)
   await publicOrderRoutes(app, ctx)
   await publicPhotoRoutes(app, ctx)
