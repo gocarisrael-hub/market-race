@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import cookie from '@fastify/cookie'
+import formbody from '@fastify/formbody'
 import multipart from '@fastify/multipart'
 import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
@@ -14,10 +15,15 @@ import { adminAuthRoutes } from './routes/admin-auth.ts'
 import { adminCatalogRoutes } from './routes/admin-catalog.ts'
 import { adminOrderRoutes } from './routes/admin-orders.ts'
 import { publicGameRoutes } from './routes/public-game.ts'
+import { publicOrderRoutes } from './routes/public-orders.ts'
+import type { Services } from './services/context.ts'
+import type { PaymentSweeper } from './services/payments.ts'
 
 export interface AppContext {
   db: DB
   config: Config
+  services: Services
+  sweeper?: PaymentSweeper | null
 }
 
 const root = fileURLToPath(new URL('../..', import.meta.url))
@@ -31,6 +37,7 @@ export async function buildApp(ctx: AppContext) {
   })
 
   await app.register(cookie)
+  await app.register(formbody)
   await app.register(rateLimit, { global: false })
   await app.register(multipart, { limits: { fileSize: 15 * 1024 * 1024, files: 5 } })
   await mkdir(ctx.config.uploadDir, { recursive: true })
@@ -41,6 +48,7 @@ export async function buildApp(ctx: AppContext) {
   await adminCatalogRoutes(app, ctx)
   await adminOrderRoutes(app, ctx)
   await publicGameRoutes(app, ctx)
+  await publicOrderRoutes(app, ctx)
 
   // Illustrations shipped with the code (maps, icons).
   await app.register(fastifyStatic, {

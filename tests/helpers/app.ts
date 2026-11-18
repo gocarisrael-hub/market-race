@@ -5,6 +5,7 @@ import { buildApp } from '../../src/server/app.ts'
 import type { Config } from '../../src/server/config.ts'
 import { openDb } from '../../src/server/db/index.ts'
 import { createOwner } from '../../src/server/lib/auth.ts'
+import { fakeServices } from './fakes.ts'
 
 export const OWNER = { email: 'owner@example.com', password: 'correct horse battery' }
 
@@ -19,13 +20,14 @@ export async function makeTestApp(overrides: Partial<Config> = {}) {
     bootstrapOwner: null,
     ...overrides,
   }
-  const app = await buildApp({ db: handle.db, config })
+  const services = fakeServices()
+  const app = await buildApp({ db: handle.db, config, services })
   await createOwner(handle.db, OWNER.email, OWNER.password)
   const close = async () => {
     await app.close()
     await handle.close()
   }
-  return { app, db: handle.db, config, close }
+  return { app, db: handle.db, config, services, close }
 }
 
 /** Logs in as the test owner and returns the cookie header to send. */

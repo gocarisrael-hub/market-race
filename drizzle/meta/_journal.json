@@ -15,6 +15,13 @@
       "when": 1794988137063,
       "tag": "0001_game_state_backup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794988706392,
+      "tag": "0002_payments_and_delivery",
+      "breakpoints": true
     }
   ]
 }

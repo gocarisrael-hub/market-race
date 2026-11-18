@@ -190,6 +190,10 @@ export const orders = pgTable('orders', {
   gameToken: text().notNull().unique(),
   manageToken: text().notNull().unique(),
   notes: text().notNull().default(''),
+  // Set when the buyer (or the owner, for companies) finished the questions.
+  answersSubmittedAt: timestamp({ withTimezone: true }),
+  // Delivery of the game link happened (email/WhatsApp), so it is not sent twice.
+  deliveredAt: timestamp({ withTimezone: true }),
 })
 
 // Shared progress of one game across every phone.
@@ -242,6 +246,8 @@ export const paySessions = pgTable(
       .references(() => orders.id),
     token: text().notNull().unique(),
     amountAgorot: integer().notNull(),
+    // What was being bought when the window opened; a charge from an older window does not pay a changed order.
+    priceKey: text().notNull().default(''),
     env: text().notNull(),
     status: text().$type<'open' | 'paid' | 'failed'>().notNull().default('open'),
     transactionId: text(),

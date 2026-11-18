@@ -13,7 +13,14 @@ export interface SettingsShape {
   valid_years: number
   hint_after_seconds: number
   poll_seconds: number
+  brand_name: string
+  // Customer-facing messages. {{var}} placeholders: name, honoree, orderNo, gameLink, manageLink, answersLink, amount.
+  message_templates: Record<MessageKey, { subject: string; text: string }>
+  // Messaging customers' numbers over WhatsApp can get the number banned; off until the owner decides.
+  whatsapp_to_customers: boolean
 }
+
+export type MessageKey = 'paid_answers_needed' | 'game_ready' | 'company_payment_link'
 
 export const SETTING_DEFAULTS: SettingsShape = {
   odd_rules: DEFAULT_ODD_RULES,
@@ -23,6 +30,22 @@ export const SETTING_DEFAULTS: SettingsShape = {
   valid_years: 1,
   hint_after_seconds: 0,
   poll_seconds: 4,
+  brand_name: '[שם המותג]',
+  message_templates: {
+    paid_answers_needed: {
+      subject: 'קיבלנו את ההזמנה {{orderNo}}',
+      text: 'היי {{name}},\nהתשלום התקבל. נשאר רק לענות על השאלות על {{honoree}} כדי שנכין את המשחק:\n{{answersLink}}\n\n{{brand}}',
+    },
+    game_ready: {
+      subject: 'המשחק של {{honoree}} מוכן',
+      text: 'היי {{name}},\nהמשחק מוכן. ביום המשחק פותחים את הקישור (או סורקים את הקוד) בטלפון, ואפשר לפתוח אותו בכמה טלפונים יחד:\n{{gameLink}}\n\nאיך משחקים: פותרים חידה, התשובה מגלה את הדוכן הבא, מראים את המסך בדוכן ומקבלים טעימה. בתוקף עד {{validUntil}}.\n\nלמעקב אחרי ההזמנה: {{manageLink}}\n\n{{brand}}',
+    },
+    company_payment_link: {
+      subject: 'הצעת מחיר {{orderNo}}',
+      text: 'שלום {{name}},\nמצורף קישור לתשלום על סך {{amount}} ₪:\n{{payLink}}\n\n{{brand}}',
+    },
+  },
+  whatsapp_to_customers: false,
 }
 
 export async function getSetting<K extends keyof SettingsShape>(db: DB, key: K): Promise<SettingsShape[K]> {
