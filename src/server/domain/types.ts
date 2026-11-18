@@ -88,6 +88,12 @@ export interface LetterNote {
   signature: string
 }
 
+/** A personal question about the honoree, asked in the game before a riddle's hint is shown. */
+export interface HintQuestion {
+  question: string
+  answer: string
+}
+
 export interface OrderFlag {
   code: 'empty_required' | 'too_long' | 'profanity' | 'repeated_chars' | 'blocked_stop' | 'other'
   slot?: string

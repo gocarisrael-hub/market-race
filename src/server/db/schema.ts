@@ -16,6 +16,7 @@ import type {
   Decor,
   Form,
   GameSnapshot,
+  HintQuestion,
   LetterNote,
   MarketHours,
   OrderFlag,
@@ -200,6 +201,9 @@ export const orders = pgTable('orders', {
   diets: textArray(),
   answers: jsonb().$type<Record<string, string>>().notNull().default({}),
   letterNotes: jsonb().$type<LetterNote[]>().notNull().default([]),
+  // Optional personal questions about the honoree, asked in the game to unlock a riddle's hint.
+  // The answers never reach the player client.
+  hintQuestions: jsonb().$type<HintQuestion[]>().notNull().default([]),
   photos: textArray(),
   companyName: text(),
   companyLogo: text(),
@@ -228,6 +232,9 @@ export const gameStates = pgTable('game_states', {
   // Stops where the stall was closed on the day and the backup stall was used.
   backupStops: integer().array().notNull().default(sql`'{}'::integer[]`),
   wrongAnswers: integer().notNull().default(0),
+  // How many players arrived, chosen by the captain (the buyer) at the start, 1..people bought.
+  // Every stall serves this many portions; null on games started before it existed (= people).
+  players: integer(),
   // Bumped on every change; clients poll and re-render when it moves.
   version: integer().notNull().default(0),
   startedAt: timestamp({ withTimezone: true }),

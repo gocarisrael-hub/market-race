@@ -1,5 +1,7 @@
 // Playing a game: one shared state per order, advanced by any phone.
 // The client never receives a later stop's answer, stall or tasting before it is reached.
+// Only the captain (the buyer, on the manage page) starts it, choosing how many players arrived;
+// until then every phone on the game link sees a waiting screen.
 import { and, eq, sql } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import { gameStates, markets, occasions, orders, redemptions, stalls } from '../db/schema.ts'
@@ -9,6 +11,7 @@ import { matchAnswer } from '../domain/matcher.ts'
 import {
   type Decor,
   type GameSnapshot,
+  type HintQuestion,
   isDecor,
   type Palette,
   type SnapshotStall,
@@ -37,7 +40,10 @@ export interface PlayerView {
   company: { name: string; logo: string | null } | null
   honoree: string
   form: string
+  /** Portions bought per stop. */
   people: number
+  /** Players who arrived, chosen by the captain at the start: the portions each stall serves. */
+  players: number
   allergens: string[]
   diets: string[]
   totalStops: number
@@ -46,7 +52,13 @@ export interface PlayerView {
   current: null | {
     index: number
     finale: boolean
-    riddle: { parts: TextPart[]; hint: string | null; hasHint: boolean }
+    riddle: {
+      parts: TextPart[]
+      hint: string | null
+      hasHint: boolean
+      /** A personal question to answer before the hint shows (never its answer). Null: plain hint. */
+      hintQuestion: string | null
+    }
     photo: string | null
     // From "revealed" on:
     reveal: null | {
@@ -83,7 +95,7 @@ async function load(db: DB, token: string): Promise<Loaded | 'not_found' | 'not_
   return { order, game: order.game, state }
 }
 
-function isExpired(order: Loaded['order'], today: string) {
+function isExpired(order: { status: string; validUntil: string | null }, today: string) {
   return (
     order.status === 'expired' ||
     (order.validUntil != null && today > order.validUntil && order.status !== 'done')
@@ -106,9 +118,38 @@ async function decorOf(db: DB, order: Loaded['order'], game: GameSnapshot): Prom
   return isDecor(occ?.decor) ? occ.decor : 'generic'
 }
 
+/** Players who arrived (games started before the choice existed serve the portions bought). */
+export const playersOf = (state: { players: number | null }, game: Pick<GameSnapshot, 'people'>) =>
+  state.players ?? game.people
+
+/** The personal question that unlocks this stop's hint: one per stop, in turn. Null: none. */
+export function hintQuestionFor(questions: HintQuestion[] | null | undefined, stopIndex: number) {
+  const list = (questions ?? []).filter((q) => q.question.trim() && q.answer.trim())
+  return list.length ? list[stopIndex % list.length] : null
+}
+
+export type StartBlock = 'not_ready' | 'started' | 'expired'
+
+/**
+ * Why the captain cannot start the game now, or null when they can: a built game (status ready)
+ * still on its opening screen, on a day it is valid (Israel time).
+ */
+export function startBlock(
+  order: { status: string; validUntil: string | null; game: unknown },
+  state: { step: string } | undefined,
+  today: string,
+): StartBlock | null {
+  if (isExpired(order, today)) return 'expired'
+  if (order.status === 'active' || order.status === 'done' || (state && state.step !== 'opening'))
+    return 'started'
+  if (order.status !== 'ready' || !order.game) return 'not_ready'
+  return null
+}
+
 async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Promise<PlayerView> {
   const { order, game, state } = l
   const today = israelDate(now)
+  const players = playersOf(state, game)
   const status: PlayerView['status'] = isExpired(order, today)
     ? 'expired'
     : state.step === 'done'
@@ -126,6 +167,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     honoree: game.honoree,
     form: game.form,
     people: game.people,
+    players,
     allergens: game.allergens,
     diets: game.diets,
     totalStops: game.stops.length,
@@ -151,13 +193,16 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
 
   const stop = game.stops[state.stopIndex]
   const hintShown = state.hintsShown.includes(stop.index)
+  const hasHint = !!stop.riddle.hint
   const current: NonNullable<PlayerView['current']> = {
     index: stop.index,
     finale: stop.finale,
     riddle: {
       parts: stop.riddle.parts,
       hint: hintShown ? stop.riddle.hint : null,
-      hasHint: !!stop.riddle.hint,
+      hasHint,
+      hintQuestion:
+        hasHint && !hintShown ? (hintQuestionFor(order.hintQuestions, stop.index)?.question ?? null) : null,
     },
     photo: fileUrl(stop.photo),
     reveal: null,
@@ -186,7 +231,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
       const [market] = await db.select().from(markets).where(eq(markets.id, game.market.id))
       current.redeem = {
         code: dailyCode(market.codeSecret, today),
-        portions: game.people,
+        portions: players,
         tasting: tasting.name,
         allergens: game.allergens,
         name: game.company?.name ?? game.honoree,
@@ -197,10 +242,11 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
   return base
 }
 
+// What a phone on the game link can do. Starting is the captain's, on the manage page (startGame).
 export type PlayAction =
-  | { type: 'start' }
   | { type: 'answer'; stopIndex: number; answer: string }
-  | { type: 'hint'; stopIndex: number }
+  // With personal questions on the order, `answer` answers this stop's question; wrong keeps the hint hidden.
+  | { type: 'hint'; stopIndex: number; answer?: string }
   | { type: 'arrived'; stopIndex: number }
   | { type: 'redeemed'; stopIndex: number }
   // The group found the shown stall closed. `stallId` is the stall the phone shows, so a phone
@@ -255,13 +301,6 @@ export async function act(
     return { ok: true, view: await buildView(db, fresh, pollSeconds, now), correct }
   }
 
-  if (action.type === 'start') {
-    if (state.step !== 'opening') return stale()
-    if (!(await update({ step: 'riddle', stopIndex: 0, startedAt: now }))) return stale()
-    await db.update(orders).set({ status: 'active' }).where(eq(orders.id, order.id))
-    return reload()
-  }
-
   if (action.stopIndex !== state.stopIndex) return stale()
   const stop = game.stops[state.stopIndex]
 
@@ -269,8 +308,11 @@ export async function act(
     case 'hint': {
       if (state.step !== 'riddle') return stale()
       if (state.hintsShown.includes(stop.index)) return reload()
+      const q = hintQuestionFor(order.hintQuestions, stop.index)
+      if (q && !matchAnswer(action.answer ?? '', q.answer).ok)
+        return { ok: true, view: await buildView(db, l, pollSeconds, now), correct: false }
       if (!(await update({ hintsShown: [...state.hintsShown, stop.index] }))) return stale()
-      return reload()
+      return reload(q ? true : undefined)
     }
     case 'answer': {
       if (state.step !== 'riddle') return stale()
@@ -312,7 +354,7 @@ export async function act(
           stopIndex: stop.index,
           stallId: stall.id,
           tastingId: tasting.id,
-          portions: game.people,
+          portions: playersOf(state, game),
           feeAgorot: tasting.feeAgorot,
           usedBackup: usingBackup,
           redeemedAt: now,
@@ -359,4 +401,54 @@ export async function act(
       return reload()
     }
   }
+}
+
+export type StartResult =
+  | { ok: true; view: PlayerView }
+  | { ok: false; error: 'not_found' | 'bad_players' | StartBlock }
+
+/**
+ * The captain starts the game with the number of players who arrived (1..people bought). From
+ * here the order is locked, every phone on the game link moves to the first riddle, and every
+ * stall serves `players` portions.
+ */
+export async function startGame(
+  db: DB,
+  gameToken: string,
+  opts: { players?: number; now?: Date; pollSeconds?: number } = {},
+): Promise<StartResult> {
+  const now = opts.now ?? new Date()
+  const [order] = await db.select().from(orders).where(eq(orders.gameToken, gameToken))
+  if (!order) return { ok: false, error: 'not_found' }
+  const [existing] = await db.select().from(gameStates).where(eq(gameStates.orderId, order.id))
+  const block = startBlock(order, existing, israelDate(now))
+  if (block) return { ok: false, error: block }
+  const l = await load(db, gameToken)
+  if (typeof l === 'string') return { ok: false, error: l === 'not_found' ? 'not_found' : 'not_ready' }
+  const players = opts.players ?? l.game.people
+  if (!Number.isInteger(players) || players < 1 || players > l.game.people)
+    return { ok: false, error: 'bad_players' }
+  const rows = await db
+    .update(gameStates)
+    .set({
+      step: 'riddle',
+      stopIndex: 0,
+      players,
+      startedAt: now,
+      version: sql`${gameStates.version} + 1`,
+      lastActivityAt: now,
+    })
+    .where(
+      and(
+        eq(gameStates.orderId, order.id),
+        eq(gameStates.version, l.state.version),
+        eq(gameStates.step, 'opening'),
+      ),
+    )
+    .returning()
+  if (!rows.length) return { ok: false, error: 'started' }
+  await db.update(orders).set({ status: 'active' }).where(eq(orders.id, order.id))
+  const fresh = await load(db, gameToken)
+  if (typeof fresh === 'string') return { ok: false, error: 'not_found' }
+  return { ok: true, view: await buildView(db, fresh, opts.pollSeconds ?? 4, now) }
 }

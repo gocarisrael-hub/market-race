@@ -1,5 +1,5 @@
 // Step 2: the honoree's name (with she/he when the occasion allows both), the occasion's
-// questions, letter notes, or "answer later". For a group the name field is the group's name.
+// questions, letter notes, optional personal questions for hints, or "answer later". For a group the name field is the group's name.
 // Leaving this step creates (or updates) the order, so the next steps have a manage token.
 import { useEffect, useState } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
@@ -13,6 +13,7 @@ import {
   updateOrder,
 } from '../api.ts'
 import { copy } from '../copy.ts'
+import { HintQuestions } from '../hintQuestions.tsx'
 import {
   askedQuestions,
   type Draft,
@@ -225,6 +226,14 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
             </Sketch>
           )}
         </TornPaper>
+      )}
+
+      {!d.answersLater && (
+        <HintQuestions
+          form={form}
+          value={d.hintQuestions ?? []}
+          onChange={(hintQuestions) => set({ hintQuestions })}
+        />
       )}
 
       <Cta onClick={next} busy={busy} error={error}>

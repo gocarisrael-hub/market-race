@@ -5,10 +5,14 @@ import type { AppContext } from '../app.ts'
 import { act, getView, type PlayAction } from '../services/play.ts'
 import { getSetting } from '../services/settings.ts'
 
+// No "start": only the captain starts the game, from the manage page (POST /api/manage/:token/start).
 const actionSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('start') }),
   z.object({ type: z.literal('answer'), stopIndex: z.number().int().min(0), answer: z.string().max(200) }),
-  z.object({ type: z.literal('hint'), stopIndex: z.number().int().min(0) }),
+  z.object({
+    type: z.literal('hint'),
+    stopIndex: z.number().int().min(0),
+    answer: z.string().max(200).optional(),
+  }),
   z.object({ type: z.literal('arrived'), stopIndex: z.number().int().min(0) }),
   z.object({ type: z.literal('redeemed'), stopIndex: z.number().int().min(0) }),
   z.object({

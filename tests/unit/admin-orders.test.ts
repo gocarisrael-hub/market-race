@@ -112,8 +112,8 @@ describe('admin orders: test games and review queue', () => {
     const { order } = res.json()
     await t.app.inject({
       method: 'POST',
-      url: `/api/game/${order.gameToken}/action`,
-      payload: { type: 'start' },
+      url: `/api/manage/${order.manageToken}/start`,
+      payload: { players: 2 },
     })
     const live = await t.app.inject({ url: '/admin/api/live', headers: { cookie } })
     expect(live.json().games[0]).toMatchObject({ id: order.id, step: 'riddle', stopIndex: 0, totalStops: 5 })

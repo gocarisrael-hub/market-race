@@ -48,7 +48,7 @@ export function App() {
     const key = screenKey(v)
     if (v.status === 'expired') screen = <Message key={key} t={t} kind="expired" />
     else if (v.step === 'done') screen = <Letter key={key} view={v} t={t} />
-    else if (v.step === 'opening') screen = <Opening key={key} view={v} t={t} act={act} />
+    else if (v.step === 'opening') screen = <Opening key={key} view={v} t={t} />
     else if (v.step === 'riddle') screen = <Riddle key={key} view={v} t={t} act={act} />
     else if (v.step === 'revealed') screen = <Reveal key={key} view={v} t={t} act={act} />
     else screen = <Redeem key={key} view={v} t={t} act={act} />

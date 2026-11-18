@@ -41,6 +41,7 @@ Personal text is shown in the riddle in the theme's accent color, in the handwri
 - A question set per occasion (and one per company type). Each question: slot key, Hebrew text per form, required or not, fallback, max length.
 - Example slots: name, first_love, favorite_food, catchphrase, favorite_place, one_word, dream; for companies: company_name, company_catchphrase, memorable_project, kitchen_favorite, last_offsite.
 - Optional sentences for the final letter (from the buyer).
+- Optional personal questions for hints (decided 2026-11-18): in the order flow and on the edit page the buyer can add questions about the honoree, each with its answer ("we'll ask these during the game to unlock hints"). When an order has them, tapping a riddle's hint asks one of them (one per stop, in turn); a right answer (the same forgiving matcher as riddles) opens the hint for everyone, a wrong one lets the group try again or skip with the hint still hidden. Without them, hints open on a tap as before. The answers stay on the server; the game client only ever gets the question.
 
 ## Photos
 
@@ -108,29 +109,30 @@ Building the game (when answers are complete):
 
 Playing:
 - One game link (plus QR). Any number of phones open it and see the same state; progress is stored on the server and polled every few seconds.
+- The buyer is the captain (decided 2026-11-18). Until the game starts, the game link shows only a waiting screen (the honoree's ribbon, "the game hasn't started, whoever ordered it starts it at the market"): no riddle, no progress, no start button. Only the manage link starts the game, on a day it is valid (Israel time), after a clear confirm. At the start the captain picks how many players arrived, 1 to the portions bought (e.g. bought 5, 3 came); it is stored on the game state. Then the captain gets a share step (a brush-stroke WhatsApp button with the `players_invite` text of the `message_templates` setting and the game link) and goes on into the game; players who open the link join the live game.
 - Stop flow: riddle → correct answer → stall revealed on the map → "we're here" → redemption screen.
 - The game never sends a later stop's answer or stall to the client before it is reached.
 
 ## Redemption (screen only, no SMS)
 
-- The redemption screen shows: the day's code (changes daily, per market), the honoree or company name, the number of portions (= people), the tasting and the group's allergens.
+- The redemption screen shows: the day's code (changes daily, per market), the honoree or company name, the number of portions (= the players who arrived, chosen at the start), the tasting and the group's allergens.
 - The vendor checks the screen and serves. The player taps "קיבלנו" to log it.
-- Every redemption is stored: order, stop, stall, tasting, portions, fee (frozen), time.
-- Portions are fixed as bought. Unused portions stay unused; make-up coupons are issued by the owner only.
-- Monthly settlement per stall: sum of fees over the month's redemptions, exportable.
+- Every redemption is stored: order, stop, stall, tasting, portions (the players who arrived), fee (frozen), time.
+- The number bought is fixed at purchase. Portions not served (fewer players came, or stops never reached) are not refunded automatically; the admin order view shows them, and make-up coupons are issued by the owner only.
+- Monthly settlement per stall: fee × portions served over the month's redemptions, exportable.
 - The daily code and the vendor-facing rules are in a printable one-pager for stalls.
 
 ## What the buyer receives
 
 - After payment: confirmation and a link to answer the questions (if not answered during the order).
-- When ready: the game link + QR and a short how-to-play, by email and WhatsApp.
+- When ready: the game link + QR and a short how-to-play, by email and WhatsApp. The email says the buyer starts the game from the manage link at the market; the game link opens once it has started.
 - A manage link to see progress and to edit: until the game starts (status before `active`, the shared game still on its opening screen) the buyer can change the name, the answers, the letter notes, the photos and the color, any number of times. A paid game that is already built is rebuilt at once; odd answers send it to review as on the first build, while flags the owner already approved stay approved. The paid and game-ready emails say so ("אפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק").
 
 ## Admin (new, separate, plain)
 
 - Orders: list, filters, status, odd-answer review queue with inline edit.
 - Live: each active game's stop and step, last activity.
-- Bought vs. used per order.
+- Bought vs. used per order: players who arrived, and portions not served.
 - Catalog: markets, stalls (with closed-today switch), tastings, riddles (with a live preview per form and an answer-matcher tester), question sets, routes, themes.
 - Companies: leads, quotes, payment links, company questions, logo upload with extracted palette.
 - Settlement per stall per month, export.

@@ -1697,6 +1697,76 @@ ol.howto.drawn li {
   position: relative;
 }
 
+/* Manage page: the captain's start (players stepper, confirm) and the share step after it. */
+.start-game .torn-paper,
+.share-game .torn-paper {
+  position: relative;
+}
+.players-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.start-game .stepper {
+  margin-top: 10px;
+}
+.players-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.players-hint .doodle {
+  flex: none;
+}
+.start-confirm {
+  margin-top: 10px;
+}
+.confirm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+.start-confirm .cta-wrap {
+  position: static;
+  background: none;
+  margin-top: 14px;
+  padding-bottom: 0;
+}
+.confirm-back,
+.share-continue {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+.share-players {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.share-brush {
+  margin-top: 18px;
+}
+.share-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.hint-q + .hint-q {
+  margin-top: 6px;
+}
+
 /* With / without background, under each photo. */
 .bg-choice {
   grid-column: 1 / -1;

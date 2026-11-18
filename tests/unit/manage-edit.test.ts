@@ -125,8 +125,8 @@ describe('buyer edits through the manage link', () => {
     const o = await paidOrder()
     const start = await t.app.inject({
       method: 'POST',
-      url: `/api/game/${o.gameToken}/action`,
-      payload: { type: 'start' },
+      url: `/api/manage/${o.manageToken}/start`,
+      payload: { players: 2 },
     })
     expect(start.statusCode).toBe(200)
     const res = await edit(o.manageToken, { answers: { first_love: 'מאוחר מדי' } })

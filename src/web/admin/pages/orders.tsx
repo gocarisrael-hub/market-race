@@ -63,6 +63,10 @@ interface Usage {
   redeemedStops: number
   bought: number
   used: number
+  /** How many arrived (chosen at the start), null before it. */
+  players?: number | null
+  /** Portions bought and not served; never refunded automatically. */
+  unused?: number
 }
 
 interface OrderRow {
@@ -87,6 +91,7 @@ interface OrderRow {
   diets: string[]
   answers: Record<string, string>
   letterNotes: LetterNote[]
+  hintQuestions?: { question: string; answer: string }[]
   companyName: string | null
   companyLogo: string | null
   companyPalette: Palette | null
@@ -908,6 +913,21 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
             <dd>{o.people}</dd>
             <dt>אלרגנים / תזונה</dt>
             <dd>{[...o.allergens, ...o.diets.map((x) => DIET_LABELS[x] ?? x)].join(', ') || '—'}</dd>
+            {(o.hintQuestions?.length ?? 0) > 0 && (
+              <>
+                <dt>שאלות לרמזים</dt>
+                <dd>
+                  <ul className="plain">
+                    {o.hintQuestions!.map((q, i) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: questions have no id
+                      <li key={i}>
+                        {q.question} → {q.answer}
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            )}
             <dt>מחיר</dt>
             <dd>{shekels(o.priceAgorot)}</dd>
             <dt>נוצרה</dt>
@@ -945,6 +965,16 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
             </strong>{' '}
             מנות ({d.usage.redeemedStops} מתוך {d.usage.stops} תחנות)
           </p>
+          {d.usage.players != null && (
+            <p data-testid="players">
+              הגיעו {d.usage.players} מתוך {o.game?.people ?? o.people}
+            </p>
+          )}
+          {(d.usage.unused ?? 0) > 0 && (
+            <p data-testid="unused">
+              מנות שלא נוצלו: <strong>{d.usage.unused}</strong> (לא מוחזרות אוטומטית)
+            </p>
+          )}
           {d.state && (
             <p className="muted">
               מצב המשחק: תחנה {d.state.stopIndex + 1}, {STEP_LABELS[d.state.step] ?? d.state.step} · פעילות
@@ -1286,6 +1316,12 @@ export function TestGamePage() {
           <p>
             <a href={result.links.game} target="_blank" rel="noreferrer" dir="ltr">
               {result.links.game}
+            </a>
+          </p>
+          <p>
+            מתחילים את המשחק מדף ההזמנה (קפטן):{' '}
+            <a href={result.links.manage} target="_blank" rel="noreferrer" dir="ltr">
+              {result.links.manage}
             </a>
           </p>
           <img className="qr" src={result.links.qr} alt="QR למשחק" width={160} height={160} />

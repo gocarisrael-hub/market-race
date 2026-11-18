@@ -4,7 +4,7 @@ import { gameStates, orders, stalls } from '../../src/server/db/schema.ts'
 import { toWaId, waLink } from '../../src/server/domain/phone.ts'
 import type { GameSnapshot } from '../../src/server/domain/types.ts'
 import { buildOrderGame, createOrder } from '../../src/server/services/orders.ts'
-import { act, type PlayerView } from '../../src/server/services/play.ts'
+import { act, type PlayerView, startGame } from '../../src/server/services/play.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
 import { setSetting } from '../../src/server/services/settings.ts'
 import { makeT } from '../../src/web/player/copy.ts'
@@ -81,7 +81,7 @@ describe('reporting a closed stall', () => {
       answers: { first_love: 'יואב מהשכבה' },
     })
     const built = await buildOrderGame(t.db, o.id)
-    await act(t.db, built.gameToken, { type: 'start' })
+    await startGame(t.db, built.gameToken)
     const r = await act(t.db, built.gameToken, { type: 'answer', stopIndex: 0, answer: 'תקווה' })
     if (!r.ok) throw new Error(r.error)
     return { order: built, token: built.gameToken, view: r.view }

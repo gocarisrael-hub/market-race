@@ -1,13 +1,12 @@
-// Opening: the market map, the race title on a ribbon, and "start".
-import { Doodles } from '../../shared/decor.tsx'
+// Opening: the market map and the race title on a ribbon, waiting for the captain. There is no
+// start here: the buyer starts the game from the manage page, and every phone follows by polling.
+import { Doodles, Icon } from '../../shared/decor.tsx'
 import { joinList } from '../copy.ts'
-import { BrushButton, Ribbon, TornEdge } from '../draw.tsx'
+import { Paper, Ribbon, TornEdge } from '../draw.tsx'
 import { iconUrl, ribbonFontSize } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
-import { useBusy } from './useBusy.ts'
 
-export function Opening({ view, t, act }: ScreenProps) {
-  const { busy, run } = useBusy()
+export function Opening({ view, t }: Omit<ScreenProps, 'act'>) {
   const title = t('start.ribbon', { name: view.honoree })
   const stops = view.totalStops
   const summary = view.allergens.length
@@ -55,11 +54,24 @@ export function Opening({ view, t, act }: ScreenProps) {
         <Ribbon text={title} fontSize={ribbonFontSize(title)} />
         <p className="opening-summary">{summary}</p>
         <p className="opening-together">{t('start.together')}</p>
-        <div className="foot">
-          <BrushButton disabled={busy} onClick={() => run(() => act({ type: 'start' }))}>
-            {t('start.button')}
-          </BrushButton>
-        </div>
+        <Paper className="wait-note rise" tilt={-1.4}>
+          <span className="wait-doodles" aria-hidden="true">
+            <Icon name="clock" size={40} tilt={-12} className="wait-d1" />
+            <Icon name="ticket" size={36} tilt={10} className="wait-d2" />
+          </span>
+          <h2 className="wait-title">
+            <Icon name="hourglass" size={38} tilt={-8} />
+            <span>{t('wait.title')}</span>
+          </h2>
+          <p className="wait-body" role="status">
+            {t('wait.body')}
+          </p>
+          <span className="wait-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </Paper>
       </div>
     </main>
   )

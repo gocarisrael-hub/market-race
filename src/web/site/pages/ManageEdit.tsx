@@ -1,11 +1,20 @@
-// The manage page's edit mode: the buyer changes the name, the answers, the letter notes and the
-// color (palette, with a live preview), and reaches the photos, any number of times until the
-// game starts. Same fields as the order flow.
+// The manage page's edit mode: the buyer changes the name, the answers, the letter notes, the
+// personal questions for hints and the color (palette, with a live preview), and reaches the
+// photos, any number of times until the game starts. Same fields as the order flow.
 import { useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
-import { ApiError, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
+import { ApiError, type HintQuestion, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
 import { copy, type SiteForm } from '../copy.ts'
-import { askedQuestions, cleanNotes, editError, errorText, MAX_NOTES, nameLabel } from '../logic.ts'
+import { HintQuestions } from '../hintQuestions.tsx'
+import {
+  askedQuestions,
+  cleanHintQuestions,
+  cleanNotes,
+  editError,
+  errorText,
+  MAX_NOTES,
+  nameLabel,
+} from '../logic.ts'
 import {
   Cta,
   Daub,
@@ -42,6 +51,7 @@ export function ManageEdit(props: {
   const [notes, setNotes] = useState<LetterNote[]>(
     m.letterNotes?.length ? m.letterNotes : [{ text: '', signature: '' }],
   )
+  const [hintQuestions, setHintQuestions] = useState<HintQuestion[]>(m.hintQuestions ?? [])
   const look = m.look ?? null
   const pals = look?.palettes ?? []
   const [paletteId, setPaletteId] = useState<number | null>(
@@ -52,7 +62,7 @@ export function ManageEdit(props: {
   const [busy, setBusy] = useState(false)
 
   const save = async () => {
-    const e = editError(name, answers, questions, form)
+    const e = editError(name, answers, questions, form, hintQuestions)
     if (e) return setError(e)
     setBusy(true)
     try {
@@ -62,6 +72,7 @@ export function ManageEdit(props: {
         honoreeName: name.trim(),
         answers: sent,
         letterNotes: cleanNotes(notes),
+        hintQuestions: cleanHintQuestions(hintQuestions),
         ...(pals.length ? { paletteId } : {}),
       })
       props.onDone()
@@ -151,6 +162,14 @@ export function ManageEdit(props: {
           </Sketch>
         )}
       </TornPaper>
+      <HintQuestions
+        form={form}
+        value={hintQuestions}
+        onChange={(v) => {
+          setError(null)
+          setHintQuestions(v)
+        }}
+      />
       {look && pals.length > 1 && (
         <section className="section m-palette" aria-labelledby="l-edit-palette">
           <div className="palette-head">

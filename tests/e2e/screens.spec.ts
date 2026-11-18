@@ -67,7 +67,12 @@ async function game(request: APIRequestContext, themeId = 1) {
       expect(r.ok()).toBe(true)
     }
   }
-  return { url, token, act, addPhotos }
+  // Only the captain starts the game, from the manage link.
+  const start = async (players = 4) => {
+    const r = await request.post(`/api/manage/${manageToken}/start`, { data: { players } })
+    expect(r.ok()).toBe(true)
+  }
+  return { url, token, act, addPhotos, start }
 }
 
 async function shoot(
@@ -122,7 +127,7 @@ test.describe.configure({ timeout: 400_000 })
 test('watercolor: every screen', async ({ browser, request }) => {
   const g = await game(request, 1)
   await shoot(browser, g.url, g.token, 'watercolor-1-opening')
-  await g.act({ type: 'start' })
+  await g.start()
   await shoot(browser, g.url, g.token, 'watercolor-2-riddle')
   await g.act({ type: 'hint', stopIndex: 0 })
   await shoot(browser, g.url, g.token, 'watercolor-3-riddle-hint')
@@ -152,7 +157,7 @@ test('watercolor: every screen', async ({ browser, request }) => {
 test('photos: riddle, lightbox and letter', async ({ browser, request }) => {
   const g = await game(request, 1)
   await g.addPhotos(['tests/fixtures/dog-on-grass.jpg', 'tests/fixtures/boxer-on-grass.jpg'])
-  await g.act({ type: 'start' })
+  await g.start()
   await shoot(browser, g.url, g.token, 'photo-1-riddle')
   await shoot(browser, g.url, g.token, 'photo-2-lightbox', undefined, async (page) => {
     await page.getByRole('button', { name: 'להגדיל את התמונה' }).click()
@@ -166,7 +171,7 @@ test('photos: riddle, lightbox and letter', async ({ browser, request }) => {
 test('riso theme', async ({ browser, request }) => {
   const g = await game(request, 2)
   await shoot(browser, g.url, g.token, 'riso-1-opening')
-  await g.act({ type: 'start' })
+  await g.start()
   await shoot(browser, g.url, g.token, 'riso-2-riddle')
   await g.act({ type: 'answer', stopIndex: 0, answer: 'תקווה' })
   await shoot(browser, g.url, g.token, 'riso-3-reveal')
@@ -179,7 +184,7 @@ test('Mahane Yehuda themes (night, watercolor)', async ({ browser, request }) =>
   const as = (t: Json, name: string) => (v: Json) => ({ ...v, theme: { name, ...t } })
   await shoot(browser, g.url, g.token, 'night-1-opening', as(NIGHT, 'מחנה יהודה בלילה'))
   await shoot(browser, g.url, g.token, 'mj-1-opening', as(MJ, 'מחנה יהודה בצבעי מים'))
-  await g.act({ type: 'start' })
+  await g.start()
   await shoot(browser, g.url, g.token, 'night-2-riddle', as(NIGHT, 'מחנה יהודה בלילה'))
   await g.act({ type: 'answer', stopIndex: 0, answer: 'תקווה' })
   await g.act({ type: 'arrived', stopIndex: 0 })
@@ -205,7 +210,7 @@ test('company: logo on the opening, the map and the letter', async ({ browser, r
     },
   })
   await shoot(browser, g.url, g.token, 'company-1-opening', corp)
-  await g.act({ type: 'start' })
+  await g.start()
   await g.act({ type: 'answer', stopIndex: 0, answer: 'תקווה' })
   await shoot(browser, g.url, g.token, 'company-2-reveal', corp)
   await g.act({ type: 'arrived', stopIndex: 0 })

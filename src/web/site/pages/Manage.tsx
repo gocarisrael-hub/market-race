@@ -1,14 +1,16 @@
-// /m/:token: the buyer's manage page. Status, the game link and QR, progress, and the edit mode
-// (name, answers, letter notes, photos) until the game starts. Drawn as a page of a market
-// notebook: torn-paper sections with drawn headers, the occasion's doodles in the margins.
+// /m/:token: the buyer's manage page. Status, progress, the edit mode (name, answers, letter
+// notes, hint questions, photos) until the game starts, and the captain's start: the buyer starts
+// the game at the market, then shares the players' link and goes into the game. Drawn as a page of
+// a market notebook: torn-paper sections with drawn headers, the occasion's doodles in the margins.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { type DoodleName, Doodles, Icon } from '../../shared/decor.tsx'
 import { ApiError, getManage, type Manage as M } from '../api.ts'
 import { copy } from '../copy.ts'
-import { errorText, whatsappShare } from '../logic.ts'
+import { errorText } from '../logic.ts'
 import { ManagePhotos } from '../photo-background.tsx'
-import { Brush, Deco, Failed, Loading, PhotoDrop, SectionHead, Sketch, TornPaper } from '../ui.tsx'
+import { Brush, Deco, Failed, Loading, PhotoDrop, SectionHead, TornPaper } from '../ui.tsx'
 import { ManageEdit } from './ManageEdit.tsx'
+import { ShareGame, StartGame } from './StartGame.tsx'
 
 const ACTIVE_POLL_MS = 15_000
 const PAID_POLL_MS = 4000
@@ -25,7 +27,7 @@ const STATUS_ICON: Record<string, DoodleName> = {
   expired: 'hourglass',
   cancelled: 'alert',
 }
-const HOWTO_ICONS: DoodleName[] = ['pin', 'phone', 'basket']
+const HOWTO_ICONS: DoodleName[] = ['pin', 'flagStart', 'chat', 'basket']
 
 // Doodles down both margins of the page; each takes the next doodle of the occasion's set.
 const MARGIN_SPOTS = [
@@ -140,26 +142,20 @@ export function Manage({ token, search }: { token: string; search: string }) {
         </p>
       )}
 
-      {m.gameLink && (
+      {/* Started: share the players' link, then into the game (the captain's own phone). */}
+      {m.started && m.status === 'active' && <ShareGame m={m} decor={decor} />}
+      {m.gameLink && m.status === 'done' && (
+        <div className="m-action">
+          <Brush href={m.gameLink} external small icon="trophy">
+            {copy.manage.openGame}
+          </Brush>
+        </div>
+      )}
+
+      {/* Before the start: how it works (no game link to pass around yet), then the start itself. */}
+      {m.gameLink && !m.started && m.status === 'ready' && (
         <TornPaper tilt="l">
           <SectionHead icon="map">{copy.manage.gameTitle}</SectionHead>
-          <div className="game-link">
-            {m.qr && (
-              <span className="taped-qr">
-                <span className="washi washi-a" aria-hidden="true" />
-                <span className="washi washi-b" aria-hidden="true" />
-                <img className="qr" src={m.qr} alt={copy.manage.qrAlt} />
-              </span>
-            )}
-            <div className="game-actions">
-              <Brush href={m.gameLink} external small>
-                {copy.manage.openGame}
-              </Brush>
-              <Sketch href={whatsappShare(copy.manage.shareText(m.gameLink))} external icon="chat" small>
-                {copy.manage.share}
-              </Sketch>
-            </div>
-          </div>
           <h3 className="howto-title">{copy.manage.howToTitle}</h3>
           <ol className="howto drawn">
             {copy.manage.howTo.map((l, i) => (
@@ -178,6 +174,16 @@ export function Manage({ token, search }: { token: string; search: string }) {
             </p>
           )}
         </TornPaper>
+      )}
+
+      {m.status === 'ready' && !m.started && !showForm && m.start.can && (
+        <StartGame token={token} m={m} decor={decor} onStarted={load} />
+      )}
+      {m.status === 'ready' && m.start.reason === 'expired' && (
+        <div className="m-status">
+          <Icon name="hourglass" size={40} tilt={-6} />
+          <p className="status">{copy.manage.start.expired}</p>
+        </div>
       )}
 
       {submitted && !editing && (

@@ -85,7 +85,8 @@ describe('admin operations', () => {
       expect(byName.orders.map((x: { id: number }) => x.id)).toEqual([o.id])
       const row = byName.orders[0]
       expect(row.game).toBeUndefined()
-      expect(row.usage).toEqual({ stops: 5, redeemedStops: 2, bought: 20, used: 7 })
+      // 3 + 4 served at two stops of 4 bought: 1 unused so far.
+      expect(row.usage).toEqual({ stops: 5, redeemedStops: 2, bought: 20, used: 7, players: null, unused: 1 })
       expect(byName.totals).toEqual({ bought: 20, used: 7 })
 
       const byNo = (await get(`/admin/api/orders?q=${o.orderNo.toLowerCase()}`)).json()
@@ -97,7 +98,7 @@ describe('admin operations', () => {
       expect((await get('/admin/api/orders?status=nope')).statusCode).toBe(400)
 
       const d = (await get(`/admin/api/orders/${o.id}`)).json()
-      expect(d.usage).toEqual({ stops: 5, redeemedStops: 2, bought: 20, used: 7 })
+      expect(d.usage).toEqual({ stops: 5, redeemedStops: 2, bought: 20, used: 7, players: null, unused: 1 })
       expect(d.redemptions[0]).toMatchObject({ stopIndex: 0, portions: 3, stallName: expect.any(String) })
       expect(d.links.qr).toBe(`/api/qr/${o.gameToken}.png`)
       expect(d.occasion).toMatchObject({ key: 'bachelorette', label: 'רווקות' })
@@ -157,8 +158,8 @@ describe('admin operations', () => {
       const started = await testOrder()
       await t.app.inject({
         method: 'POST',
-        url: `/api/game/${started.gameToken}/action`,
-        payload: { type: 'start' },
+        url: `/api/manage/${started.manageToken}/start`,
+        payload: { players: 2 },
       })
       const [st] = await t.db.select().from(gameStates).where(eq(gameStates.orderId, started.id))
       expect(st.startedAt).not.toBeNull()

@@ -25,7 +25,13 @@ async function newGame(request: APIRequestContext) {
   expect(res.ok()).toBe(true)
   const body = await res.json()
   const url: string = body.links.game
-  return { url, token: url.split('/g/')[1] }
+  const manageToken: string = body.order.manageToken
+  // Only the captain starts the game, from the manage link, with the players who arrived.
+  const start = async (players = 4) => {
+    const r = await request.post(`/api/manage/${manageToken}/start`, { data: { players } })
+    expect(r.ok()).toBe(true)
+  }
+  return { url, token: url.split('/g/')[1], start }
 }
 
 async function phone(browser: Browser) {
@@ -46,19 +52,20 @@ async function answer(p: Page, text: string) {
 
 test('two phones play the whole game together', async ({ browser, request }) => {
   test.setTimeout(180_000)
-  const { url } = await newGame(request)
+  const { url, start } = await newGame(request)
   const a = await phone(browser)
   const b = await phone(browser)
 
-  // Opening on both phones.
+  // Both phones wait on the opening until the captain starts.
   await a.goto(url)
   await b.goto(url)
   await expect(a.getByRole('heading', { name: 'המירוץ של מיכל' })).toBeVisible()
   await expect(b.getByText('5 חידות, 5 טעימות, בלי בוטנים')).toBeVisible()
+  await expect(a.getByText('המשחק עוד לא התחיל')).toBeVisible()
 
-  // Phone A starts; phone B follows by polling.
-  await a.getByRole('button', { name: 'יוצאות לדרך!' }).click()
-  await expect(riddleTitle(a, 0)).toBeVisible()
+  // The captain starts; both phones follow by polling.
+  await start()
+  await expect(riddleTitle(a, 0)).toBeVisible(SYNC)
   await expect(riddleTitle(b, 0)).toBeVisible(SYNC)
   await expect(a.locator('.slot', { hasText: 'יואב מהשכבה' })).toBeVisible()
 
@@ -120,22 +127,25 @@ test('two phones play the whole game together', async ({ browser, request }) => 
 })
 
 test('a phone that acts late just catches up', async ({ browser, request }) => {
-  const { url, token } = await newGame(request)
+  const { url, token, start } = await newGame(request)
+  await start()
   const p = await phone(browser)
-  // Freeze this phone's polls on the opening, so it is surely behind when it taps.
+  // Freeze this phone's polls on the first riddle, so it is surely behind when it answers.
   let first: string | null = null
   await p.route(`**/api/game/${token}`, async (route) => {
     if (first === null) first = await (await route.fetch()).text()
     await route.fulfill({ status: 200, contentType: 'application/json', body: first })
   })
   await p.goto(url)
-  await expect(p.getByRole('button', { name: 'יוצאות לדרך!' })).toBeVisible()
-  // Another phone starts the game behind this one's back.
-  const res = await request.post(`/api/game/${token}/action`, { data: { type: 'start' } })
-  expect(res.ok()).toBe(true)
-  // This phone still shows the opening and taps start: the stale answer brings the riddle.
-  await p.getByRole('button', { name: 'יוצאות לדרך!' }).click()
   await expect(riddleTitle(p, 0)).toBeVisible()
+  // Another phone solves it behind this one's back.
+  const res = await request.post(`/api/game/${token}/action`, {
+    data: { type: 'answer', stopIndex: 0, answer: ANSWERS[0] },
+  })
+  expect(res.ok()).toBe(true)
+  // This phone still shows the riddle and answers: the stale answer brings the reveal.
+  await answer(p, ANSWERS[0])
+  await expect(p.getByRole('heading', { name: 'נכון!' })).toBeVisible()
   await p.context().close()
 })
 
@@ -143,8 +153,8 @@ test('a closed stall sends the group to the backup, and a stall without a pin sh
   page,
   request,
 }) => {
-  const { url, token } = await newGame(request)
-  await request.post(`/api/game/${token}/action`, { data: { type: 'start' } })
+  const { url, token, start } = await newGame(request)
+  await start()
   await request.post(`/api/game/${token}/action`, { data: { type: 'answer', stopIndex: 0, answer: 'תקווה' } })
   // Closing a stall is an admin action on the live catalog; the view for that day is simulated here.
   await page.route(`**/api/game/${token}`, async (route) => {
@@ -171,14 +181,14 @@ test('help: WhatsApp to us, and a closed stall reported on the spot sends the gr
   page,
   request,
 }) => {
-  const { url } = await newGame(request)
+  const { url, start } = await newGame(request)
   const set = await request.put('/admin/api/catalog/settings/support_whatsapp', {
     data: { value: '054-6577715' },
   })
   expect(set.ok()).toBe(true)
   await page.goto(url)
 
-  // On the opening: WhatsApp only, the prefilled text names the honoree.
+  // On the waiting opening: WhatsApp only, the prefilled text names the honoree.
   await page.getByRole('button', { name: 'עזרה' }).click()
   const sheet = page.getByRole('dialog', { name: 'צריכות עזרה?' })
   await expect(sheet).toBeVisible()
@@ -191,7 +201,8 @@ test('help: WhatsApp to us, and a closed stall reported on the spot sends the gr
   await expect(sheet).toHaveCount(0)
 
   // On the reveal: report the stall closed, confirm in the page, see the backup stall.
-  await page.getByRole('button', { name: 'יוצאות לדרך!' }).click()
+  await start()
+  await expect(riddleTitle(page, 0)).toBeVisible(SYNC)
   await answer(page, ANSWERS[0])
   await expect(page.getByRole('heading', { name: 'דוכן המיצים של תקווה' })).toBeVisible()
   await page.getByRole('button', { name: 'עזרה' }).click()

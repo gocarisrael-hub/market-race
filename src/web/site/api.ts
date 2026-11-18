@@ -46,6 +46,8 @@ export type Shop = {
 }
 export type Question = { slot: string; text: string; required: boolean; maxLen: number }
 export type LetterNote = { text: string; signature: string }
+/** A personal question about the honoree, asked in the game to unlock a hint. */
+export type HintQuestion = { question: string; answer: string }
 export type Buyer = { name: string; phone: string; email: string }
 export type OrderPayload = {
   occasionKey: string
@@ -58,6 +60,7 @@ export type OrderPayload = {
   diets: string[]
   answers: Record<string, string>
   letterNotes: LetterNote[]
+  hintQuestions: HintQuestion[]
   answersLater: boolean
 }
 export type Manage = {
@@ -75,6 +78,13 @@ export type Manage = {
   validUntil: string | null
   gameLink: string | null
   qr: string | null
+  /** The captain's start: whether it can start now (or why not), and up to how many players. */
+  start: { can: boolean; reason: 'not_ready' | 'started' | 'expired' | null; maxPlayers: number }
+  started: boolean
+  /** Players who arrived, chosen at the start. */
+  players: number | null
+  /** After the start: the WhatsApp text for the players (the owner's template, filled). */
+  invite: { text: string } | null
   progress: { step: string; stopIndex: number; total: number; redeemed: number } | null
   needsAnswers: boolean
   photos: { count: number; editable: boolean }
@@ -82,6 +92,7 @@ export type Manage = {
   editable: boolean
   honoreeName?: string
   letterNotes?: LetterNote[]
+  hintQuestions?: HintQuestion[]
   /** The color choice for the edit form: the map, its palettes (default first) and the chosen id. */
   look?: {
     map: string | null
@@ -170,11 +181,17 @@ export type OrderEdit = {
   paletteId?: number | null
   answers: Record<string, string>
   letterNotes: LetterNote[]
+  hintQuestions?: HintQuestion[]
 }
 export const submitAnswers = (token: string, edit: OrderEdit) =>
   api<{ status: string }>(`/api/manage/${encodeURIComponent(token)}/answers`, {
     method: 'PUT',
     json: edit,
+  })
+export const startGame = (token: string, players: number) =>
+  api<{ ok: true; gameLink: string; players: number }>(`/api/manage/${encodeURIComponent(token)}/start`, {
+    method: 'POST',
+    json: { players },
   })
 export const sendLead = (lead: Record<string, unknown>) =>
   api<{ ok: true }>('/api/leads', { method: 'POST', json: lead })

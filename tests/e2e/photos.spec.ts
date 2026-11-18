@@ -32,18 +32,19 @@ test('an order with two photos: on the riddles, in a lightbox, and in the letter
   await page.getByRole('button', { name: /^לתשלום/ }).click()
   await page.frameLocator('iframe').getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
   await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })
-  const link = page.getByRole('link', { name: 'לפתוח את המשחק' })
-  await expect(link).toHaveAttribute('href', /\/g\//, { timeout: 30_000 })
+  await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.', { timeout: 30_000 })
   // Until the game starts, the manage page offers to change the photos.
   await expect(page.getByRole('link', { name: 'להוסיף או להחליף תמונות (2 מתוך 5)' })).toBeVisible()
   // Taped prints of the drawn photos in the drop area's slots.
   await expect(page.locator('.photo-drop .drop-count')).toHaveText('2/5')
   await expect(page.locator('.photo-drop .slot img')).toHaveCount(2)
-  const gameUrl = (await link.getAttribute('href'))!
+  const gameUrl: string = (await (await page.request.get(`/api/manage/${token}`)).json()).gameLink
   const gameToken = gameUrl.split('/g/')[1]
 
-  await page.goto(gameUrl)
-  await page.getByRole('button', { name: 'יוצאות לדרך!' }).click()
+  // The captain starts the game and goes into it.
+  await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
+  await page.getByRole('button', { name: 'כן, מתחילים!' }).click()
+  await page.getByRole('link', { name: 'ממשיכים למשחק' }).click()
   await expect(page.getByRole('heading', { name: 'חידה ראשונה', exact: true })).toBeVisible()
   const photo = page.locator('.riddle-photo img')
   await expect(photo).toBeVisible()
