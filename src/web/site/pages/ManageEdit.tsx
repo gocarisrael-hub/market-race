@@ -1,6 +1,7 @@
 // The manage page's edit mode: the buyer changes the name, the answers, the letter notes, the
 // personal questions for hints and the color (palette, with a live preview), and reaches the
 // photos, any number of times until the game starts. Same fields as the order flow.
+
 import { useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
 import { ApiError, type HintQuestion, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
@@ -15,19 +16,8 @@ import {
   MAX_NOTES,
   nameLabel,
 } from '../logic.ts'
-import {
-  Cta,
-  Daub,
-  LookPreview,
-  PhotoDrop,
-  QField,
-  QNote,
-  Ring,
-  SectionHead,
-  Sketch,
-  Tick,
-  TornPaper,
-} from '../ui.tsx'
+import { PhotoDrop } from '../photo-background.tsx'
+import { Cta, Daub, LookPreview, QField, QNote, Ring, SectionHead, Sketch, Tick, TornPaper } from '../ui.tsx'
 
 // A notebook page: straight top (torn off the pad), ragged bottom.
 const NOTEBOOK =
