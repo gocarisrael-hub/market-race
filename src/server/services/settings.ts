@@ -21,6 +21,11 @@ export interface SettingsShape {
   // Player-facing text overrides, { copyKey: text }. Keys are those of src/web/player/copy.ts;
   // a key may end in .she/.he/.couple/.company to override one form only.
   player_texts: Record<string, string>
+  // The help button in the game: an Israeli mobile ("050-1234567") players reach on WhatsApp.
+  // Empty hides the WhatsApp link.
+  support_whatsapp: string
+  // Optional prefilled WhatsApp text; {name} = honoree, {n} = current stop. Empty uses the default copy.
+  support_message: string
 }
 
 export type MessageKey = 'paid_answers_needed' | 'game_ready' | 'company_payment_link'
@@ -50,6 +55,8 @@ export const SETTING_DEFAULTS: SettingsShape = {
   },
   whatsapp_to_customers: false,
   player_texts: {},
+  support_whatsapp: '',
+  support_message: '',
 }
 
 export async function getSetting<K extends keyof SettingsShape>(db: DB, key: K): Promise<SettingsShape[K]> {

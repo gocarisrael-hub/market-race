@@ -83,7 +83,7 @@ Themes are rows in the database (admin can add one: upload map, set colors). The
 
 Allergens are a fixed list, never free text: גלוטן, חלב, אגוזים, בוטנים, ביצים, שומשום, סויה, דגים, פירות ים. Diets: vegan, vegetarian, gluten_free.
 
-Stall closed on the day: market hours are global; a stall can be switched "closed today" with a note. A closed stall is replaced by its stop's backup stall when the game reaches it.
+Stall closed on the day: market hours are global; a stall can be switched "closed today" with a note. A closed stall is replaced by its stop's backup stall when the game reaches it. In the game, a help control (WhatsApp to the `support_whatsapp` setting, prefilled with `support_message` or a default naming the honoree and stop) also lets the group report the shown stall closed: the stop switches to its backup at once and the owner is alerted; with no backup the game stays put, the group is told to contact us, and the owner is alerted. A report never closes the stall for other games.
 
 ## Orders and the game
 

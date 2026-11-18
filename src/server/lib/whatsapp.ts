@@ -1,6 +1,10 @@
 // WhatsApp over Whapi Cloud. Dormant until WHATSAPP_ENABLED=1 and WHAPI_TOKEN are set.
 // Messaging new numbers can get a WhatsApp number banned (seen on Dugri), so messages to
 // customers are additionally gated by the `whatsapp_to_customers` setting (off by default).
+import { toWaId } from '../domain/phone.ts'
+
+export { toWaId }
+
 export interface WhatsAppConfig {
   enabled: boolean
   token: string
@@ -15,14 +19,6 @@ export function whatsappConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Wha
     baseUrl: (env.WHAPI_BASE_URL ?? 'https://gate.whapi.cloud').replace(/\/+$/, ''),
     ownerNumber: env.OWNER_WHATSAPP ?? '',
   }
-}
-
-/** Israeli mobile "050-1234567" → "972501234567". Returns null for anything else. */
-export function toWaId(phone: string): string | null {
-  const d = phone.replace(/\D/g, '')
-  if (/^05\d{8}$/.test(d)) return `972${d.slice(1)}`
-  if (/^9725\d{8}$/.test(d)) return d
-  return null
 }
 
 export interface WhatsApp {
