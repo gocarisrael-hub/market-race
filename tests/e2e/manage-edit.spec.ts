@@ -1,0 +1,64 @@
+// The buyer's edit link: after paying (mock provider), the buyer opens the manage page, taps
+// "ערוך", changes an answer, the name and the color, and the game shows the change.
+import { expect, test } from '@playwright/test'
+
+test.use({ viewport: { width: 390, height: 844 } })
+
+test('buyer edits an answer after paying and sees it in the first riddle', async ({ page }) => {
+  const shop = await (await page.request.get('/api/shop')).json()
+  const created = await page.request.post('/api/orders', {
+    data: {
+      occasionKey: 'bachelorette',
+      form: 'she',
+      honoreeName: 'מיכל',
+      themeId: shop.themes[0].id,
+      people: 4,
+      answers: { first_love: 'יואב מהשכבה' },
+      buyer: { name: 'נועה', phone: '050-1234567', email: 'noa@example.com' },
+    },
+  })
+  expect(created.ok()).toBe(true)
+  const { manageToken } = await created.json()
+  const pay = await (await page.request.post(`/api/orders/${manageToken}/pay`)).json()
+  const s = new URL(pay.url).searchParams.get('s')
+  expect((await page.request.post('/api/payment/mock/complete', { data: { token: s } })).ok()).toBe(true)
+
+  await page.goto(`/m/${manageToken}`)
+  await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.')
+  await expect(page.getByText('אפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק.')).toBeVisible()
+  await page.getByRole('button', { name: 'ערוך' }).click()
+  await expect(page.getByRole('heading', { name: 'עריכה' })).toBeVisible()
+  const field = page.locator('input[name="first_love"]')
+  await expect(field).toHaveValue('יואב מהשכבה')
+  await field.fill('דני מהצבא')
+  await page.locator('input[name="honoreeName"]').fill('מיכלי')
+  // The color: another daub, previewed live, then saved into the game.
+  const daubs = page.getByRole('radio').and(page.locator('.daub'))
+  expect(await daubs.count()).toBeGreaterThan(1)
+  const preview = page.getByTestId('look-preview')
+  await expect(preview).toBeVisible()
+  const unpicked = daubs.and(page.locator('[aria-checked="false"]')).last()
+  const paletteId = Number(await unpicked.getAttribute('data-palette'))
+  const pick = page.locator(`.daub[data-palette="${paletteId}"]`)
+  await pick.click()
+  await expect(pick).toHaveAttribute('aria-checked', 'true')
+  const shopPal = shop.themes[0].palettes.find((p: { id: number }) => p.id === paletteId)
+  await expect(page.locator('.daub-name')).toHaveText(shopPal.name)
+  await page.getByRole('button', { name: 'שמירת השינויים' }).click()
+  await expect(page.getByText('השינויים נשמרו.')).toBeVisible()
+  await expect(page.getByTestId('status')).toHaveText('המשחק מוכן.')
+
+  const gameUrl = (await page.getByRole('link', { name: 'לפתוח את המשחק' }).getAttribute('href'))!
+  const view = await (await page.request.get(`/api/game/${gameUrl.split('/g/')[1]}`)).json()
+  expect(view.theme.palette.accent).toBe(shopPal.palette.accent)
+  await page.goto(gameUrl)
+  await page.getByRole('button', { name: 'יוצאות לדרך!' }).click()
+  await expect(page.getByRole('heading', { name: 'חידה ראשונה', exact: true })).toBeVisible()
+  await expect(page.getByText('דני מהצבא')).toBeVisible()
+  await expect(page.getByText('יואב מהשכבה')).toHaveCount(0)
+
+  // Started: the manage page no longer offers to edit.
+  await page.goto(`/m/${manageToken}`)
+  await expect(page.getByTestId('status')).toHaveText('המשחק בעיצומו.')
+  await expect(page.getByRole('button', { name: 'ערוך' })).toHaveCount(0)
+})

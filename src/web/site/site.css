@@ -1300,3 +1300,13 @@ ol.howto {
     animation: none;
   }
 }
+
+/* Manage page: the "ערוך" word, circled by hand like the file picker. */
+.edit-btn {
+  position: relative;
+  display: inline-block;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 4px 18px;
+  cursor: pointer;
+}

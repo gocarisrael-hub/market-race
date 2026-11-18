@@ -4,7 +4,7 @@ import type { DB } from '../db/index.ts'
 import { messages } from '../db/schema.ts'
 import type { Services } from './context.ts'
 import type { Order } from './orders.ts'
-import { getSetting, type MessageKey } from './settings.ts'
+import { getSetting, type MessageKey, SETTING_DEFAULTS } from './settings.ts'
 
 export function interpolate(tpl: string, vars: Record<string, string>) {
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '')
@@ -48,7 +48,8 @@ export async function sendToBuyer(
   extra: Record<string, string> = {},
 ) {
   const templates = await getSetting(db, 'message_templates')
-  const tpl = templates[key]
+  // A stored set that predates a message falls back to its default text.
+  const tpl = templates[key] ?? SETTING_DEFAULTS.message_templates[key]
   if (!tpl) return
   const brand = await getSetting(db, 'brand_name')
   const l = links(base, order)
