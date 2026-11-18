@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>מחנה יהודה בלילה · פתיחה</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&amp;family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B4161B}a:hover{color:#8A0F13}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-10px) rotate(calc(var(--r,0deg) + 3deg))}}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes pop{0%{transform:scale(.2) rotate(-12deg);opacity:0}60%{transform:scale(1.15) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(-3deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes dash{to{stroke-dashoffset:-60}}
+@keyframes pulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+@keyframes rise{0%{transform:translateY(12px) rotate(var(--r,0deg));opacity:0}100%{transform:translateY(0) rotate(var(--r,0deg));opacity:1}}
+@keyframes fall{0%{transform:translateY(-120px) rotate(0)}100%{transform:translateY(980px) rotate(540deg)}}
+@keyframes kenburns{0%{transform:scale(1.05)}100%{transform:scale(1.18) translate(-10px,-14px)}}
+@keyframes wiggle{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(-6deg)}96%{transform:rotate(6deg)}}
+@keyframes steam{0%{transform:translateY(0);opacity:0}30%{opacity:.8}100%{transform:translateY(-22px);opacity:0}}
+@keyframes draw{from{stroke-dashoffset:400}to{stroke-dashoffset:0}}
+.bob{animation:bob 4.5s ease-in-out infinite}
+.sway{animation:sway 5s ease-in-out infinite;transform-origin:50% 0}
+.pop{animation:pop .9s cubic-bezier(.2,.9,.3,1.3) both}
+.rise{animation:rise .7s ease both}
+.wiggle{animation:wiggle 4s ease-in-out infinite}
+.draw{stroke-dasharray:400;animation:draw 1.6s ease .3s both}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+.kb{animation:kenburns 18s ease-in-out infinite alternate}
+
+</style>
+</helmet>
+
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; background: #0B2B47; font-family: Heebo, sans-serif; color: #FAF5EC; position: relative; overflow: hidden">
+  <img class="kb" src="/_blob/1ad9ff9924edffe277f2b6ac603d6ea3" alt="מפה מאוירת של שוק מחנה יהודה" style="position: absolute; top: 0; left: 0; width: 100%; height: 640px; object-fit: cover">
+  <img src="/_blob/d0cd4398fad27c1ab6c9cee56fb3a18c" alt="דוגרי" style="position: absolute; top: 12px; right: 12px; width: 92px; z-index: 3">
+  <svg viewBox="0 0 390 320" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; bottom: 0; left: 0; width: 390px; height: 320px; z-index: 1">
+    <path d="M0 60 C 40 30, 70 70, 110 46 S 180 20, 220 48 S 300 72, 340 40 S 380 30, 390 44 L390 320 L0 320 Z" fill="#0B2B47"></path>
+  </svg>
+  <div style="position: absolute; bottom: 110px; right: 0; left: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px">
+    <svg class="pop" width="330" height="92" viewBox="0 0 330 92" role="img" aria-label="המירוץ של מיכל">
+      <path d="M8 26 L40 20 L34 46 L40 72 L8 66 L20 46 Z" fill="#6D8985" stroke="#08223A" stroke-width="2"></path>
+      <path d="M322 26 L290 20 L296 46 L290 72 L322 66 L310 46 Z" fill="#6D8985" stroke="#08223A" stroke-width="2"></path>
+      <path d="M34 12 Q165 -4 296 12 L296 72 Q165 56 34 72 Z" fill="#AFC7AE" stroke="#08223A" stroke-width="2"></path>
+      <text x="165" y="54" text-anchor="middle" font-family="Amatic SC, Heebo" font-weight="700" font-size="44" fill="#08223A">המירוץ של מיכל</text>
+    </svg>
+    <div style="font-family: 'Amatic SC', Heebo, sans-serif; font-size: 30px; font-weight: 700; color: #FAF5EC">5 חידות, 5 טעימות, שוק מחנה יהודה</div>
+  </div>
+  <a href="#" style="position: absolute; bottom: 22px; right: 22px; left: 22px; height: 68px; z-index: 9; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #08223A; font-family: 'Amatic SC', Heebo, sans-serif; font-weight: 700; font-size: 38px"><svg viewBox="0 0 346 68" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><path d="M9 12 C 70 4, 180 9, 262 5 C 300 3, 330 6, 339 9 C 344 26, 341 44, 343 58 C 262 64, 150 59, 60 63 C 36 64, 16 62, 5 60 C 2 44, 7 28, 9 12 Z" fill="#AFC7AE" stroke="#08223A" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg><span style="position: relative">יוצאות לדרך!</span></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

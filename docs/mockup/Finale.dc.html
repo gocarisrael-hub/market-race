@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>המכתב של מיכל</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&amp;family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B4161B}a:hover{color:#8A0F13}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-10px) rotate(calc(var(--r,0deg) + 3deg))}}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes pop{0%{transform:scale(.2) rotate(-12deg);opacity:0}60%{transform:scale(1.15) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(-3deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes dash{to{stroke-dashoffset:-60}}
+@keyframes pulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+@keyframes rise{0%{transform:translateY(12px) rotate(var(--r,0deg));opacity:0}100%{transform:translateY(0) rotate(var(--r,0deg));opacity:1}}
+@keyframes fall{0%{transform:translateY(-120px) rotate(0)}100%{transform:translateY(980px) rotate(540deg)}}
+@keyframes kenburns{0%{transform:scale(1.05)}100%{transform:scale(1.18) translate(-10px,-14px)}}
+@keyframes wiggle{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(-6deg)}96%{transform:rotate(6deg)}}
+@keyframes steam{0%{transform:translateY(0);opacity:0}30%{opacity:.8}100%{transform:translateY(-22px);opacity:0}}
+@keyframes draw{from{stroke-dashoffset:400}to{stroke-dashoffset:0}}
+.bob{animation:bob 4.5s ease-in-out infinite}
+.sway{animation:sway 5s ease-in-out infinite;transform-origin:50% 0}
+.pop{animation:pop .9s cubic-bezier(.2,.9,.3,1.3) both}
+.rise{animation:rise .7s ease both}
+.wiggle{animation:wiggle 4s ease-in-out infinite}
+.draw{stroke-dasharray:400;animation:draw 1.6s ease .3s both}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+.conf{position:absolute;top:0;animation:fall 7s linear infinite;z-index:1;opacity:.9}
+.sig{margin-top:6px;font-family:'Amatic SC',Heebo,sans-serif;font-size:32px;font-weight:700;color:#B4161B;line-height:1}
+
+</style>
+</helmet>
+
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; background: #EADBC8; font-family: Heebo, sans-serif; color: #2B2420; position: relative; overflow: hidden">
+  <img class="conf" src="/_blob/2611865ec66f5cb95bba964ca68a5122" alt="" style="left: 20px; width: 54px">
+  <img class="conf" src="/_blob/561cbd71e4c9eb6c984a219691f65936" alt="" style="left: 140px; width: 60px; animation-delay: -2.4s">
+  <img class="conf" src="/_blob/2fca7b40ebac719250f70493895cee9f" alt="" style="left: 290px; width: 56px; animation-delay: -4.6s">
+  <img class="conf" src="/_blob/f5880fc7120c1de2ca1a84786ee6a714" alt="" style="left: 220px; width: 58px; animation-delay: -1.2s; animation-duration: 8.5s">
+  <img class="conf" src="/_blob/5263aed83ad421c8e84ff99468d52962" alt="" style="left: 70px; width: 58px; animation-delay: -5.8s; animation-duration: 9s">
+
+  <div style="position: absolute; top: 28px; right: 0; left: 0; text-align: center; z-index: 2">
+    <div style="font-size: 15px; color: #5E5148">תחנה אחרונה</div>
+    <div class="pop" style="display: inline-block; font-family: 'Amatic SC', Heebo, sans-serif; font-size: 84px; line-height: .95; font-weight: 700; color: #B4161B">לחיים, מיכל!</div>
+  </div>
+
+  <div class="rise" style="position: absolute; top: 176px; right: 22px; left: 44px; height: 190px; z-index: 3; --r: -3deg; animation-delay: .3s">
+    <svg viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0"><path d="M6 10 C 60 3, 120 8, 180 4 C 230 1, 270 6, 294 5 C 297 60, 293 120, 296 180 C 298 230, 294 270, 297 294 C 230 298, 160 293, 90 297 C 50 299, 20 295, 4 296 C 7 240, 2 180, 5 120 C 7 70, 3 40, 6 10 Z" fill="#FFFBF4" stroke="#2B2420" stroke-width="1.6" vector-effect="non-scaling-stroke"></path></svg>
+    <div style="position: relative; z-index: 1; padding: 22px 24px">
+      <p style="margin: 0; font-size: 19px; line-height: 1.55">"מהשכבה ועד חוף הצוק, את תמיד אומרת עוד חמש דקות. נחכה לך עוד חמישים שנה."</p>
+      <div class="sig">נועה</div>
+    </div>
+  </div>
+  <div class="rise" style="position: absolute; top: 384px; right: 54px; left: 18px; height: 160px; z-index: 4; --r: 2.5deg; animation-delay: .7s">
+    <svg viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0"><path d="M6 10 C 60 3, 120 8, 180 4 C 230 1, 270 6, 294 5 C 297 60, 293 120, 296 180 C 298 230, 294 270, 297 294 C 230 298, 160 293, 90 297 C 50 299, 20 295, 4 296 C 7 240, 2 180, 5 120 C 7 70, 3 40, 6 10 Z" fill="#FFFBF4" stroke="#2B2420" stroke-width="1.6" vector-effect="non-scaling-stroke"></path></svg>
+    <div style="position: relative; z-index: 1; padding: 22px 24px">
+      <p style="margin: 0; font-size: 19px; line-height: 1.55">"שתפתחי את הקפה בליסבון, ושיהיה לנו שם שולחן קבוע."</p>
+      <div class="sig">שירה</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 580px; right: 36px; z-index: 5; width: 96px; height: 96px">
+    <svg width="60" height="40" viewBox="0 0 60 40" aria-hidden="true" style="position: absolute; top: -26px; left: 18px">
+      <path d="M15 36 C 8 26, 22 20, 15 8" fill="none" stroke="#8C7B6C" stroke-width="3" stroke-linecap="round" style="animation: steam 2.4s ease-in-out infinite"></path>
+      <path d="M32 36 C 25 26, 39 20, 32 8" fill="none" stroke="#8C7B6C" stroke-width="3" stroke-linecap="round" style="animation: steam 2.4s ease-in-out .8s infinite"></path>
+    </svg>
+    <img src="/_blob/5be879408952c39fede462cdcf45719f" alt="" style="width: 96px">
+  </div>
+  <div style="position: absolute; top: 600px; left: 30px; z-index: 5; font-family: 'Amatic SC', Heebo; font-size: 30px; font-weight: 700; line-height: 1.15; transform: rotate(-3deg)">5 חידות<br>5 טעימות<br>שעתיים וחצי של צחוק</div>
+
+  <a href="#" style="position: absolute; bottom: 22px; right: 22px; left: 22px; height: 68px; z-index: 9; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #FFFFFF; font-family: 'Amatic SC', Heebo, sans-serif; font-weight: 700; font-size: 38px"><svg viewBox="0 0 346 68" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><path d="M9 12 C 70 4, 180 9, 262 5 C 300 3, 330 6, 339 9 C 344 26, 341 44, 343 58 C 262 64, 150 59, 60 63 C 36 64, 16 62, 5 60 C 2 44, 7 28, 9 12 Z" fill="#B4161B" stroke="#2B2420" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg><span style="position: relative">שומרות ומתייגות את דוגרי</span></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

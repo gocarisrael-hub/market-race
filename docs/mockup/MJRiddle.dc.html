@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>מחנה יהודה בצבעי מים · חידה</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&amp;family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B4161B}a:hover{color:#8A0F13}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-10px) rotate(calc(var(--r,0deg) + 3deg))}}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes pop{0%{transform:scale(.2) rotate(-12deg);opacity:0}60%{transform:scale(1.15) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(-3deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes dash{to{stroke-dashoffset:-60}}
+@keyframes pulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+@keyframes rise{0%{transform:translateY(12px) rotate(var(--r,0deg));opacity:0}100%{transform:translateY(0) rotate(var(--r,0deg));opacity:1}}
+@keyframes fall{0%{transform:translateY(-120px) rotate(0)}100%{transform:translateY(980px) rotate(540deg)}}
+@keyframes kenburns{0%{transform:scale(1.05)}100%{transform:scale(1.18) translate(-10px,-14px)}}
+@keyframes wiggle{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(-6deg)}96%{transform:rotate(6deg)}}
+@keyframes steam{0%{transform:translateY(0);opacity:0}30%{opacity:.8}100%{transform:translateY(-22px);opacity:0}}
+@keyframes draw{from{stroke-dashoffset:400}to{stroke-dashoffset:0}}
+.bob{animation:bob 4.5s ease-in-out infinite}
+.sway{animation:sway 5s ease-in-out infinite;transform-origin:50% 0}
+.pop{animation:pop .9s cubic-bezier(.2,.9,.3,1.3) both}
+.rise{animation:rise .7s ease both}
+.wiggle{animation:wiggle 4s ease-in-out infinite}
+.draw{stroke-dasharray:400;animation:draw 1.6s ease .3s both}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+.her{font-family:'Amatic SC',Heebo,sans-serif;font-weight:700;font-size:34px;color:#B4161B;line-height:1}
+
+</style>
+</helmet>
+
+<div dir="rtl" style="width: 390px; height: 844px; box-sizing: border-box; background: #EADBC8; font-family: Heebo, sans-serif; color: #2B2420; position: relative; overflow: hidden">
+  <img src="/_blob/221e08e5b4ad22b7081f1af3f6d8aa0a" alt="" style="position: absolute; top: -10px; left: -10px; width: 410px; height: 190px; object-fit: cover; object-position: 50% 30%; clip-path: polygon(0 0, 100% 0, 100% 78%, 86% 86%, 70% 80%, 52% 90%, 34% 82%, 16% 92%, 0 84%)">
+  <img src="/_blob/d0e15267e8cb3c9b6b9f1875de59d4bc" alt="דוגרי" style="position: absolute; top: 8px; right: 10px; width: 74px">
+  <div class="rise" style="position: absolute; top: 186px; right: 22px; left: 26px; height: 360px; --r: 1.5deg">
+    <svg viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0"><path d="M6 10 C 60 3, 120 8, 180 4 C 230 1, 270 6, 294 5 C 297 60, 293 120, 296 180 C 298 230, 294 270, 297 294 C 230 298, 160 293, 90 297 C 50 299, 20 295, 4 296 C 7 240, 2 180, 5 120 C 7 70, 3 40, 6 10 Z" fill="#FFFBF4" stroke="#2B2420" stroke-width="1.6" vector-effect="non-scaling-stroke"></path></svg>
+    <div style="position: relative; z-index: 1; padding: 30px 26px; color: #2B2420">
+      <div style="font-family: 'Amatic SC', Heebo, sans-serif; font-size: 30px; font-weight: 700; line-height: 1">חידה ראשונה</div>
+      <p style="margin: 16px 0 0; font-size: 22px; line-height: 1.65">מאז <span class="her">יואב מהשכבה</span>, <span class="her">מיכל</span> יודעת שאסור לוותר עליה. היא עוד לא אבדה, ושרים עליה בסוף כל טקס.</p>
+      <p style="margin: 16px 0 0; font-family: 'Amatic SC', Heebo, sans-serif; font-size: 56px; line-height: 1; font-weight: 700">מה היא?</p>
+    </div>
+  </div>
+  <div style="position: absolute; top: 572px; right: 32px; display: flex; align-items: center; gap: 8px; transform: rotate(-3deg); color: #2B2420">
+    <svg width="46" height="34" viewBox="0 0 46 34" aria-hidden="true"><path d="M42 4 C 30 2, 14 10, 8 26 M8 26 L 4 14 M8 26 L 20 24" fill="none" stroke="#2B2420" stroke-width="2.2" stroke-linecap="round"></path></svg>
+    <span style="font-family: 'Amatic SC', Heebo; font-size: 28px; font-weight: 700">רמז: זה גם שם של המנון</span>
+  </div>
+  <label style="position: absolute; top: 640px; right: 30px; left: 30px; display: flex; flex-direction: column; font-size: 15px; color: #5E5148">התשובה שלכן
+    <input value="תקווה" style="font-family: 'Amatic SC', Heebo, sans-serif; font-weight: 700; font-size: 40px; padding: 0 2px; border: none; border-bottom: 1.5px solid #2B2420; background: transparent; color: #2B2420; outline: none">
+  </label>
+  <a href="#" style="position: absolute; bottom: 22px; right: 22px; left: 22px; height: 68px; z-index: 9; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #FFFFFF; font-family: 'Amatic SC', Heebo, sans-serif; font-weight: 700; font-size: 38px"><svg viewBox="0 0 346 68" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><path d="M9 12 C 70 4, 180 9, 262 5 C 300 3, 330 6, 339 9 C 344 26, 341 44, 343 58 C 262 64, 150 59, 60 63 C 36 64, 16 62, 5 60 C 2 44, 7 28, 9 12 Z" fill="#B4161B" stroke="#2B2420" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg><span style="position: relative">בודקות!</span></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
