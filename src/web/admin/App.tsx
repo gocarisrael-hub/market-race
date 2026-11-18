@@ -8,11 +8,23 @@ import {
   StallsPage,
   TastingsPage,
 } from './pages/basic.tsx'
+import { CompaniesPage } from './pages/companies.tsx'
 import { QuestionSetsPage, RiddlesPage } from './pages/content.tsx'
+import { LivePage, OrdersPage, ReviewPage, TestGamePage } from './pages/orders.tsx'
 import { RoutesPage, ThemesPage } from './pages/routes-themes.tsx'
+import { SettlementPage } from './pages/settlement.tsx'
 import { useLoc } from './ui.tsx'
 
-const SECTIONS = [
+const OPS = [
+  { key: 'orders', label: 'הזמנות', Page: OrdersPage },
+  { key: 'review', label: 'לבדיקה', Page: ReviewPage },
+  { key: 'live', label: 'משחקים פעילים', Page: LivePage },
+  { key: 'test-game', label: 'משחק בדיקה', Page: TestGamePage },
+  { key: 'companies', label: 'חברות', Page: CompaniesPage },
+  { key: 'settlement', label: 'התחשבנות', Page: SettlementPage },
+]
+
+const CATALOG = [
   { key: 'markets', label: 'שווקים', Page: MarketsPage },
   { key: 'stalls', label: 'דוכנים', Page: StallsPage },
   { key: 'tastings', label: 'טעימות', Page: TastingsPage },
@@ -23,6 +35,27 @@ const SECTIONS = [
   { key: 'themes', label: 'עיצובים', Page: ThemesPage },
   { key: 'settings', label: 'הגדרות', Page: SettingsPage },
 ]
+const SECTIONS = [...OPS, ...CATALOG]
+
+/** Orders waiting in the review queue, refreshed on navigation, on changes and every minute. */
+function useReviewCount(hash: string) {
+  const [n, setN] = useState(0)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh when the location changes
+  useEffect(() => {
+    const load = () =>
+      api<{ counts: Record<string, number> }>('/orders/summary')
+        .then((r) => setN(r.counts.review ?? 0))
+        .catch(() => {})
+    load()
+    const t = setInterval(load, 60_000)
+    window.addEventListener('orders-changed', load)
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('orders-changed', load)
+    }
+  }, [hash])
+  return n
+}
 
 type Owner = { id: number; email: string; name: string }
 
@@ -43,6 +76,13 @@ export function App() {
 function Shell({ owner, onLogout }: { owner: Owner; onLogout: () => void }) {
   const loc = useLoc()
   const current = SECTIONS.find((s) => s.key === loc.section)
+  const review = useReviewCount(`${loc.section}/${loc.id ?? ''}`)
+  const link = (s: (typeof SECTIONS)[number]) => (
+    <a key={s.key} href={`#/${s.key}`} className={s.key === loc.section ? 'on' : ''}>
+      {s.label}
+      {s.key === 'review' && review > 0 && <span className="badge"> {review}</span>}
+    </a>
+  )
   return (
     <div className="shell">
       <header className="no-print">
@@ -60,11 +100,9 @@ function Shell({ owner, onLogout }: { owner: Owner; onLogout: () => void }) {
       </header>
       <div className="layout">
         <nav className="no-print">
-          {SECTIONS.map((s) => (
-            <a key={s.key} href={`#/${s.key}`} className={s.key === loc.section ? 'on' : ''}>
-              {s.label}
-            </a>
-          ))}
+          {OPS.map(link)}
+          <span className="nav-group">קטלוג</span>
+          {CATALOG.map(link)}
         </nav>
         <main>
           {loc.section === 'codes' ? (
@@ -72,7 +110,7 @@ function Shell({ owner, onLogout }: { owner: Owner; onLogout: () => void }) {
           ) : current ? (
             <current.Page key={current.key} />
           ) : (
-            <h1>ניהול</h1>
+            <OrdersPage />
           )}
         </main>
       </div>

@@ -145,7 +145,13 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
   order.letterNotes.forEach((n, i) => {
     extra[`letter_${i}`] = `${n.text} ${n.signature}`
   })
-  const answerFlags = checkAnswers({ name: order.honoreeName, ...order.answers }, questions, rules, extra)
+  // Same defaults as the builder: a company's name fills the company_name slot.
+  const checked = {
+    name: order.honoreeName,
+    ...(company ? { company_name: company.name } : {}),
+    ...order.answers,
+  }
+  const answerFlags = checkAnswers(checked, questions, rules, extra)
   // De-duplicate: the builder and the checker can both report the same empty slot.
   const seen = new Set<string>()
   const flags: OrderFlag[] = []

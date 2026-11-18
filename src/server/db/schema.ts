@@ -269,6 +269,8 @@ export const leads = pgTable('leads', {
   preferredDate: text().notNull().default(''),
   message: text().notNull().default(''),
   status: text().$type<'new' | 'quoted' | 'won' | 'lost'>().notNull().default('new'),
+  // Owner's notes on the lead (admin only).
+  notes: text().notNull().default(''),
   orderId: integer().references(() => orders.id),
   createdAt: now(),
 })

@@ -13,7 +13,9 @@ import type { Config } from './config.ts'
 import type { DB } from './db/index.ts'
 import { adminAuthRoutes } from './routes/admin-auth.ts'
 import { adminCatalogRoutes } from './routes/admin-catalog.ts'
+import { adminCompanyRoutes } from './routes/admin-companies.ts'
 import { adminOrderRoutes } from './routes/admin-orders.ts'
+import { adminSettlementRoutes } from './routes/admin-settlement.ts'
 import { publicGameRoutes } from './routes/public-game.ts'
 import { publicOrderRoutes } from './routes/public-orders.ts'
 import type { Services } from './services/context.ts'
@@ -47,6 +49,8 @@ export async function buildApp(ctx: AppContext) {
   await adminAuthRoutes(app, ctx)
   await adminCatalogRoutes(app, ctx)
   await adminOrderRoutes(app, ctx)
+  await adminCompanyRoutes(app, ctx)
+  await adminSettlementRoutes(app, ctx)
   await publicGameRoutes(app, ctx)
   await publicOrderRoutes(app, ctx)
 

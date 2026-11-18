@@ -2,7 +2,7 @@
 // against this product's `orders` and `pay_sessions` tables. See docs/PAYMENT.md.
 import { and, eq, gt, inArray, lte } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
-import { orders, paySessions, settings } from '../db/schema.ts'
+import { leads, orders, paySessions, settings } from '../db/schema.ts'
 import {
   type AlertItem,
   alertFooter,
@@ -85,9 +85,16 @@ export async function onOrderPaid(db: DB, svc: Services, base: string, orderId: 
     if (order.answersSubmittedAt) {
       order = await buildOrderGame(db, orderId)
       await afterBuilt(db, svc, base, order)
+    } else if (order.kind === 'company') {
+      // Company answers are filled by the owner with the company in the admin.
+      await alertOwner(svc, `הזמנת חברה ${order.orderNo} שולמה: נשאר למלא את השאלות`, [
+        `${base}/admin#/orders/${order.id}`,
+      ])
     } else {
       await sendToBuyer(db, svc, base, order, 'paid_answers_needed')
     }
+    if (order.kind === 'company')
+      await db.update(leads).set({ status: 'won' }).where(eq(leads.orderId, orderId))
   } catch (e) {
     console.error(`[payment] after-paid for order ${orderId} failed: ${(e as Error)?.message ?? e}`)
   }

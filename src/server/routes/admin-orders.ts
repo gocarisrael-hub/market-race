@@ -1,19 +1,35 @@
-// Admin: orders, test games, review queue, live games.
-import { desc, eq, inArray } from 'drizzle-orm'
+// Admin: orders, test games, review queue, live games, resend and cancel.
+import { and, count, desc, eq, gt, ilike, inArray, max, or, sum } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppContext } from '../app.ts'
-import { gameStates, orders, redemptions } from '../db/schema.ts'
+import type { DB } from '../db/index.ts'
+import {
+  gameStates,
+  leads,
+  messages,
+  occasions,
+  orders,
+  paySessions,
+  redemptions,
+  stalls,
+  tastings,
+  uploads,
+} from '../db/schema.ts'
 import { FORMS, ORDER_STATUSES } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
+import { sendToBuyer } from '../services/delivery.ts'
 import {
   approveOrder,
   BuildError,
   buildOrderGame,
   createOrder,
   getOrder,
+  type Order,
+  questionsForOccasion,
   updateAnswersAndRebuild,
 } from '../services/orders.ts'
+import { afterBuilt } from '../services/payments.ts'
 
 const letterNote = z.object({ text: z.string().max(600), signature: z.string().max(60) })
 
@@ -31,40 +47,154 @@ const testGame = z.object({
   companyName: z.string().max(80).optional(),
 })
 
+const idParam = z.object({ id: z.coerce.number().int() })
+
+/** Statuses whose game has not started: answers can still change, the order can be cancelled. */
+export const EDITABLE = ['quoted', 'pending_payment', 'awaiting_answers', 'review', 'ready'] as const
+
 export function orderLinks(base: string, o: { gameToken: string; manageToken: string }) {
-  return { game: `${base}/g/${o.gameToken}`, manage: `${base}/m/${o.manageToken}` }
+  return {
+    game: `${base}/g/${o.gameToken}`,
+    manage: `${base}/m/${o.manageToken}`,
+    pay: `${base}/pay/${o.manageToken}`,
+    qr: `/api/qr/${o.gameToken}.png`,
+  }
+}
+
+/** Portions bought (people × stops of the frozen game) vs. portions redeemed. */
+export function usage(o: Pick<Order, 'people' | 'game'>, used: { portions: number; stops: number }) {
+  const stops = o.game?.stops.length ?? 0
+  return { stops, redeemedStops: used.stops, bought: o.people * stops, used: used.portions }
+}
+
+async function usedByOrder(db: DB, ids: number[]) {
+  if (!ids.length) return new Map<number, { portions: number; stops: number }>()
+  const rows = await db
+    .select({ orderId: redemptions.orderId, portions: sum(redemptions.portions), stops: count() })
+    .from(redemptions)
+    .where(inArray(redemptions.orderId, ids))
+    .groupBy(redemptions.orderId)
+  return new Map(rows.map((r) => [r.orderId, { portions: Number(r.portions ?? 0), stops: Number(r.stops) }]))
 }
 
 export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
+  const { db } = ctx
+  const base = ctx.config.publicBaseUrl
   await app.register(async (r) => {
-    r.addHook('preHandler', requireOwner(ctx.db))
+    r.addHook('preHandler', requireOwner(db))
     const fail = (reply: { code: (n: number) => { send: (b: unknown) => unknown } }, err: unknown) => {
       if (err instanceof BuildError) return reply.code(400).send({ error: err.message })
       throw err
     }
 
-    r.get('/admin/api/orders', async (req) => {
-      const q = z.object({ status: z.enum(ORDER_STATUSES).optional() }).parse(req.query)
-      const rows = await ctx.db
+    r.get('/admin/api/orders', async (req, reply) => {
+      const parsed = z
+        .object({
+          status: z.enum(ORDER_STATUSES).optional(),
+          kind: z.enum(['private', 'company']).optional(),
+          q: z.string().trim().max(80).optional(),
+        })
+        .safeParse(req.query)
+      if (!parsed.success) return reply.code(400).send({ error: 'invalid' })
+      const q = parsed.data
+      const like = q.q ? `%${q.q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : null
+      const rows = await db
         .select()
         .from(orders)
-        .where(q.status ? eq(orders.status, q.status) : undefined)
-        .orderBy(desc(orders.createdAt))
+        .where(
+          and(
+            q.status ? eq(orders.status, q.status) : undefined,
+            q.kind ? eq(orders.kind, q.kind) : undefined,
+            like
+              ? or(
+                  ilike(orders.orderNo, like),
+                  ilike(orders.buyerName, like),
+                  ilike(orders.buyerEmail, like),
+                  ilike(orders.buyerPhone, like),
+                  ilike(orders.honoreeName, like),
+                  ilike(orders.companyName, like),
+                )
+              : undefined,
+          ),
+        )
+        .orderBy(desc(orders.createdAt), desc(orders.id))
         .limit(500)
-      return { orders: rows.map((o) => ({ ...o, game: undefined, hasGame: !!o.game })) }
+      const used = await usedByOrder(
+        db,
+        rows.map((o) => o.id),
+      )
+      const totals = { bought: 0, used: 0 }
+      const list = rows.map(({ game, ...o }) => {
+        const u = usage({ people: o.people, game }, used.get(o.id) ?? { portions: 0, stops: 0 })
+        totals.bought += u.bought
+        totals.used += u.used
+        return { ...o, hasGame: !!game, usage: u }
+      })
+      return { orders: list, totals }
+    })
+
+    // Counts per status, for the nav badge (review queue).
+    r.get('/admin/api/orders/summary', async () => {
+      const rows = await db.select({ status: orders.status, n: count() }).from(orders).groupBy(orders.status)
+      return { counts: Object.fromEntries(rows.map((x) => [x.status, Number(x.n)])) }
     })
 
     r.get('/admin/api/orders/:id', async (req, reply) => {
-      const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params)
-      const order = await getOrder(ctx.db, id)
+      const { id } = idParam.parse(req.params)
+      const order = await getOrder(db, id)
       if (!order) return reply.code(404).send({ error: 'not_found' })
-      const [state] = await ctx.db.select().from(gameStates).where(eq(gameStates.orderId, id))
-      const used = await ctx.db.select().from(redemptions).where(eq(redemptions.orderId, id))
+      const [[state], used, msgs, sessions, files, [lead], [occasion], questions] = await Promise.all([
+        db.select().from(gameStates).where(eq(gameStates.orderId, id)),
+        db
+          .select({
+            id: redemptions.id,
+            stopIndex: redemptions.stopIndex,
+            stallId: redemptions.stallId,
+            stallName: stalls.name,
+            tastingId: redemptions.tastingId,
+            tastingName: tastings.name,
+            portions: redemptions.portions,
+            feeAgorot: redemptions.feeAgorot,
+            usedBackup: redemptions.usedBackup,
+            redeemedAt: redemptions.redeemedAt,
+          })
+          .from(redemptions)
+          .innerJoin(stalls, eq(stalls.id, redemptions.stallId))
+          .innerJoin(tastings, eq(tastings.id, redemptions.tastingId))
+          .where(eq(redemptions.orderId, id))
+          .orderBy(redemptions.stopIndex),
+        db.select().from(messages).where(eq(messages.orderId, id)).orderBy(desc(messages.id)),
+        db
+          .select({
+            id: paySessions.id,
+            amountAgorot: paySessions.amountAgorot,
+            env: paySessions.env,
+            status: paySessions.status,
+            transactionId: paySessions.transactionId,
+            createdAt: paySessions.createdAt,
+            settledAt: paySessions.settledAt,
+          })
+          .from(paySessions)
+          .where(eq(paySessions.orderId, id))
+          .orderBy(desc(paySessions.createdAt)),
+        db.select().from(uploads).where(eq(uploads.orderId, id)).orderBy(desc(uploads.createdAt)),
+        db.select().from(leads).where(eq(leads.orderId, id)),
+        db.select().from(occasions).where(eq(occasions.key, order.occasionKey)),
+        questionsForOccasion(db, order.occasionKey),
+      ])
+      const portions = used.reduce((n, x) => n + x.portions, 0)
       return {
         order,
         state: state ?? null,
         redemptions: used,
-        links: orderLinks(ctx.config.publicBaseUrl, order),
+        usage: usage(order, { portions, stops: used.length }),
+        messages: msgs,
+        paySessions: sessions,
+        uploads: files,
+        lead: lead ?? null,
+        occasion: occasion ? { key: occasion.key, label: occasion.label, audience: occasion.audience } : null,
+        questions,
+        links: orderLinks(base, order),
       }
     })
 
@@ -74,22 +204,22 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       if (!body.success) return reply.code(400).send({ error: 'invalid', issues: body.error.issues })
       const b = body.data
       try {
-        const order = await createOrder(ctx.db, {
+        const order = await createOrder(db, {
           kind: b.companyName ? 'company' : 'private',
           status: 'awaiting_answers',
           ...b,
           companyName: b.companyName ?? null,
           notes: 'test game',
         })
-        const built = await buildOrderGame(ctx.db, order.id)
-        return { order: built, links: orderLinks(ctx.config.publicBaseUrl, built) }
+        const built = await buildOrderGame(db, order.id)
+        return { order: built, links: orderLinks(base, built) }
       } catch (err) {
         return fail(reply, err)
       }
     })
 
     r.patch('/admin/api/orders/:id/answers', async (req, reply) => {
-      const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params)
+      const { id } = idParam.parse(req.params)
       const body = z
         .object({
           answers: z.record(z.string(), z.string()).optional(),
@@ -99,36 +229,83 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         .safeParse(req.body)
       if (!body.success) return reply.code(400).send({ error: 'invalid' })
       try {
-        return { order: await updateAnswersAndRebuild(ctx.db, id, body.data) }
+        const order = await updateAnswersAndRebuild(db, id, body.data)
+        // The owner is looking at it: deliver when clean, no review alert.
+        if (order.status === 'ready') await afterBuilt(db, ctx.services, base, order)
+        return { order: (await getOrder(db, id)) ?? order }
       } catch (err) {
         return fail(reply, err)
       }
     })
 
     r.post('/admin/api/orders/:id/rebuild', async (req, reply) => {
-      const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params)
-      const order = await getOrder(ctx.db, id)
+      const { id } = idParam.parse(req.params)
+      const order = await getOrder(db, id)
       if (!order) return reply.code(404).send({ error: 'not_found' })
       if (!['awaiting_answers', 'review', 'ready'].includes(order.status))
         return reply.code(400).send({ error: `order is ${order.status}; a started game is frozen` })
       try {
-        return { order: await buildOrderGame(ctx.db, id) }
+        return { order: await buildOrderGame(db, id) }
       } catch (err) {
         return fail(reply, err)
       }
     })
 
     r.post('/admin/api/orders/:id/approve', async (req, reply) => {
-      const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params)
+      const { id } = idParam.parse(req.params)
       try {
-        return { order: await approveOrder(ctx.db, id) }
+        const order = await approveOrder(db, id)
+        // A paid order that waited for review goes out now.
+        await afterBuilt(db, ctx.services, base, order)
+        return { order: (await getOrder(db, id)) ?? order }
       } catch (err) {
         return fail(reply, err)
       }
     })
 
+    // Sends the game link again (email, and WhatsApp when allowed).
+    r.post('/admin/api/orders/:id/resend', async (req, reply) => {
+      const { id } = idParam.parse(req.params)
+      const order = await getOrder(db, id)
+      if (!order) return reply.code(404).send({ error: 'not_found' })
+      if (!order.game || !['ready', 'active', 'done'].includes(order.status))
+        return reply.code(400).send({ error: 'not_ready' })
+      if (!order.buyerEmail && !order.buyerPhone) return reply.code(400).send({ error: 'no_contact' })
+      const [{ last }] = await db
+        .select({ last: max(messages.id) })
+        .from(messages)
+        .where(eq(messages.orderId, id))
+      await sendToBuyer(db, ctx.services, base, order, 'game_ready')
+      if (!order.deliveredAt)
+        await db.update(orders).set({ deliveredAt: new Date() }).where(eq(orders.id, id))
+      const sent = await db
+        .select()
+        .from(messages)
+        .where(and(eq(messages.orderId, id), gt(messages.id, last ?? 0)))
+      return { messages: sent }
+    })
+
+    // Cancels an order whose game has not started. A refund, if any, is done in My Tranzila.
+    r.post('/admin/api/orders/:id/cancel', async (req, reply) => {
+      const { id } = idParam.parse(req.params)
+      const order = await getOrder(db, id)
+      if (!order) return reply.code(404).send({ error: 'not_found' })
+      const [state] = await db.select().from(gameStates).where(eq(gameStates.orderId, id))
+      if (!(EDITABLE as readonly string[]).includes(order.status) || state?.startedAt)
+        return reply
+          .code(400)
+          .send({ error: `order is ${order.status}; only an order not started can be cancelled` })
+      const [row] = await db
+        .update(orders)
+        .set({ status: 'cancelled' })
+        .where(and(eq(orders.id, id), inArray(orders.status, [...EDITABLE])))
+        .returning()
+      if (!row) return reply.code(409).send({ error: 'changed' })
+      return { order: row, refundNeeded: !!row.paidAt }
+    })
+
     r.get('/admin/api/live', async () => {
-      const active = await ctx.db
+      const active = await db
         .select({
           id: orders.id,
           orderNo: orders.orderNo,
@@ -139,6 +316,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           step: gameStates.step,
           lastActivityAt: gameStates.lastActivityAt,
           startedAt: gameStates.startedAt,
+          backupStops: gameStates.backupStops,
           game: orders.game,
         })
         .from(orders)
@@ -146,11 +324,16 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         .where(inArray(orders.status, ['active']))
         .orderBy(desc(gameStates.lastActivityAt))
       return {
-        games: active.map(({ game, ...g }) => ({
-          ...g,
-          totalStops: game?.stops.length ?? 0,
-          stallName: game?.stops[g.stopIndex]?.stall.name ?? '',
-        })),
+        games: active.map(({ game, backupStops, ...g }) => {
+          const stop = game?.stops[g.stopIndex]
+          const backup = !!stop?.backup && backupStops.includes(g.stopIndex)
+          return {
+            ...g,
+            totalStops: game?.stops.length ?? 0,
+            stallName: (backup ? stop?.backup?.stall.name : stop?.stall.name) ?? '',
+            usingBackup: backup,
+          }
+        }),
       }
     })
   })
