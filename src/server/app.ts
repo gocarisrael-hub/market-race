@@ -11,6 +11,8 @@ import Fastify from 'fastify'
 import type { Config } from './config.ts'
 import type { DB } from './db/index.ts'
 import { adminAuthRoutes } from './routes/admin-auth.ts'
+import { adminOrderRoutes } from './routes/admin-orders.ts'
+import { publicGameRoutes } from './routes/public-game.ts'
 
 export interface AppContext {
   db: DB
@@ -35,6 +37,8 @@ export async function buildApp(ctx: AppContext) {
   app.get('/healthz', async () => ({ ok: true, env: ctx.config.env }))
 
   await adminAuthRoutes(app, ctx)
+  await adminOrderRoutes(app, ctx)
+  await publicGameRoutes(app, ctx)
 
   // Illustrations shipped with the code (maps, icons).
   await app.register(fastifyStatic, {
