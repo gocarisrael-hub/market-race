@@ -50,6 +50,22 @@ export async function illustrate(input: Buffer, opts: IllustrateOptions = {}): P
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
+  const out = await paint(src, w, h, { ...opts, paper, ink })
+  return sharp(out, { raw: { width: w, height: h, channels: 3 } })
+    .jpeg({ quality: 84, mozjpeg: true })
+    .toBuffer()
+}
+
+export type Rgb = { r: number; g: number; b: number }
+
+/** The illustration itself, on raw RGB pixels: returns raw RGB of the same size. */
+export async function paint(
+  src: Buffer,
+  w: number,
+  h: number,
+  opts: IllustrateOptions & { paper: Rgb; ink: Rgb },
+): Promise<Buffer> {
+  const { paper, ink } = opts
   const raw = { raw: { width: w, height: h, channels: 3 as const } }
 
   // 1. Edge-preserving smoothing (median) then color flattening through a small palette.
@@ -132,7 +148,142 @@ export async function illustrate(input: Buffer, opts: IllustrateOptions = {}): P
       out[i * 3 + c] = Math.max(0, Math.min(255, Math.round(v)))
     }
   }
-  return sharp(out, raw).jpeg({ quality: 84, mozjpeg: true }).toBuffer()
+  return out
+}
+
+/** Alpha at or above this is subject (a hair matte fades over a few pixels; all of it counts). */
+const ALPHA_MIN = 24
+
+/** Bounding box of the subject in an RGBA buffer, or null when there is no subject. */
+export function alphaBox(rgba: Buffer, w: number, h: number) {
+  let x0 = w
+  let y0 = h
+  let x1 = -1
+  let y1 = -1
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (rgba[(y * w + x) * 4 + 3] >= ALPHA_MIN) {
+        if (x < x0) x0 = x
+        if (x > x1) x1 = x
+        if (y < y0) y0 = y
+        if (y > y1) y1 = y
+      }
+  return x1 < 0 ? null : { x0, y0, x1: x1 + 1, y1: y1 + 1 }
+}
+
+/**
+ * The 4:5 window that frames a cut subject: the whole subject with a margin, centered on it. A
+ * side where the subject runs off the photo (the photo's own edge cut it, a body below a
+ * portrait) is anchored to that edge, so the straight cut sits on the frame and not inside it.
+ */
+export function subjectWindow(box: { x0: number; y0: number; x1: number; y1: number }, w: number, h: number) {
+  const margin = 0.1
+  const bw = box.x1 - box.x0
+  const bh = box.y1 - box.y0
+  const winH = Math.max(bh * (1 + 2 * margin), (bw * (1 + 2 * margin)) / ILLUSTRATED_ASPECT, 16)
+  const winW = winH * ILLUSTRATED_ASPECT
+  let left = (box.x0 + box.x1) / 2 - winW / 2
+  let top = (box.y0 + box.y1) / 2 - winH / 2
+  const edge = 2
+  if (box.y1 >= h - edge) top = box.y1 - winH
+  else if (box.y0 <= edge) top = box.y0
+  if (box.x0 <= edge && box.x1 < w - edge) left = box.x0
+  else if (box.x1 >= w - edge && box.x0 > edge) left = box.x1 - winW
+  return { left: Math.round(left), top: Math.round(top), width: Math.round(winW), height: Math.round(winH) }
+}
+
+/**
+ * A cut subject (transparent PNG from the buyer's browser) illustrated on paper: framed on its
+ * silhouette, painted like `illustrate`, and set on the paper with an ink contour round it.
+ */
+export async function illustrateCutout(cutout: Buffer, opts: IllustrateOptions = {}): Promise<Buffer> {
+  const maxSize = opts.maxSize ?? 1000
+  const paper = opts.paper ?? { r: 0xfc, g: 0xf3, b: 0xe3 }
+  const ink = opts.ink ?? { r: 0x2b, g: 0x24, b: 0x20 }
+  const { data: rgba, info } = await sharp(cutout).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  const box = alphaBox(rgba, info.width, info.height)
+  if (!box) throw new Error('empty cutout')
+  const win = subjectWindow(box, info.width, info.height)
+  const pad = {
+    left: Math.max(0, -win.left),
+    top: Math.max(0, -win.top),
+    right: Math.max(0, win.left + win.width - info.width),
+    bottom: Math.max(0, win.top + win.height - info.height),
+  }
+  const h = Math.max(16, Math.round(Math.min(maxSize, win.height)))
+  const w = Math.max(13, Math.round(h * ILLUSTRATED_ASPECT))
+  // Two passes: sharp would extract before it extends within one pipeline.
+  const padded = await sharp(rgba, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .extend({ ...pad, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .raw()
+    .toBuffer()
+  const pw = info.width + pad.left + pad.right
+  const ph = info.height + pad.top + pad.bottom
+  const { data: framed } = await sharp(padded, { raw: { width: pw, height: ph, channels: 4 } })
+    .extract({ left: win.left + pad.left, top: win.top + pad.top, width: win.width, height: win.height })
+    .resize(w, h, { fit: 'fill' })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  // The subject flattened on paper is what gets painted; the alpha decides where it shows.
+  const alpha = Buffer.alloc(w * h)
+  const flat = Buffer.alloc(w * h * 3)
+  for (let i = 0; i < w * h; i++) {
+    const a = framed[i * 4 + 3] / 255
+    alpha[i] = framed[i * 4 + 3]
+    flat[i * 3] = Math.round(framed[i * 4] * a + paper.r * (1 - a))
+    flat[i * 3 + 1] = Math.round(framed[i * 4 + 1] * a + paper.g * (1 - a))
+    flat[i * 3 + 2] = Math.round(framed[i * 4 + 2] * a + paper.b * (1 - a))
+  }
+  const painted = await paint(flat, w, h, { ...opts, paper, ink })
+  // The ink contour: a soft band just outside the silhouette (the blurred alpha minus the alpha).
+  const spread = Math.max(1.2, w / 260)
+  const { data: grown } = await sharp(alpha, { raw: { width: w, height: h, channels: 1 } })
+    .blur(spread)
+    .greyscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const out = Buffer.alloc(w * h * 3)
+  for (let i = 0; i < w * h; i++) {
+    const a = alpha[i] / 255
+    const line = Math.min(1, Math.max(0, (grown[i] / 255 - a) * 3.2)) * 0.8
+    for (let c = 0; c < 3; c++) {
+      const p = c === 0 ? paper.r : c === 1 ? paper.g : paper.b
+      const k = c === 0 ? ink.r : c === 1 ? ink.g : ink.b
+      // Outside the subject the painted pixel is already paper and grain; keep it, then ink.
+      const base = painted[i * 3 + c] * a + (painted[i * 3 + c] * 0.3 + p * 0.7) * (1 - a)
+      out[i * 3 + c] = Math.max(0, Math.min(255, Math.round(base * (1 - line) + k * line)))
+    }
+  }
+  return sharp(out, { raw: { width: w, height: h, channels: 3 } })
+    .jpeg({ quality: 84, mozjpeg: true })
+    .toBuffer()
+}
+
+/**
+ * Checks a cutout PNG sent by the browser against its original: a PNG, with alpha, the same
+ * shape as the original, and with a subject in it. Returns the reason it is refused, or null.
+ */
+export async function checkCutout(png: Buffer, original: Buffer): Promise<string | null> {
+  try {
+    const meta = await sharp(png).metadata()
+    if (meta.format !== 'png' || !meta.hasAlpha || !meta.width || !meta.height) return 'not_a_cutout'
+    if (meta.width > 4096 || meta.height > 4096) return 'not_a_cutout'
+    const o = await sharp(original).metadata()
+    if (!o.width || !o.height) return 'not_a_cutout'
+    if (Math.abs(meta.width / meta.height - o.width / o.height) > 0.03) return 'shape_mismatch'
+    const { data, info } = await sharp(png)
+      .ensureAlpha()
+      .extractChannel(3)
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+    let covered = 0
+    for (let i = 0; i < data.length; i++) if (data[i] >= ALPHA_MIN) covered++
+    const share = covered / (info.width * info.height)
+    if (share < 0.02 || share > 0.995) return 'no_subject'
+    return null
+  } catch {
+    return 'not_a_cutout'
+  }
 }
 
 /** Removes ink blobs smaller than `minArea` pixels (texture specks), keeping long contours. */

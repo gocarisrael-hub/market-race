@@ -6,6 +6,7 @@ import { type DoodleName, Doodles, Icon } from '../../shared/decor.tsx'
 import { ApiError, getManage, type Manage as M } from '../api.ts'
 import { copy } from '../copy.ts'
 import { errorText, whatsappShare } from '../logic.ts'
+import { ManagePhotos } from '../photo-background.tsx'
 import { Brush, Deco, Failed, Loading, PhotoDrop, SectionHead, Sketch, TornPaper } from '../ui.tsx'
 import { ManageEdit } from './ManageEdit.tsx'
 
@@ -224,6 +225,7 @@ export function Manage({ token, search }: { token: string; search: string }) {
             {copy.manage.photosTitle}
           </SectionHead>
           <PhotoDrop token={token} count={m.photos.count} />
+          {m.photos.count > 0 && <ManagePhotos token={token} />}
           <p className="hint">{copy.manage.photosHint}</p>
         </section>
       )}

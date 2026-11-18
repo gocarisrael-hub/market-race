@@ -50,6 +50,13 @@
       "when": 1794998615050,
       "tag": "0006_palettes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795011372288,
+      "tag": "0007_photo_background",
+      "breakpoints": true
     }
   ]
 }

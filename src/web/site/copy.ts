@@ -127,6 +127,12 @@ export const copy = {
     unavailable: 'העלאת תמונות לא זמינה כרגע. אפשר להמשיך בלי.',
     next: 'לתשלום',
     done: 'חזרה להזמנה',
+    background: 'הרקע של התמונה',
+    withBg: 'עם רקע',
+    withoutBg: 'בלי רקע',
+    cutting: 'מפרידים מהרקע...',
+    cutFailed: 'לא הצלחנו להפריד את הרקע בתמונה הזו, אז היא נשארת עם רקע.',
+    bgHint: 'בלי רקע: רק הפנים, האנשים או הכלב, מצוירים על דף נקי.',
   },
 
   checkout: {
@@ -219,6 +225,7 @@ export const copy = {
     photosTitle: 'תמונות',
     photosLink: (n: number) => (n ? `להוסיף או להחליף תמונות (${n} מתוך 5)` : 'להוסיף תמונות למשחק'),
     photosHint: 'אפשר עד שהמשחק מתחיל. יופיעו על החידות ובמכתב בסוף.',
+    photoAlt: (n: number) => `תמונה ${n}`,
     photosAdd: 'להוסיף תמונות',
     photosChange: 'להוסיף או להחליף',
     photosCount: (n: number, max: number) => `${n}/${max}`,

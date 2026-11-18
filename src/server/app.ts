@@ -19,6 +19,7 @@ import { adminSettlementRoutes } from './routes/admin-settlement.ts'
 import { publicGameRoutes } from './routes/public-game.ts'
 import { publicOrderRoutes } from './routes/public-orders.ts'
 import { publicPhotoRoutes } from './routes/public-photos.ts'
+import { vendorRoutes } from './routes/vendor.ts'
 import type { Services } from './services/context.ts'
 import type { PaymentSweeper } from './services/payments.ts'
 
@@ -63,6 +64,7 @@ export async function buildApp(ctx: AppContext) {
   await publicGameRoutes(app, ctx)
   await publicOrderRoutes(app, ctx)
   await publicPhotoRoutes(app, ctx)
+  await vendorRoutes(app, root)
 
   // Illustrations shipped with the code (maps, icons).
   await app.register(fastifyStatic, {

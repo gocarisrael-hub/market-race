@@ -21,6 +21,7 @@ import type {
   OrderFlag,
   OrderStatus,
   Palette,
+  PhotoBackground,
   Question,
   RiddleTemplates,
   RouteStop,
@@ -302,8 +303,19 @@ export const uploads = pgTable('uploads', {
   kind: text().$type<'photo' | 'logo' | 'map'>().notNull(),
   // Paths relative to the uploads root.
   originalPath: text().notNull(),
+  // What is shown and played: for a photo, the illustration matching `background`.
   path: text().notNull(),
   createdAt: now(),
+  // Photos only. The buyer's choice: keep the background, or cut the subject out (Dugri's
+  // in-browser cutout, src/web/shared/cutout.ts) and illustrate it on paper.
+  background: text().$type<PhotoBackground>().notNull().default('keep'),
+  // The illustration with the background (null on rows made before the choice: then `path`).
+  bgPath: text(),
+  // The transparent PNG cut in the buyer's browser, and its illustration on paper.
+  cutoutPath: text(),
+  cutPath: text(),
+  // The buyer asked for a cutout and the browser could not make one (no subject found, old device).
+  cutFailed: boolean().notNull().default(false),
 })
 
 // Outbound messages (email, WhatsApp), logged for the admin and for retries.
