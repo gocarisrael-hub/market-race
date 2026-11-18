@@ -14,7 +14,7 @@ import {
 } from '../logic.ts'
 import { PayLayer, usePay } from '../pay.tsx'
 import { navigate } from '../router.ts'
-import { Back, Cta, Deco, Failed, Field, Link, Loading, StepTrail, TornPaper } from '../ui.tsx'
+import { Back, Cta, Deco, Failed, Field, Loading, Sketch, StepTrail, TitleIcon, TornPaper } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
 export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDraft: (d: Draft) => void }) {
@@ -81,11 +81,14 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
       <Back href={`/order/${token}/photos`} />
       <div style={{ marginTop: 18, marginLeft: 70 }}>
         <StepTrail step={4} total={STEPS} />
-        <h1 className="title rise">
-          {t1}
-          <br />
-          {t2}
-        </h1>
+        <div className="title-row">
+          <h1 className="title rise">
+            {t1}
+            <br />
+            {t2}
+          </h1>
+          <TitleIcon icon="ticket" />
+        </div>
         <p className="lead">{copy.checkout.intro}</p>
       </div>
 
@@ -160,7 +163,9 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
 
       {pay.state.s === 'error' && (
         <p className="hint" style={{ marginTop: 16 }}>
-          <Link href={`/m/${token}`}>{copy.pay.toManage}</Link>
+          <Sketch href={`/m/${token}`} icon="ticket" small>
+            {copy.pay.toManage}
+          </Sketch>
         </p>
       )}
 

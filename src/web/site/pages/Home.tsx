@@ -21,7 +21,20 @@ import {
 } from '../logic.ts'
 import { navigate } from '../router.ts'
 import { RouteTastings } from '../tastings.tsx'
-import { Cta, Daub, Deco, Link, LookPreview, Opt, QNote, Ring, StepTrail, Tick, Underline } from '../ui.tsx'
+import {
+  Cta,
+  Daub,
+  Deco,
+  LookPreview,
+  Opt,
+  QNote,
+  Ring,
+  Sketch,
+  StepTrail,
+  Tick,
+  TitleIcon,
+  Underline,
+} from '../ui.tsx'
 
 export const STEPS = 4
 
@@ -78,11 +91,14 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
 
       <div style={{ marginTop: 74, marginLeft: 50 }}>
         <StepTrail step={1} total={STEPS} />
-        <h1 className="title rise">
-          {t1}
-          <br />
-          {t2}
-        </h1>
+        <div className="title-row">
+          <h1 className="title rise">
+            {t1}
+            <br />
+            {t2}
+          </h1>
+          <TitleIcon icon="flagStart" />
+        </div>
         <p className="lead">{copy.home.intro}</p>
       </div>
 
@@ -91,7 +107,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
       ) : (
         <>
           <section className="section" aria-labelledby="l-occ">
-            <QNote id="l-occ" tilt={-1.5}>
+            <QNote id="l-occ" tilt={-1.5} icon="gift">
               {copy.home.occasion}
             </QNote>
             <div className="row" role="radiogroup" aria-labelledby="l-occ">
@@ -114,7 +130,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
           </section>
 
           <section className="section" aria-labelledby="l-theme">
-            <QNote id="l-theme" tilt={-1}>
+            <QNote id="l-theme" tilt={-1} icon="map">
               {copy.home.theme}
             </QNote>
             <div className="themes">
@@ -147,7 +163,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
 
           {theme && pals.length > 0 && (
             <section className="section" aria-labelledby="l-palette">
-              <QNote id="l-palette" tilt={1.4}>
+              <QNote id="l-palette" tilt={1.4} icon="palette">
                 {copy.home.palette}
               </QNote>
               <div className="daubs" role="radiogroup" aria-labelledby="l-palette">
@@ -183,7 +199,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
           )}
 
           <section className="section" aria-labelledby="l-people">
-            <QNote id="l-people" tilt={-1.2}>
+            <QNote id="l-people" tilt={-1.2} icon="people">
               {copy.home.people}
             </QNote>
             <div className="stepper">
@@ -211,7 +227,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
           </section>
 
           <section className="section" aria-labelledby="l-all">
-            <QNote id="l-all" tilt={1}>
+            <QNote id="l-all" tilt={1} icon="plate">
               {copy.home.allergens}
             </QNote>
             <div className="row" style={{ gap: '2px 10px' }}>
@@ -267,7 +283,9 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
           )}
 
           <p className="section">
-            <Link href="/companies">{copy.home.companies}</Link>
+            <Sketch href="/companies" icon="briefcase" small>
+              {copy.home.companies}
+            </Sketch>
           </p>
 
           <Cta onClick={next} error={error}>

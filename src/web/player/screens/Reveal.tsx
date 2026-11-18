@@ -1,6 +1,6 @@
 // Reveal: "נכון!", the answer, and the next stall marked on the map.
 import { useState } from 'react'
-import { Confetti, Doodles } from '../../shared/decor.tsx'
+import { Burst, Confetti, Doodles, Icon } from '../../shared/decor.tsx'
 import type { T } from '../copy.ts'
 import { BrushButton, PinMark, Rays, Underline } from '../draw.tsx'
 import { mapFrame, stopIcon, trailPath } from '../logic.ts'
@@ -83,11 +83,16 @@ export function Reveal({ view, t, act }: ScreenProps) {
         <Doodles
           decor={view.decor}
           spots={[
-            { top: 6, left: '4%', size: 46, rot: -12 },
+            { top: 58, left: '3%', size: 42, rot: -12 },
             { top: 0, right: '5%', size: 42, rot: 10 },
+            { top: 128, left: '12%', size: 28, rot: 8 },
+            { top: 84, right: '1%', size: 30, rot: -8 },
           ]}
         />
-        <h1 className="correct pop">{t('reveal.correct')}</h1>
+        <div className="correct-wrap">
+          <Burst decor={view.decor} />
+          <h1 className="correct pop">{t('reveal.correct')}</h1>
+        </div>
         <p className="answer-was rise">{t('reveal.answerWas', { answer: rv.answer })}</p>
         {rv.afterText && <p className="after-text rise">{rv.afterText}</p>}
       </div>
@@ -108,7 +113,10 @@ export function Reveal({ view, t, act }: ScreenProps) {
             {rv.closedNote && <span className="closed-why"> {rv.closedNote}</span>}
           </p>
         )}
-        <div className="muted-label">{cur.finale ? t('reveal.nextLast') : t('reveal.next')}</div>
+        <div className="muted-label with-icon">
+          <Icon name={cur.finale ? 'flagStart' : 'map'} size={28} tilt={-6} />
+          {cur.finale ? t('reveal.nextLast') : t('reveal.next')}
+        </div>
         <h2 className="stall-name">{rv.stall.name}</h2>
         <Underline />
         {rv.stall.locationHint && (
@@ -117,7 +125,10 @@ export function Reveal({ view, t, act }: ScreenProps) {
             <span>{rv.stall.locationHint}</span>
           </p>
         )}
-        <p className="tell">{t('reveal.tellThem', { name: view.honoree })}</p>
+        <p className="tell">
+          <Icon name="chat" size={28} tilt={6} />
+          <span>{t('reveal.tellThem', { name: view.honoree })}</span>
+        </p>
       </section>
 
       <div className="foot">

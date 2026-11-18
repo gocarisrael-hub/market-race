@@ -5,7 +5,7 @@ import { copy } from '../copy.ts'
 import { errorText, formatShekels } from '../logic.ts'
 import { PayLayer, usePay } from '../pay.tsx'
 import { navigate } from '../router.ts'
-import { Cta, Deco, Failed, Link, Loading, TornPaper } from '../ui.tsx'
+import { Brush, Cta, Deco, Failed, Loading, TornPaper } from '../ui.tsx'
 
 export function CompanyPay({ token }: { token: string }) {
   const [m, setM] = useState<Manage | null>(null)
@@ -35,9 +35,9 @@ export function CompanyPay({ token }: { token: string }) {
       {m.paid ? (
         <>
           <p className="status">{copy.companyPay.paid}</p>
-          <Link href={`/m/${token}`} className="big-link">
-            {copy.pay.toManage}
-          </Link>
+          <p>
+            <Brush href={`/m/${token}`}>{copy.pay.toManage}</Brush>
+          </p>
         </>
       ) : !payable ? (
         <p className="status">{copy.companyPay.inactive}</p>

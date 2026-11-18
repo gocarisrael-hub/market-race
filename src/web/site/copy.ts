@@ -219,6 +219,12 @@ export const copy = {
     photosTitle: 'תמונות',
     photosLink: (n: number) => (n ? `להוסיף או להחליף תמונות (${n} מתוך 5)` : 'להוסיף תמונות למשחק'),
     photosHint: 'אפשר עד שהמשחק מתחיל. יופיעו על החידות ובמכתב בסוף.',
+    photosAdd: 'להוסיף תמונות',
+    photosChange: 'להוסיף או להחליף',
+    photosCount: (n: number, max: number) => `${n}/${max}`,
+    answersSection: 'השם והתשובות',
+    howToTitle: 'איך משחקים',
+    editIntro: 'משהו השתנה?',
   },
 
   companyPay: {

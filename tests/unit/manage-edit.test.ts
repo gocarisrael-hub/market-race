@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { orders, palettes } from '../../src/server/db/schema.ts'
 import type { GameSnapshot } from '../../src/server/domain/types.ts'
 import { approveOrder } from '../../src/server/services/orders.ts'
-import { seedDemo } from '../../src/server/services/seed-demo.ts'
+import { DEMO_DECOR, seedDemo } from '../../src/server/services/seed-demo.ts'
 import { setSetting } from '../../src/server/services/settings.ts'
 import { makeTestApp } from '../helpers/app.ts'
 
@@ -71,6 +71,8 @@ describe('buyer edits through the manage link', () => {
       letterNotes: [{ text: 'מזל טוב', signature: 'נועה' }],
     })
     expect(m.questions.length).toBeGreaterThan(3)
+    // The occasion's doodle set, for the page's margins.
+    expect(m.decor).toBe(DEMO_DECOR.bachelorette)
 
     const res = await edit(o.manageToken, {
       honoreeName: 'מיכלי',

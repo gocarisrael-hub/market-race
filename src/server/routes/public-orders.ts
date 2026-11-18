@@ -400,6 +400,10 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const needsAnswers = !order.answersSubmittedAt && order.kind === 'private'
     // The buyer can change everything personal until the game starts (see isEditable).
     const editable = isEditable(order, state)
+    const [occ] = await db
+      .select({ decor: occasions.decor })
+      .from(occasions)
+      .where(eq(occasions.key, order.occasionKey))
     return {
       orderNo: order.orderNo,
       kind: order.kind,
@@ -408,6 +412,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       honoree: order.companyName || order.honoreeName,
       form: order.form,
       occasionKey: order.occasionKey,
+      // The occasion's doodle set, for the page's decorations.
+      decor: occ?.decor ?? 'generic',
       people: order.people,
       amountAgorot: order.priceAgorot,
       validUntil: order.validUntil,
