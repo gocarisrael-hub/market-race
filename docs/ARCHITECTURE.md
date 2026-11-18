@@ -48,3 +48,12 @@ tests/{unit,e2e,helpers}
 | `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` | Creates the first owner when there are none |
 | `TRANZILA_*` | Payment, see `docs/PAYMENT.md` (Phase 3) |
 | `SMTP_*` / `WHATSAPP_*` | Delivery (Phase 3) |
+
+## Photos: with or without background
+
+Each order photo carries the buyer's choice (`uploads.background`: `keep` or `remove`).
+
+- **Cutout = Dugri's algorithm, run in the buyer's browser.** `src/web/shared/cutout.ts` is a port of Dugri's `site/js/pawn-cutout.js`: MediaPipe Tasks Vision `ImageSegmenter` with the `selfie_multiclass_256x256` model (category mask; every class but background is the subject; largest connected blob only; under 2% coverage is a miss; the mask is drawn scaled up over the photo with bilinear smoothing, which is the feathered edge; 15s timeout; any failure resolves to null). The pure part is `src/web/shared/cutout-mask.ts`, shared with the unit tests.
+- **How it ships.** The runtime and model (Apache-2.0) are copied from Dugri into `vendor/mediapipe/` (see its README) and served from our origin by `src/server/routes/vendor.ts` (the `.wasm` is stored brotli-compressed and sent with `Content-Encoding: br`). Nothing is imported from Dugri, no CDN, no server-side model, no sidecar: the same code and model in the same environment (a browser) gives the same result, and the Railway service stays one Node process. The ~18MB download happens only when a buyer first picks "without background".
+- **Server.** `PUT /api/orders/:token/photos/:id/background` takes the choice and, the first time, the cutout PNG. The server checks it (`checkCutout`: PNG with alpha, same shape as the original, a subject in it), stores it (`cutoutPath`) and its illustration on paper (`illustrateCutout`, `cutPath`), and points `path` (what the game plays) at the illustration matching the choice (`bgPath` keeps the with-background one). Switching back and forth needs no new cut. A cut the browser could not make is recorded as `cutFailed` and the photo keeps its background.
+- **Style prototypes.** `src/server/photos/styles.ts` holds numbered style treatments, none live. `node scripts/photo-styles-showcase.ts <dir> <out.html> name...` renders them on sample photos (each `<name>.jpg` plus `<name>-cut.png`) into one HTML page.

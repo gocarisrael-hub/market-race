@@ -90,7 +90,18 @@ export type Manage = {
   answers?: Record<string, string>
   questions?: Question[]
 }
-export type Photo = { id: string | number; url: string; previewUrl: string }
+export type PhotoBackground = 'keep' | 'remove'
+export type Photo = {
+  id: string | number
+  url: string
+  previewUrl: string
+  /** Keep the background, or the subject cut out on paper. */
+  background: PhotoBackground
+  /** A cutout is stored: switching to "without background" needs no new cut. */
+  hasCutout: boolean
+  /** The buyer asked for a cutout and the browser could not make one. */
+  cutFailed: boolean
+}
 
 /** An API error with the server's code (`bad_people`, `card_disabled`, ...) or `network`. */
 export class ApiError extends Error {
@@ -176,6 +187,24 @@ export const uploadPhoto = (token: string, file: File) => {
   return api<{ photo: Photo }>(`/api/orders/${encodeURIComponent(token)}/photos`, {
     method: 'POST',
     body,
+  }).then((r) => r.photo)
+}
+/** Sets a photo's background; a new cutout (transparent PNG from the browser) travels along. */
+export const setPhotoBackground = (
+  token: string,
+  id: Photo['id'],
+  choice: { background: PhotoBackground; cutout?: Blob; failed?: boolean },
+) => {
+  const url = `/api/orders/${encodeURIComponent(token)}/photos/${encodeURIComponent(String(id))}/background`
+  if (choice.cutout) {
+    const body = new FormData()
+    body.append('background', choice.background)
+    body.append('cutout', choice.cutout, 'cutout.png')
+    return api<{ photo: Photo }>(url, { method: 'PUT', body }).then((r) => r.photo)
+  }
+  return api<{ photo: Photo }>(url, {
+    method: 'PUT',
+    json: { background: choice.background, ...(choice.failed ? { failed: true } : {}) },
   }).then((r) => r.photo)
 }
 export const deletePhoto = (token: string, id: Photo['id']) =>

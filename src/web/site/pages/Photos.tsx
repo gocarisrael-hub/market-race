@@ -5,6 +5,7 @@ import { Doodles } from '../../shared/decor.tsx'
 import { ApiError, deletePhoto, listPhotos, type Photo, type Shop, uploadPhoto } from '../api.ts'
 import { copy } from '../copy.ts'
 import { type Draft, decorFor, errorText, MAX_PHOTOS } from '../logic.ts'
+import { BackgroundChoice } from '../photo-background.tsx'
 import { Arrow, Back, Cta, Deco, Polaroid, Ring, Spinner, StepTrail } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
 
@@ -80,6 +81,7 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
           {copy.photos.title(draft.manageToken === token ? draft.form : null)}
         </h1>
         <p className="lead">{copy.photos.intro}</p>
+        <p className="hint">{copy.photos.bgHint}</p>
         <p className="photos-where">
           {copy.photos.where}
           <span className="hint"> {copy.photos.order}</span>
@@ -92,6 +94,12 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
             <img className="orig" src={p.local ?? p.url} alt={copy.photos.original} />
             <Arrow />
             <Polaroid src={p.previewUrl} alt={copy.photos.drawn} tilt={i % 2 ? 3 : -3} />
+            <BackgroundChoice
+              token={token}
+              photo={p}
+              source={p.local}
+              onChange={(next) => setItems((xs) => xs.map((x) => (x.id === next.id ? { ...x, ...next } : x)))}
+            />
             <button type="button" className="link-btn remove" onClick={() => remove(p)}>
               {copy.photos.remove}
             </button>

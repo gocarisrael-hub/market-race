@@ -34,6 +34,10 @@ export const ORDER_STATUSES = [
 ] as const
 export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
+/** Per photo: keep its background, or cut the subject out and set it on paper. */
+export const PHOTO_BACKGROUNDS = ['keep', 'remove'] as const
+export type PhotoBackground = (typeof PHOTO_BACKGROUNDS)[number]
+
 export type MarketHours = Partial<
   Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', { open: string; close: string }>
 >

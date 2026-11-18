@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, getManage, type Manage as M } from '../api.ts'
 import { copy } from '../copy.ts'
 import { errorText, whatsappShare } from '../logic.ts'
+import { ManagePhotos } from '../photo-background.tsx'
 import { Deco, Failed, Link, Loading, Ring } from '../ui.tsx'
 import { ManageEdit } from './ManageEdit.tsx'
 
@@ -167,6 +168,7 @@ export function Manage({ token, search }: { token: string; search: string }) {
       {!showForm && m.photos?.editable && (
         <section className="section">
           <h2 className="sub">{copy.manage.photosTitle}</h2>
+          {m.photos.count > 0 && <ManagePhotos token={token} />}
           <p>
             <Link href={`/order/${token}/photos`}>{copy.manage.photosLink(m.photos.count)}</Link>
           </p>
