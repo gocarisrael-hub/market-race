@@ -1,6 +1,6 @@
 // Loads the game, keeps it in sync across phones, and sends actions.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchGame, type Loaded, type PlayAction, type PlayerView, sendAction } from './api.ts'
+import { fetchGame, type Loaded, type PlayAction, type PlayerView, type Support, sendAction } from './api.ts'
 import { type Poller, pickView, startPoller } from './sync.ts'
 
 export type GameState =
@@ -13,6 +13,7 @@ export type GameState =
 export function useGame(token: string) {
   const [state, setState] = useState<GameState>({ phase: 'loading' })
   const [texts, setTexts] = useState<Record<string, string>>({})
+  const [support, setSupport] = useState<Support>({ whatsapp: '', message: '' })
   const [offline, setOffline] = useState(false)
   const viewRef = useRef<PlayerView | null>(null)
   const pollerRef = useRef<Poller | null>(null)
@@ -27,6 +28,7 @@ export function useGame(token: string) {
     setOffline(false)
     if (r.kind === 'view') {
       if (r.texts) setTexts(r.texts)
+      if (r.support) setSupport(r.support)
       const next = pickView(viewRef.current, r.view)
       if (next !== viewRef.current) {
         viewRef.current = next
@@ -72,5 +74,5 @@ export function useGame(token: string) {
     void load()
   }, [load])
 
-  return { state, texts, offline, act, retry }
+  return { state, texts, support, offline, act, retry }
 }

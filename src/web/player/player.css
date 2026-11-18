@@ -1116,6 +1116,123 @@ h2 {
   clip-path: polygon(2% 10%, 30% 0, 62% 6%, 98% 0, 100% 52%, 97% 100%, 60% 94%, 28% 100%, 0 92%, 3% 48%);
 }
 
+/* ---------- Help (corner scrawl + torn-paper sheet) ---------- */
+
+.help-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: calc(env(safe-area-inset-left) + 14px);
+  z-index: 25;
+  padding: 2px 8px 4px;
+  border: 0;
+  background: none;
+  color: var(--on-bg);
+  font-family: var(--hand);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transform: rotate(-4deg);
+}
+.help-btn span {
+  position: relative;
+}
+.help-btn .hand-circle {
+  inset: -6px -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 12px);
+}
+.help-btn:focus-visible {
+  outline: none;
+}
+.help-btn:focus-visible .hand-circle path {
+  stroke-width: 4.5;
+}
+
+.help-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.help-veil {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(43, 36, 32, 0.32);
+  cursor: pointer;
+}
+.help-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding: 0 calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 14px)
+    calc(env(safe-area-inset-left) + 12px);
+}
+.help-sheet .paper-body {
+  padding: 22px 22px 20px;
+  text-align: center;
+}
+.help-title {
+  margin: 0 0 10px;
+  font-family: var(--hand);
+  font-size: 38px;
+  line-height: 1.05;
+}
+.help-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.help-list li + li {
+  margin-top: 6px;
+}
+.help-item {
+  display: block;
+  width: 100%;
+  padding: 8px 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--hand);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
+}
+.help-item .underline {
+  width: min(200px, 60%);
+}
+.help-confirm p {
+  margin: 0 0 14px;
+  font-size: 17px;
+  line-height: 1.45;
+}
+.help-confirm .brush {
+  text-decoration: none;
+}
+.help-plain {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.help-confirm .help-failed {
+  margin: 10px 0 0;
+  color: var(--accent);
+  font-size: 15px;
+}
+
 /* ---------- Short screens ---------- */
 
 @media (max-height: 700px) {
