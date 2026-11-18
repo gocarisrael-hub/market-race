@@ -81,6 +81,10 @@ export const tastings = pgTable('tastings', {
     .notNull()
     .references(() => stalls.id),
   name: text().notNull(),
+  // Shown to buyers before purchase, without the stall's name (stalls are the riddles' answers).
+  teaser: text().notNull().default(''),
+  // File name (no extension) of an illustration in assets/icons, or null.
+  teaserIcon: text(),
   allergens: textArray(),
   diets: textArray(),
   feeAgorot: integer().notNull().default(0),

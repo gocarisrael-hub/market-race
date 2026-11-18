@@ -337,6 +337,91 @@ h2.sub {
   height: 14px;
 }
 
+/* What you taste on the way: illustrated stops on a hand-drawn dashed path, no boxes. */
+.stops {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  position: relative;
+}
+.stops::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  right: 23px;
+  border-right: 2px dashed var(--dim);
+  opacity: 0.55;
+}
+.stop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+  position: relative;
+}
+.stop .dot {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--accent);
+  background: var(--bg);
+}
+.stop .dot img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  transform: rotate(-4deg);
+}
+.stop:nth-child(even) .dot img {
+  transform: rotate(5deg);
+}
+.stop .what {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.stop .no {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--dim);
+}
+.stop .fin {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 26px;
+}
+.stop .teaser {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.stop .note {
+  font-size: 13px;
+  color: var(--muted);
+}
+.stop .warn {
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.stop.blocked .teaser {
+  color: var(--dim);
+  text-decoration: line-through;
+  text-decoration-color: var(--accent);
+}
+.stop.blocked .dot img {
+  opacity: 0.45;
+}
+
 /* Brush-stroke button, sticky at the bottom of the screen. */
 .cta-wrap {
   position: sticky;

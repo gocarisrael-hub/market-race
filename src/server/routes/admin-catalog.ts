@@ -29,6 +29,7 @@ import { matchAnswer } from '../domain/matcher.ts'
 import { extractSlots, fallbackFor, fillTemplate } from '../domain/template.ts'
 import { ALLERGENS, DIETS, FORMS, type Question, type RouteStop } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
+import { iconNames } from '../lib/icons.ts'
 import { randomToken } from '../lib/tokens.ts'
 
 const builtinMapsDir = fileURLToPath(new URL('../../../assets/maps', import.meta.url))
@@ -80,6 +81,15 @@ const stallCreate = stallBase.partial().extend({ marketId: id, name: str.min(1) 
 
 const tastingBase = z.object({
   name: str.min(1),
+  // Public, shown before purchase. The admin form warns not to name the stall.
+  teaser: str.max(120),
+  teaserIcon: z.preprocess(
+    (v) => (v === '' ? null : v),
+    z
+      .string()
+      .refine((v) => iconNames().includes(v), 'unknown icon')
+      .nullable(),
+  ),
   allergens: z.array(z.enum(ALLERGENS)),
   diets: z.array(z.enum(DIETS)),
   feeAgorot: z.number().int().min(0),
@@ -403,6 +413,7 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
       })
 
       // ----- tastings -----
+      r.get('/icons', async () => ({ items: iconNames() }))
       r.get('/tastings', async (req) => {
         const stallId = Number((req.query as { stallId?: string }).stallId)
         const items = await db

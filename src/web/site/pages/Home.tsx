@@ -15,6 +15,7 @@ import {
   toggle,
 } from '../logic.ts'
 import { navigate } from '../router.ts'
+import { RouteTastings } from '../tastings.tsx'
 import { Cta, Deco, Link, Opt, Ring, Underline } from '../ui.tsx'
 
 export const STEPS = 4
@@ -193,6 +194,13 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
             </div>
             <p className="hint">{copy.home.allergensHint}</p>
           </section>
+
+          <RouteTastings
+            shop={shop}
+            themeId={theme?.id ?? themes[0]?.id ?? null}
+            allergens={d.allergens}
+            diets={d.diets}
+          />
 
           {total !== null && per && (
             <section className="section price" aria-live="polite" data-testid="price">

@@ -33,6 +33,8 @@ export interface Tasting {
   id: number
   stallId: number
   name: string
+  teaser: string
+  teaserIcon: string | null
   allergens: string[]
   diets: string[]
   feeAgorot: number

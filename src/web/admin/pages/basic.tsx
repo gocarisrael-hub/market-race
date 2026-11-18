@@ -271,6 +271,7 @@ function useStallOptions() {
 
 function TastingEditor({ value, set, isNew }: EditorProps<Tasting>) {
   const st = useStallOptions()
+  const icons = useList<string>('/catalog/icons').items ?? []
   return (
     <>
       <Select
@@ -281,6 +282,20 @@ function TastingEditor({ value, set, isNew }: EditorProps<Tasting>) {
         onChange={(stallId) => set({ stallId })}
       />
       <Text label="שם" value={value.name} onChange={(name) => set({ name })} required />
+      <Text label="תיאור לקונים" value={value.teaser} onChange={(teaser) => set({ teaser })} />
+      <p className="muted">מוצג לקונים לפני הרכישה. לא לכתוב את שם הדוכן או משהו שמסגיר חידה.</p>
+      <div className="row">
+        <Select
+          label="איור לתיאור"
+          value={value.teaserIcon ?? ''}
+          placeholder="בלי איור"
+          options={icons.map((i) => ({ value: i, label: i }))}
+          onChange={(v) => set({ teaserIcon: v || null })}
+        />
+        {value.teaserIcon && (
+          <img src={`/static/icons/${value.teaserIcon}.png`} alt="" width={48} height={48} />
+        )}
+      </div>
       <fieldset>
         <legend>אלרגנים</legend>
         {ALLERGENS.map((a) => (
@@ -324,6 +339,8 @@ export function TastingsPage() {
       blank={() => ({
         stallId: st.stalls[0]?.id,
         name: '',
+        teaser: '',
+        teaserIcon: null,
         allergens: [],
         diets: [],
         feeAgorot: 0,
@@ -331,6 +348,7 @@ export function TastingsPage() {
       })}
       columns={[
         { label: 'שם', render: (t) => t.name },
+        { label: 'תיאור לקונים', render: (t) => t.teaser || <span className="muted">חסר</span> },
         { label: 'דוכן', render: (t) => st.name(t.stallId) },
         { label: 'תשלום', render: (t) => shekels(t.feeAgorot) },
         { label: 'מצב', render: (t) => activeLabel(t.active) },

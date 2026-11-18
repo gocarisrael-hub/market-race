@@ -113,6 +113,38 @@ test('buyer orders a game up to the pay step', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'להשלמת התשלום' })).toBeVisible()
 })
 
+test('step 1 shows what is tasted on the way and follows the allergens', async ({ page }) => {
+  await stepOne(page)
+  const list = page.getByTestId('tastings')
+  await expect(list.getByText('מה טועמים בדרך')).toBeVisible()
+  const stops = list.locator('li')
+  await expect(stops).toHaveCount(5)
+  await expect(stops.nth(1)).toContainText('מאפה תימני מסורתי מהתנור')
+  await expect(stops.last()).toContainText('הגמר')
+  await expect(stops.last()).toContainText('משהו קר מהחבית לסיום')
+  // Never a stall's name.
+  await expect(list).not.toContainText('המאפייה התימנית')
+  await expect(list).not.toContainText('בירה בסוף השוק')
+  await expect(list.getByText('מוחלף בטעימה מתאימה')).toHaveCount(0)
+
+  await page.getByRole('checkbox', { name: 'גלוטן', exact: true }).click()
+  await expect(stops.nth(1)).toHaveAttribute('data-status', 'blocked')
+  await expect(stops.nth(1)).toContainText('אין כרגע טעימה מתאימה בתחנה הזו; ניצור קשר')
+  await expect(stops.nth(3)).toHaveAttribute('data-status', 'swapped')
+  await expect(stops.last()).toContainText('משהו קר ומתוק לסיום')
+  await expect(stops.last()).toContainText('מוחלף בטעימה מתאימה')
+  await expect(list.getByRole('alert')).toBeVisible()
+  await list.scrollIntoViewIfNeeded()
+  await shot(page, '1-home-tastings')
+
+  // Still orderable; the blocked stop goes to the owner's review after payment.
+  await page.getByRole('checkbox', { name: 'גלוטן', exact: true }).click()
+  await expect(stops.nth(1)).toHaveAttribute('data-status', 'as_listed')
+  await expect(list.getByRole('alert')).toHaveCount(0)
+  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
+  await expect(page).toHaveURL(/\/order\/questions$/)
+})
+
 test('answers later, then from the manage page', async ({ page }) => {
   await stepOne(page)
   await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()

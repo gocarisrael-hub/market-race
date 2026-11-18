@@ -9,12 +9,22 @@ export type Theme = {
   map: string | null
   palette: Record<string, string | boolean>
 }
+/** What a stop serves, as buyers see it before purchase: no stall or tasting names. */
+export type RouteTasting = {
+  teaser: string
+  icon: string | null
+  allergens: string[]
+  diets: string[]
+  finale: boolean
+}
+export type PreviewStatus = 'as_listed' | 'swapped' | 'blocked'
+export type PreviewStop = { teaser: string; icon: string | null; finale: boolean; status: PreviewStatus }
 export type Shop = {
   brand: string
   occasions: Occasion[]
   markets: { id: number; name: string }[]
   themes: Theme[]
-  routes: { id: number; marketId: number; name: string; stops: number }[]
+  routes: { id: number; marketId: number; name: string; stops: number; tastings: RouteTasting[] }[]
   prices: Record<string, { base: number; perPerson: number }>
   minPeople: number
   maxPeople: number
@@ -98,6 +108,17 @@ export const getQuestions = (occasion: string, form: string) =>
   api<{ questions: Question[] }>(
     `/api/shop/questions?occasion=${encodeURIComponent(occasion)}&form=${encodeURIComponent(form)}`,
   ).then((r) => r.questions)
+
+export const getRoutePreview = (
+  themeId: number,
+  allergens: string[],
+  diets: string[],
+  signal?: AbortSignal,
+) =>
+  api<{ stops: PreviewStop[] }>(
+    `/api/shop/route-preview?themeId=${themeId}&allergens=${encodeURIComponent(allergens.join(','))}&diets=${encodeURIComponent(diets.join(','))}`,
+    { signal },
+  ).then((r) => r.stops)
 
 type Created = { orderNo: string; manageToken: string; amountAgorot: number }
 export const createOrder = (p: OrderPayload) => api<Created>('/api/orders', { method: 'POST', json: p })

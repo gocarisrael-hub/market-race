@@ -80,6 +80,65 @@ export function isSafe(t: CatalogTasting, allergens: string[], diets: string[]):
   return diets.every((d) => t.diets.includes(d))
 }
 
+/**
+ * The tasting a stop serves at a stall: the preferred one if safe, else the first other safe
+ * tasting at the stall (lowest id). Undefined when the stall has nothing safe.
+ */
+export function pickSafeTasting<T extends CatalogTasting>(
+  tastings: T[],
+  stallId: number,
+  preferredId: number | null | undefined,
+  allergens: string[],
+  diets: string[],
+): T | undefined {
+  const preferred = preferredId != null ? tastings.find((t) => t.id === preferredId) : undefined
+  if (preferred && preferred.stallId === stallId && isSafe(preferred, allergens, diets)) return preferred
+  return tastings
+    .filter((t) => t.stallId === stallId && isSafe(t, allergens, diets))
+    .sort((a, b) => a.id - b.id)[0]
+}
+
+export type PreviewStatus = 'as_listed' | 'swapped' | 'blocked'
+export interface PreviewStop<T> {
+  index: number
+  finale: boolean
+  status: PreviewStatus
+  /** What will be served: the listed tasting, its safe replacement, or (blocked) the listed one. */
+  tasting: T | undefined
+}
+
+/**
+ * Before purchase: what each stop of a route serves for a set of allergens and diets. Same safety
+ * order as buildGame (listed tasting → other safe tasting at the stall → backup stall). Riddles are
+ * not considered: the form is not known yet and a missing riddle is a catalog error, not the buyer's.
+ */
+export function previewRoute<T extends CatalogTasting>(input: {
+  stops: RouteStop[]
+  stalls: CatalogStall[]
+  tastings: T[]
+  allergens: string[]
+  diets: string[]
+}): PreviewStop<T>[] {
+  const { allergens, diets } = input
+  const stallById = new Map(input.stalls.map((s) => [s.id, s]))
+  const usable = (id: number | null | undefined) => (id != null ? stallById.get(id)?.active : false)
+  const listedById = new Map(input.tastings.map((t) => [t.id, t]))
+  return input.stops.map((stop, index) => {
+    const finale = index === input.stops.length - 1
+    const listed = listedById.get(stop.tastingId)
+    const main = usable(stop.stallId)
+      ? pickSafeTasting(input.tastings, stop.stallId, stop.tastingId, allergens, diets)
+      : undefined
+    if (main)
+      return { index, finale, status: main.id === stop.tastingId ? 'as_listed' : 'swapped', tasting: main }
+    const backup = usable(stop.backupStallId)
+      ? pickSafeTasting(input.tastings, stop.backupStallId!, stop.backupTastingId, allergens, diets)
+      : undefined
+    if (backup) return { index, finale, status: 'swapped', tasting: backup }
+    return { index, finale, status: 'blocked', tasting: listed }
+  })
+}
+
 export function buildGame(input: BuildInput): BuildResult {
   const { order } = input
   const stallById = new Map(input.stalls.map((s) => [s.id, s]))
@@ -103,13 +162,8 @@ export function buildGame(input: BuildInput): BuildResult {
     diets: [...t.diets],
     feeAgorot: t.feeAgorot,
   })
-  const safe = (t: CatalogTasting | undefined) => !!t && isSafe(t, order.allergens, order.diets)
-  // Preferred tasting if safe, else the first other safe tasting at the stall.
-  const pickTasting = (stallId: number, preferredId?: number | null) => {
-    const preferred = preferredId != null ? tastingById.get(preferredId) : undefined
-    if (preferred && preferred.stallId === stallId && safe(preferred)) return preferred
-    return input.tastings.filter((t) => t.stallId === stallId && safe(t)).sort((a, b) => a.id - b.id)[0]
-  }
+  const pickTasting = (stallId: number, preferredId?: number | null) =>
+    pickSafeTasting(input.tastings, stallId, preferredId, order.allergens, order.diets)
   const usableStall = (id: number | null | undefined) => {
     const s = id != null ? stallById.get(id) : undefined
     return s?.active ? s : undefined
