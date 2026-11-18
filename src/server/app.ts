@@ -42,7 +42,8 @@ export async function buildApp(ctx: AppContext) {
 
   await app.register(cookie)
   await app.register(formbody)
-  await app.register(rateLimit, { global: false })
+  // Every e2e test logs in from localhost; limits would trip the suite, never a real client.
+  await app.register(rateLimit, { global: false, allowList: () => ctx.config.env === 'test' })
   await app.register(multipart, { limits: { fileSize: 15 * 1024 * 1024, files: 5 } })
   await mkdir(ctx.config.uploadDir, { recursive: true })
 
