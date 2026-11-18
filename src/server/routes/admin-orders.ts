@@ -211,6 +211,8 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           companyName: b.companyName ?? null,
           notes: 'test game',
         })
+        // The owner entered the answers here, so they count as submitted.
+        await db.update(orders).set({ answersSubmittedAt: new Date() }).where(eq(orders.id, order.id))
         const built = await buildOrderGame(db, order.id)
         return { order: built, links: orderLinks(base, built) }
       } catch (err) {
