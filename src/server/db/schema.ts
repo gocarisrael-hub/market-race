@@ -314,7 +314,7 @@ export const uploads = pgTable('uploads', {
   path: text().notNull(),
   createdAt: now(),
   // Photos only. The buyer's choice: keep the background, or cut the subject out (Dugri's
-  // in-browser cutout, src/web/shared/cutout.ts) and illustrate it on paper.
+  // in-browser cutout, src/web/shared/cutout.ts) and draw it on paper (photos/doodle-frame.ts).
   background: text().$type<PhotoBackground>().notNull().default('keep'),
   // The illustration with the background (null on rows made before the choice: then `path`).
   bgPath: text(),

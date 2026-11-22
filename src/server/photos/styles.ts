@@ -1,5 +1,5 @@
-// PROTOTYPE: photo style treatments for the owner to choose from (none is live yet; the live
-// converter is still `illustrate` / `illustrateCutout`). Each style renders a 4:5 JPEG from the
+// PROTOTYPE: photo style treatments for the owner to choose from. The owner chose 14 (doodle
+// frame); its reworked version, which keeps the photo itself, is live in doodle-frame.ts. Each style renders a 4:5 JPEG from the
 // buyer's photo, with its background ("bg") and/or from the browser cutout ("cut").
 // Everything is plain sharp plus raw pixel work and SVG overlays: no model, no network.
 // Showcase: scripts/photo-styles-showcase.ts renders every style on sample photos.
