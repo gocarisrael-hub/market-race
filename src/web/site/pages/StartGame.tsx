@@ -1,9 +1,10 @@
 // The captain's part of the manage page. The buyer starts the game at the market (choosing how
 // many players arrived, after a clear confirm), then shares the players' link on WhatsApp and
 // goes straight into the game. Nobody else can start it: the game link only shows a waiting screen.
+// The captain can pause the game from their own phone in the game; it resumes here (ResumeGame).
 import { useState } from 'react'
 import { Doodles, Icon, SketchShape } from '../../shared/decor.tsx'
-import { ApiError, type Manage as M, startGame } from '../api.ts'
+import { ApiError, type Manage as M, resumeGame, startGame } from '../api.ts'
 import { copy } from '../copy.ts'
 import { clampPlayers, errorText, whatsappShare } from '../logic.ts'
 import { Brush, Cta, QNote, SectionHead, Sketch, TornPaper } from '../ui.tsx'
@@ -146,9 +147,10 @@ export function ShareGame({ m, decor }: { m: M; decor?: string | null }) {
             </Brush>
           </div>
         )}
-        {/* The captain's own phone goes on into the game, in this tab (another bundle). */}
+        {/* The captain's own phone goes on into the game, in this tab (another bundle), carrying
+            the captain token that lets this phone pause the game. */}
         <div className="share-continue">
-          <a className="sketch" href={m.gameLink}>
+          <a className="sketch" href={m.captainLink ?? m.gameLink}>
             <SketchShape />
             <Icon name="map" />
             <span>{c.continue}</span>
@@ -163,6 +165,69 @@ export function ShareGame({ m, decor }: { m: M; decor?: string | null }) {
               <img className="qr" src={m.qr} alt={copy.manage.qrAlt} />
             </span>
           </div>
+        )}
+      </TornPaper>
+    </section>
+  )
+}
+
+/**
+ * Paused by the captain ("עוצרים להיום" in the game): where they stopped, and a brush-stroke
+ * "ממשיכים" that resumes the game for everyone at the same stop and takes this phone back in.
+ */
+export function ResumeGame(props: { token: string; m: M; decor?: string | null; onResumed: () => void }) {
+  const { m } = props
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const c = copy.manage.paused
+  if (!m.paused) return null
+
+  const resume = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const r = await resumeGame(props.token)
+      window.location.assign(r.captainLink)
+    } catch (e) {
+      setError(errorText(e instanceof ApiError ? e.code : 'generic'))
+      setBusy(false)
+      props.onResumed()
+    }
+  }
+
+  return (
+    <section className="section resume-game" aria-labelledby="resume-title">
+      <TornPaper tilt="r">
+        <Doodles
+          decor={props.decor}
+          className="deco share-doodles"
+          spots={[
+            { top: -16, left: 8, size: 38, rot: -10 },
+            { bottom: 16, left: 4, size: 30, rot: 12 },
+          ]}
+        />
+        <SectionHead icon="clock" id="resume-title">
+          {c.title}
+        </SectionHead>
+        <p className="resume-where" data-testid="paused-where">
+          <Icon name="pin" size={34} tilt={-6} />
+          <span>{c.where(m.paused.stop, m.paused.total)}</span>
+        </p>
+        {m.players != null && (
+          <p className="share-players">
+            <Icon name="people" size={34} tilt={6} />
+            <span>{c.players(m.players)}</span>
+          </p>
+        )}
+        {m.resume.can ? (
+          <>
+            <p className="hint">{c.intro}</p>
+            <Cta onClick={resume} busy={busy} error={error}>
+              {c.button}
+            </Cta>
+          </>
+        ) : (
+          <p className="status">{m.resume.reason === 'expired' ? c.expired : error}</p>
         )}
       </TornPaper>
     </section>

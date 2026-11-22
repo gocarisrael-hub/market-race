@@ -201,7 +201,11 @@ test('manage page: a ready game offers the captain’s start; the link, QR and W
   await shot(page, '6-manage-ready')
   await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
   await page.getByRole('button', { name: 'כן, מתחילים!' }).click()
-  await expect(page.getByRole('link', { name: 'ממשיכים למשחק' })).toHaveAttribute('href', links.game)
+  // The captain's way in: the game link plus the captain token (which lets that phone pause).
+  await expect(page.getByRole('link', { name: 'ממשיכים למשחק' })).toHaveAttribute(
+    'href',
+    new RegExp(`^${links.game}#c=[A-Za-z0-9_-]{32}$`),
+  )
   await expect(page.getByRole('img', { name: 'קוד QR לקישור המשחק' })).toBeVisible()
   const wa = await page.getByRole('link', { name: 'שולחים בוואטסאפ' }).getAttribute('href')
   expect(wa).toContain('https://wa.me/?text=')

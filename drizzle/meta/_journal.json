@@ -64,6 +64,13 @@
       "when": 1795013037421,
       "tag": "0008_captain_players_hint_questions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795343074305,
+      "tag": "0009_game_pause",
+      "breakpoints": true
     }
   ]
 }

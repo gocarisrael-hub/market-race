@@ -336,6 +336,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           step: gameStates.step,
           lastActivityAt: gameStates.lastActivityAt,
           startedAt: gameStates.startedAt,
+          pausedAt: gameStates.pausedAt,
           backupStops: gameStates.backupStops,
           game: orders.game,
         })

@@ -1,7 +1,9 @@
 // Customer and owner messages. Every send is logged in `messages`.
+import { and, desc, eq, gt, isNotNull, sql } from 'drizzle-orm'
 import QRCode from 'qrcode'
 import type { DB } from '../db/index.ts'
-import { messages } from '../db/schema.ts'
+import { messages, orders } from '../db/schema.ts'
+import { israelDate } from '../domain/dates.ts'
 import type { Services } from './context.ts'
 import type { Order } from './orders.ts'
 import { getSetting, type MessageKey, messageTemplate } from './settings.ts'
@@ -63,7 +65,10 @@ export async function sendToBuyer(
   }
   const subject = interpolate(tpl.subject, vars)
   const text = interpolate(tpl.text, vars)
-  const qr = key === 'game_ready' ? await QRCode.toDataURL(l.gameLink, { width: 400, margin: 2 }) : undefined
+  const qr =
+    key === 'game_ready' || key === 'game_started'
+      ? await QRCode.toDataURL(l.gameLink, { width: 400, margin: 2 })
+      : undefined
 
   if (order.buyerEmail) {
     const ok = svc.mailer.isConfigured()
@@ -104,4 +109,70 @@ export async function alertOwner(svc: Services, subject: string, lines: string[]
     return true
   }
   return false
+}
+
+/** Orders whose manage link a lost-link request sends: paid, not cancelled, still valid. */
+const REMINDABLE = ['awaiting_answers', 'review', 'ready', 'active', 'done']
+
+/**
+ * "איבדתי את הקישור": emails the address its orders' manage links, in one message. Nothing is
+ * sent when the address has no paid, valid orders, or when it was sent one within
+ * `minIntervalMs` (so the form cannot flood an inbox). Returns how many links were sent; the
+ * caller never tells the visitor, so the page does not reveal whether an address has orders.
+ */
+export async function sendManageLinks(
+  db: DB,
+  svc: Services,
+  base: string,
+  email: string,
+  opts: { now?: Date; minIntervalMs?: number } = {},
+): Promise<number> {
+  const now = opts.now ?? new Date()
+  const address = email.trim().toLowerCase()
+  if (!address) return 0
+  const today = israelDate(now)
+  const found = (
+    await db
+      .select()
+      .from(orders)
+      .where(and(sql`lower(${orders.buyerEmail}) = ${address}`, isNotNull(orders.paidAt)))
+      .orderBy(desc(orders.createdAt))
+  ).filter((o) => REMINDABLE.includes(o.status) && (o.validUntil == null || o.validUntil >= today))
+  if (!found.length) return 0
+  if (opts.minIntervalMs) {
+    const since = new Date(now.getTime() - opts.minIntervalMs)
+    const [recent] = await db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.template, 'links_reminder'),
+          sql`lower(${messages.to}) = ${address}`,
+          gt(messages.createdAt, since),
+        ),
+      )
+      .limit(1)
+    if (recent) return 0
+  }
+  const tpl = await messageTemplate(db, 'links_reminder')
+  const vars = {
+    name: found[0].buyerName,
+    brand: await getSetting(db, 'brand_name'),
+    links: found
+      .map(
+        (o) =>
+          `המירוץ של ${o.companyName || o.honoreeName} (הזמנה ${o.orderNo}):\n${links(base, o).manageLink}`,
+      )
+      .join('\n\n'),
+  }
+  const subject = interpolate(tpl.subject, vars)
+  const text = interpolate(tpl.text, vars)
+  const to = found[0].buyerEmail
+  const ok = svc.mailer.isConfigured()
+    ? await svc.mailer.send({ to, subject, text, html: toHtml(text) })
+    : false
+  const status = svc.mailer.isConfigured() ? (ok ? 'sent' : 'failed') : 'skipped'
+  for (const o of found)
+    await log(db, { orderId: o.id, channel: 'email', to, template: 'links_reminder', status, createdAt: now })
+  return found.length
 }

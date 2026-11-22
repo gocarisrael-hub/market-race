@@ -32,7 +32,7 @@ function useTheme(palette: Palette) {
 
 export function App() {
   const token = tokenFromPath(window.location.pathname)
-  const { state, texts, support, offline, act, retry } = useGame(token)
+  const { state, texts, support, offline, act, retry, captain, pause } = useGame(token)
   const view = state.phase === 'view' ? state.view : null
   const palette = view?.theme?.palette ?? DEFAULT_PALETTE
   useTheme(palette)
@@ -49,6 +49,7 @@ export function App() {
     if (v.status === 'expired') screen = <Message key={key} t={t} kind="expired" />
     else if (v.step === 'done') screen = <Letter key={key} view={v} t={t} />
     else if (v.step === 'opening') screen = <Opening key={key} view={v} t={t} />
+    else if (v.status === 'paused') screen = <Opening key={key} view={v} t={t} paused />
     else if (v.step === 'riddle') screen = <Riddle key={key} view={v} t={t} act={act} />
     else if (v.step === 'revealed') screen = <Reveal key={key} view={v} t={t} act={act} />
     else screen = <Redeem key={key} view={v} t={t} act={act} />
@@ -63,7 +64,9 @@ export function App() {
         </div>
       )}
       {screen}
-      {view && view.status !== 'expired' && <Help view={view} t={t} act={act} support={support} />}
+      {view && view.status !== 'expired' && (
+        <Help view={view} t={t} act={act} support={support} captain={captain} pause={pause} />
+      )}
     </>
   )
 }

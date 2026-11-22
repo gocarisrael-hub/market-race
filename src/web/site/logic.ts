@@ -323,6 +323,7 @@ export type Route =
   | { page: 'companyPay'; token: string }
   | { page: 'manage'; token: string }
   | { page: 'companies' }
+  | { page: 'lostLink' }
   | { page: 'notFound' }
 
 export function parseRoute(pathname: string): Route {
@@ -330,6 +331,7 @@ export function parseRoute(pathname: string): Route {
   if (p === '/') return { page: 'home' }
   if (p === '/order/questions') return { page: 'questions' }
   if (p === '/companies') return { page: 'companies' }
+  if (p === '/lost-link') return { page: 'lostLink' }
   if (p === '/pay/done') return { page: 'payDone' }
   if (p === '/pay/mock') return { page: 'payMock' }
   let m = p.match(/^\/order\/([A-Za-z0-9_-]{10,64})\/(photos|pay)$/)

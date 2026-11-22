@@ -110,6 +110,13 @@ Building the game (when answers are complete):
 Playing:
 - One game link (plus QR). Any number of phones open it and see the same state; progress is stored on the server and polled every few seconds.
 - The buyer is the captain (decided 2026-11-18). Until the game starts, the game link shows only a waiting screen (the honoree's ribbon, "the game hasn't started, whoever ordered it starts it at the market"): no riddle, no progress, no start button. Only the manage link starts the game, on a day it is valid (Israel time), after a clear confirm. At the start the captain picks how many players arrived, 1 to the portions bought (e.g. bought 5, 3 came); it is stored on the game state. Then the captain gets a share step (a brush-stroke WhatsApp button with the `players_invite` text of the `message_templates` setting and the game link) and goes on into the game; players who open the link join the live game.
+- At the start the buyer is emailed the players' link with its QR (the `game_started` template: "the game started, here is the players' link, and if you stop you continue from your link: <manage link>"). Once per start; resuming sends nothing.
+- Pause and resume (decided 2026-11-22). Only the captain starts, pauses and resumes; players only play.
+  - The captain's phone: the manage page's "continue to the game" link carries a captain token in the URL hash (`#c=…`, derived from the manage token, so it does not reveal it). The player keeps it in localStorage for that game, removes it from the address bar and sends it in an `x-captain` header; the server checks it. The bare game link never grants pause or resume.
+  - On that phone the help sheet has "עוצרים להיום", after a confirm. Any number of times. Every phone then shows a paused screen ("המשחק בהפסקה, ממשיכים בפעם הבאה", where they stopped: stop X of Y): no riddle, no next stop is sent, and every play action is refused on the server. The buyer is emailed the `game_paused` template ("you stopped at stop X of Y, continue from your link: <manage link>").
+  - The manage page of a paused game shows "המשחק בהפסקה, עצרתם בתחנה X מתוך Y" and a brush-stroke "ממשיכים". Resume is allowed any day while the game is valid (one year from purchase), any number of times. Everyone continues at exactly the same stop and step, on the same game link. The players count is fixed at the start and does not change on resume. The closed-stall check and backup work as on any day (stall availability is checked on the day each stop is played).
+  - State: `game_states.paused_at` (null while playable). The admin's live view and order view show a paused game.
+- Lost link: the site has "איבדתי את הקישור" (`/lost-link`). The buyer enters the email they ordered with; if it has paid, valid orders, that address gets one email with their manage links (the `links_reminder` template). The page answers the same whether or not the address has orders, and the email goes out after the answer. Rate limited per client (5 per 15 minutes) and one email per address per 10 minutes; both lifted in the test env.
 - Stop flow: riddle → correct answer → stall revealed on the map → "we're here" → redemption screen.
 - The game never sends a later stop's answer or stall to the client before it is reached.
 
@@ -126,6 +133,7 @@ Playing:
 
 - After payment: confirmation and a link to answer the questions (if not answered during the order).
 - When ready: the game link + QR and a short how-to-play, by email and WhatsApp. The email says the buyer starts the game from the manage link at the market; the game link opens once it has started.
+- At the start, on a pause, and on request ("איבדתי את הקישור"): see Playing. Every customer message is a template in the `message_templates` setting, edited in the admin: `paid_answers_needed`, `game_ready`, `company_payment_link`, `players_invite`, `game_started`, `game_paused`, `links_reminder`. A saved set without a key falls back to that key's default text.
 - A manage link to see progress and to edit: until the game starts (status before `active`, the shared game still on its opening screen) the buyer can change the name, the answers, the letter notes, the photos and the color, any number of times. A paid game that is already built is rebuilt at once; odd answers send it to review as on the first build, while flags the owner already approved stay approved. The paid and game-ready emails say so ("אפשר לשנות תשובות, תמונות וצבע עד שמתחילים לשחק").
 
 ## Admin (new, separate, plain)
@@ -147,4 +155,4 @@ Tranzila, copied from the Dugri codebase (see `PAYMENT_FROM_DUGRI.md`). Private 
 - Brand name and domain (working name `market-race`).
 - Photo retention period.
 - Prices per occasion and per person, and the company quote template.
-- Whether a game, once started, stays open only for that day.
+- ~~Whether a game, once started, stays open only for that day.~~ Decided 2026-11-22: it can be paused and resumed any day while valid (see Playing).

@@ -17,6 +17,10 @@ export interface SettingsShape {
   // Customer-facing messages. {{var}} placeholders: name, honoree, orderNo, gameLink, manageLink, answersLink, amount.
   // players_invite is the WhatsApp text the captain shares with the players once the game starts
   // (its subject is unused); it takes name (the captain), honoree, gameLink and brand.
+  // game_started goes to the buyer once, when the captain starts (with the game link's QR).
+  // game_paused goes when the captain pauses; it also takes {{stop}} and {{total}}.
+  // links_reminder answers "איבדתי את הקישור": one email per address, {{links}} lists the
+  // address's orders with their manage links (one per line); it takes name and brand.
   message_templates: Record<MessageKey, { subject: string; text: string }>
   // Messaging customers' numbers over WhatsApp can get the number banned; off until the owner decides.
   whatsapp_to_customers: boolean
@@ -30,7 +34,14 @@ export interface SettingsShape {
   support_message: string
 }
 
-export type MessageKey = 'paid_answers_needed' | 'game_ready' | 'company_payment_link' | 'players_invite'
+export type MessageKey =
+  | 'paid_answers_needed'
+  | 'game_ready'
+  | 'company_payment_link'
+  | 'players_invite'
+  | 'game_started'
+  | 'game_paused'
+  | 'links_reminder'
 
 export const SETTING_DEFAULTS: SettingsShape = {
   odd_rules: DEFAULT_ODD_RULES,
@@ -57,6 +68,18 @@ export const SETTING_DEFAULTS: SettingsShape = {
     players_invite: {
       subject: 'מצטרפים למירוץ',
       text: 'המירוץ של {{honoree}} בשוק התחיל!\nפותחים את הקישור ומשחקים איתנו יחד, מכל טלפון:\n{{gameLink}}',
+    },
+    game_started: {
+      subject: 'המשחק של {{honoree}} התחיל!',
+      text: 'היי {{name}},\nהמשחק התחיל! הנה הקישור לשחקנים (או הקוד המצורף), כולם משחקים יחד מכל טלפון:\n{{gameLink}}\n\nואם עוצרים באמצע, ממשיכים מהקישור שלך, באותה תחנה, בכל יום עד {{validUntil}}:\n{{manageLink}}\n\n{{brand}}',
+    },
+    game_paused: {
+      subject: 'המשחק של {{honoree}} בהפסקה',
+      text: 'היי {{name}},\nעצרתם בתחנה {{stop}} מתוך {{total}}. ממשיכים מהקישור שלך, מאותה תחנה, בכל יום עד {{validUntil}}:\n{{manageLink}}\n\n{{brand}}',
+    },
+    links_reminder: {
+      subject: 'הקישורים להזמנות שלך',
+      text: 'היי {{name}},\nביקשת את הקישורים להזמנות שלך. מכל קישור מתחילים, עוצרים וממשיכים את המשחק:\n{{links}}\n\nלא ביקשת? אפשר להתעלם מהמייל הזה.\n\n{{brand}}',
     },
   },
   whatsapp_to_customers: false,

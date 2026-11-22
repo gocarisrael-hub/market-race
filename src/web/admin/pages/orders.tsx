@@ -113,6 +113,7 @@ interface Detail {
     step: string
     startedAt: string | null
     finishedAt: string | null
+    pausedAt?: string | null
     lastActivityAt: string
     wrongAnswers: number
   } | null
@@ -977,8 +978,9 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
           )}
           {d.state && (
             <p className="muted">
-              מצב המשחק: תחנה {d.state.stopIndex + 1}, {STEP_LABELS[d.state.step] ?? d.state.step} · פעילות
-              אחרונה {when(d.state.lastActivityAt)} · תשובות שגויות {d.state.wrongAnswers}
+              מצב המשחק: תחנה {d.state.stopIndex + 1}, {STEP_LABELS[d.state.step] ?? d.state.step}
+              {d.state.pausedAt && ` (בהפסקה מ-${when(d.state.pausedAt)})`} · פעילות אחרונה{' '}
+              {when(d.state.lastActivityAt)} · תשובות שגויות {d.state.wrongAnswers}
             </p>
           )}
           {d.redemptions.length > 0 && (
@@ -1347,6 +1349,7 @@ interface LiveGame {
   step: string
   lastActivityAt: string
   startedAt: string | null
+  pausedAt: string | null
   totalStops: number
   stallName: string
   usingBackup: boolean
@@ -1402,7 +1405,10 @@ export function LivePage() {
                 <td>
                   {g.stopIndex + 1} / {g.totalStops}
                 </td>
-                <td>{STEP_LABELS[g.step] ?? g.step}</td>
+                <td>
+                  {STEP_LABELS[g.step] ?? g.step}
+                  {g.pausedAt && ' (בהפסקה)'}
+                </td>
                 <td>
                   {g.stallName}
                   {g.usingBackup && ' (גיבוי)'}

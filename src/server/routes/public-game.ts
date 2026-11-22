@@ -1,9 +1,17 @@
-// Player API, addressed by the game token. Public.
+// Player API, addressed by the game token. Public, except pausing: that needs the captain token,
+// which only the manage page hands out (the bare game link never grants it).
+import { eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppContext } from '../app.ts'
-import { act, getView, type PlayAction } from '../services/play.ts'
+import { orders } from '../db/schema.ts'
+import { isCaptainToken } from '../lib/tokens.ts'
+import { sendToBuyer } from '../services/delivery.ts'
+import { act, getView, type PlayAction, pauseGame } from '../services/play.ts'
 import { getSetting } from '../services/settings.ts'
+
+/** The header the captain's phone sends its captain token in. */
+export const CAPTAIN_HEADER = 'x-captain'
 
 // No "start": only the captain starts the game, from the manage page (POST /api/manage/:token/start).
 const actionSchema = z.discriminatedUnion('type', [
@@ -24,6 +32,13 @@ const actionSchema = z.discriminatedUnion('type', [
 
 export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
   const token = z.object({ token: z.string().min(10).max(64) })
+
+  /** The order behind a game link, when the request carries its captain token. */
+  async function captainOrder(gameToken: string, header: unknown) {
+    if (typeof header !== 'string' || header.length > 64) return null
+    const [order] = await ctx.db.select().from(orders).where(eq(orders.gameToken, gameToken))
+    return order && isCaptainToken(order.manageToken, header) ? order : null
+  }
 
   app.get(
     '/api/game/:token',
@@ -46,7 +61,9 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
         whatsapp: await getSetting(ctx.db, 'support_whatsapp'),
         message: await getSetting(ctx.db, 'support_message'),
       }
-      return { ...view, texts, support }
+      // Only the captain's phone (holding the captain token) gets the pause control.
+      const captain = !!(await captainOrder(p.data.token, req.headers[CAPTAIN_HEADER]))
+      return { ...view, texts, support, captain }
     },
   )
 
@@ -73,6 +90,33 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
         return reply.code(409).send({ error: res.error, view: res.view })
       }
       return { view: res.view, correct: res.correct, noBackup: res.noBackup }
+    },
+  )
+
+  // "עוצרים להיום": the captain pauses the game for everyone. Resuming is on the manage link.
+  app.post(
+    '/api/game/:token/pause',
+    { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } },
+    async (req, reply) => {
+      const p = token.safeParse(req.params)
+      if (!p.success) return reply.code(404).send({ error: 'not_found' })
+      const order = await captainOrder(p.data.token, req.headers[CAPTAIN_HEADER])
+      if (!order) return reply.code(403).send({ error: 'not_captain' })
+      const res = await pauseGame(ctx.db, p.data.token, {
+        pollSeconds: await getSetting(ctx.db, 'poll_seconds'),
+      })
+      if (!res.ok) return reply.code(res.error === 'not_found' ? 404 : 409).send({ error: res.error })
+      if (res.changed) {
+        try {
+          await sendToBuyer(ctx.db, ctx.services, ctx.config.publicBaseUrl, order, 'game_paused', {
+            stop: String(res.view.stopIndex + 1),
+            total: String(res.view.totalStops),
+          })
+        } catch (e) {
+          console.error('[pause] email failed', e)
+        }
+      }
+      return { view: res.view }
     },
   )
 }

@@ -1,8 +1,11 @@
 // Playing a game: one shared state per order, advanced by any phone.
 // The client never receives a later stop's answer, stall or tasting before it is reached.
 // Only the captain (the buyer, on the manage page) starts it, choosing how many players arrived;
-// until then every phone on the game link sees a waiting screen.
-import { and, eq, sql } from 'drizzle-orm'
+// until then every phone on the game link sees a waiting screen. The captain can also pause it
+// ("עוצרים להיום", from the game on the captain's own phone) and resume it from the manage link,
+// any day it is valid and any number of times, at the same stop. While paused nothing is sent and
+// every play action is refused.
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import { gameStates, markets, occasions, orders, redemptions, stalls } from '../db/schema.ts'
 import { dailyCode } from '../domain/dailycode.ts'
@@ -31,7 +34,7 @@ export function fileUrl(file: string | null | undefined): string | null {
 }
 
 export interface PlayerView {
-  status: 'ready' | 'active' | 'done' | 'expired' | 'not_ready'
+  status: 'ready' | 'active' | 'paused' | 'done' | 'expired' | 'not_ready'
   version: number
   pollSeconds: number
   theme: { name: string; map: string | null; palette: Palette } | null
@@ -146,6 +149,39 @@ export function startBlock(
   return null
 }
 
+export type PauseBlock = 'not_playing' | 'expired'
+export type ResumeBlock = 'not_paused' | 'expired'
+
+/** Whether a game is paused now (a finished game never is). */
+export const isPaused = (state: { pausedAt: Date | null; step: string }) =>
+  state.pausedAt != null && state.step !== 'opening' && state.step !== 'done'
+
+/**
+ * Why the captain cannot pause now, or null: only a started, unfinished, valid game. Pausing a
+ * game that is already paused is not an error (two taps); the caller sees it changed nothing.
+ */
+export function pauseBlock(
+  order: { status: string; validUntil: string | null },
+  state: { step: string } | undefined,
+  today: string,
+): PauseBlock | null {
+  if (isExpired(order, today)) return 'expired'
+  if (!state || state.step === 'opening' || state.step === 'done' || order.status !== 'active')
+    return 'not_playing'
+  return null
+}
+
+/** Why the captain cannot resume now, or null: a paused game, any day it is still valid. */
+export function resumeBlock(
+  order: { status: string; validUntil: string | null },
+  state: { step: string; pausedAt: Date | null } | undefined,
+  today: string,
+): ResumeBlock | null {
+  if (isExpired(order, today)) return 'expired'
+  if (!state || !isPaused(state)) return 'not_paused'
+  return null
+}
+
 async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Promise<PlayerView> {
   const { order, game, state } = l
   const today = israelDate(now)
@@ -156,7 +192,9 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
       ? 'done'
       : state.step === 'opening'
         ? 'ready'
-        : 'active'
+        : isPaused(state)
+          ? 'paused'
+          : 'active'
   const base: PlayerView = {
     status,
     version: state.version,
@@ -189,7 +227,8 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     base.letter = { notes: game.letter.notes, photos: game.letter.photos.map((p) => fileUrl(p)!) }
     return base
   }
-  if (state.step === 'opening') return base
+  // Paused: where they stopped (stopIndex, totalStops) and nothing of the stop itself.
+  if (state.step === 'opening' || status === 'paused') return base
 
   const stop = game.stops[state.stopIndex]
   const hintShown = state.hintsShown.includes(stop.index)
@@ -256,7 +295,7 @@ export type PlayAction =
 export type PlayResult =
   // noBackup: a reported closed stall has no backup; the group is told to contact us.
   | { ok: true; view: PlayerView; correct?: boolean; noBackup?: boolean }
-  | { ok: false; error: 'not_found' | 'not_ready' | 'expired' | 'stale'; view?: PlayerView }
+  | { ok: false; error: 'not_found' | 'not_ready' | 'expired' | 'stale' | 'paused'; view?: PlayerView }
 
 export async function getView(db: DB, token: string, pollSeconds = 4, now = new Date()) {
   const l = await load(db, token)
@@ -283,6 +322,9 @@ export async function act(
   const today = israelDate(now)
   if (isExpired(order, today))
     return { ok: false, error: 'expired', view: await buildView(db, l, pollSeconds, now) }
+
+  // Paused by the captain: nothing moves until the captain resumes from the manage link.
+  if (isPaused(state)) return { ok: false, error: 'paused', view: await buildView(db, l, pollSeconds, now) }
 
   const stale = async () =>
     ({ ok: false, error: 'stale', view: await buildView(db, l, pollSeconds, now) }) as PlayResult
@@ -450,5 +492,69 @@ export async function startGame(
   await db.update(orders).set({ status: 'active' }).where(eq(orders.id, order.id))
   const fresh = await load(db, gameToken)
   if (typeof fresh === 'string') return { ok: false, error: 'not_found' }
+  return { ok: true, view: await buildView(db, fresh, opts.pollSeconds ?? 4, now) }
+}
+
+export type PauseResult =
+  // changed: false when the game was already paused (nothing new happened, no email).
+  | { ok: true; view: PlayerView; changed: boolean }
+  | { ok: false; error: 'not_found' | 'not_ready' | PauseBlock }
+
+/** The captain pauses the game ("עוצרים להיום"). Every phone moves to the paused screen. */
+export async function pauseGame(
+  db: DB,
+  gameToken: string,
+  opts: { now?: Date; pollSeconds?: number } = {},
+): Promise<PauseResult> {
+  const now = opts.now ?? new Date()
+  const l = await load(db, gameToken)
+  if (typeof l === 'string') return { ok: false, error: l }
+  const block = pauseBlock(l.order, l.state, israelDate(now))
+  if (block) return { ok: false, error: block }
+  const pollSeconds = opts.pollSeconds ?? 4
+  if (isPaused(l.state)) return { ok: true, view: await buildView(db, l, pollSeconds, now), changed: false }
+  const rows = await db
+    .update(gameStates)
+    .set({ pausedAt: now, version: sql`${gameStates.version} + 1`, lastActivityAt: now })
+    .where(
+      and(
+        eq(gameStates.orderId, l.order.id),
+        isNull(gameStates.pausedAt),
+        inArray(gameStates.step, ['riddle', 'revealed', 'redeem']),
+      ),
+    )
+    .returning()
+  const fresh = await load(db, gameToken)
+  if (typeof fresh === 'string') return { ok: false, error: fresh }
+  if (!rows.length && !isPaused(fresh.state)) return { ok: false, error: 'not_playing' }
+  return { ok: true, view: await buildView(db, fresh, pollSeconds, now), changed: rows.length > 0 }
+}
+
+export type ResumeResult =
+  | { ok: true; view: PlayerView }
+  | { ok: false; error: 'not_found' | 'not_ready' | ResumeBlock }
+
+/**
+ * The captain resumes a paused game from the manage link: everyone continues at exactly the same
+ * stop and step, on the same game link, with the players fixed at the start.
+ */
+export async function resumeGame(
+  db: DB,
+  gameToken: string,
+  opts: { now?: Date; pollSeconds?: number } = {},
+): Promise<ResumeResult> {
+  const now = opts.now ?? new Date()
+  const l = await load(db, gameToken)
+  if (typeof l === 'string') return { ok: false, error: l }
+  const block = resumeBlock(l.order, l.state, israelDate(now))
+  if (block) return { ok: false, error: block }
+  const rows = await db
+    .update(gameStates)
+    .set({ pausedAt: null, version: sql`${gameStates.version} + 1`, lastActivityAt: now })
+    .where(and(eq(gameStates.orderId, l.order.id), isNotNull(gameStates.pausedAt)))
+    .returning()
+  if (!rows.length) return { ok: false, error: 'not_paused' }
+  const fresh = await load(db, gameToken)
+  if (typeof fresh === 'string') return { ok: false, error: fresh }
   return { ok: true, view: await buildView(db, fresh, opts.pollSeconds ?? 4, now) }
 }

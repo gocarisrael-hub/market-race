@@ -1888,3 +1888,28 @@ ol.howto.drawn li {
   width: 26px;
   height: 26px;
 }
+
+/* ---------- Paused game: resume on the manage page ---------- */
+
+.resume-game .torn-paper {
+  position: relative;
+}
+.resume-where {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* ---------- Lost link ---------- */
+
+.lost-link-entry {
+  margin-top: -6px;
+}
+.lost-link .thanks .sketch + .sketch {
+  margin-top: 10px;
+}

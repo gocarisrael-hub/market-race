@@ -19,6 +19,7 @@ import { Checkout } from './pages/Checkout.tsx'
 import { Companies } from './pages/Companies.tsx'
 import { CompanyPay } from './pages/CompanyPay.tsx'
 import { Home } from './pages/Home.tsx'
+import { LostLink } from './pages/LostLink.tsx'
 import { Manage } from './pages/Manage.tsx'
 import { PayDone } from './pages/PayDone.tsx'
 import { PayMock } from './pages/PayMock.tsx'
@@ -33,7 +34,7 @@ function App() {
   const [shop, setShop] = useState<Shop | null>(null)
   const [shopError, setShopError] = useState(false)
   const [draft, setDraftState] = useState<Draft | null>(null)
-  const needsShop = !['payDone', 'payMock', 'manage', 'companyPay'].includes(route.page)
+  const needsShop = !['payDone', 'payMock', 'manage', 'companyPay', 'lostLink'].includes(route.page)
 
   useEffect(() => {
     if (!needsShop || shop) return
@@ -67,6 +68,8 @@ function App() {
       return <Manage token={route.token} search={loc.search} />
     case 'companyPay':
       return <CompanyPay token={route.token} />
+    case 'lostLink':
+      return <LostLink />
     case 'notFound':
       return (
         <main className="page">

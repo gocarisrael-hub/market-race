@@ -10,7 +10,7 @@ import { errorText } from '../logic.ts'
 import { PhotoDrop } from '../photo-background.tsx'
 import { Brush, Deco, Failed, Loading, SectionHead, TornPaper } from '../ui.tsx'
 import { ManageEdit } from './ManageEdit.tsx'
-import { ShareGame, StartGame } from './StartGame.tsx'
+import { ResumeGame, ShareGame, StartGame } from './StartGame.tsx'
 
 const ACTIVE_POLL_MS = 15_000
 const PAID_POLL_MS = 4000
@@ -120,9 +120,17 @@ export function Manage({ token, search }: { token: string; search: string }) {
       </header>
 
       <div className="m-status">
-        <Icon name={STATUS_ICON[waitingPay ? 'pending_payment' : m.status] ?? 'star'} size={40} tilt={-6} />
+        <Icon
+          name={m.paused ? 'clock' : (STATUS_ICON[waitingPay ? 'pending_payment' : m.status] ?? 'star')}
+          size={40}
+          tilt={-6}
+        />
         <p className="status" data-testid="status">
-          {waitingPay ? copy.manage.checking : (copy.manage.status[m.status] ?? '')}
+          {waitingPay
+            ? copy.manage.checking
+            : m.paused
+              ? copy.manage.paused.status
+              : (copy.manage.status[m.status] ?? '')}
         </p>
       </div>
       {canPay && !waitingPay && (
@@ -131,7 +139,7 @@ export function Manage({ token, search }: { token: string; search: string }) {
         </div>
       )}
 
-      {m.progress && (m.status === 'active' || m.status === 'done') && m.progress.total > 0 && (
+      {!m.paused && m.progress && (m.status === 'active' || m.status === 'done') && m.progress.total > 0 && (
         <p className="hint m-progress">
           <Icon name="basket" size={28} />
           <span>
@@ -143,7 +151,9 @@ export function Manage({ token, search }: { token: string; search: string }) {
       )}
 
       {/* Started: share the players' link, then into the game (the captain's own phone). */}
-      {m.started && m.status === 'active' && <ShareGame m={m} decor={decor} />}
+      {m.started && m.status === 'active' && !m.paused && <ShareGame m={m} decor={decor} />}
+      {/* Paused by the captain in the game: resume here, at the same stop. */}
+      {m.paused && <ResumeGame token={token} m={m} decor={decor} onResumed={load} />}
       {m.gameLink && m.status === 'done' && (
         <div className="m-action">
           <Brush href={m.gameLink} external small icon="trophy">
