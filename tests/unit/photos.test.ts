@@ -1,10 +1,11 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { eq } from 'drizzle-orm'
 import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { orders } from '../../src/server/db/schema.ts'
 import { illustrate } from '../../src/server/photos/illustrate.ts'
+import { photoLook, renderGamePhoto } from '../../src/server/photos/look.ts'
 import { buildOrderGame } from '../../src/server/services/orders.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
 import { makeTestApp } from '../helpers/app.ts'
@@ -129,6 +130,13 @@ describe('photo upload', () => {
     expect(existsSync(path.join(t.config.uploadDir, photo.previewUrl.slice('/uploads/'.length)))).toBe(true)
     const served = await t.app.inject({ url: photo.previewUrl })
     expect(served.statusCode).toBe(200)
+    // Drawn in the live look (the doodle frame), seeded by the photo's id, in the order's look.
+    const [ord] = await t.db.select().from(orders).where(eq(orders.manageToken, token))
+    const look = await photoLook(t.db, ord)
+    expect(look.decor).not.toBe('')
+    const original = readFileSync(path.join(t.config.uploadDir, photo.url.slice('/uploads/'.length)))
+    const expected = await renderGamePhoto(original, 'bg', photo.id, look)
+    expect(served.rawPayload.equals(expected)).toBe(true)
 
     for (let i = 0; i < 4; i++)
       await t.app.inject({

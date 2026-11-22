@@ -55,13 +55,13 @@ test('buyer orders a game up to the pay step', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלה' })).toBeVisible()
   await expect(page.getByText('0 מתוך 5')).toBeVisible()
   await page.locator('input[type=file]').setInputFiles(['assets/icons/fruit.png', 'assets/icons/hummus.png'])
-  await expect(page.getByAltText('אותה תמונה, מצוירת')).toHaveCount(2)
+  await expect(page.getByAltText('אותה תמונה, במסגרת מצוירת')).toHaveCount(2)
   await expect(page.getByText('2 מתוך 5')).toBeVisible()
   await shot(page, '3-photos')
   await page.getByRole('button', { name: 'הסרה' }).first().click()
   await expect(page.getByText('1 מתוך 5')).toBeVisible()
   await page.reload()
-  await expect(page.getByAltText('אותה תמונה, מצוירת')).toHaveCount(1)
+  await expect(page.getByAltText('אותה תמונה, במסגרת מצוירת')).toHaveCount(1)
 
   // Back and forth keeps the same order and updates it.
   await page.getByRole('link', { name: '→ חזרה' }).click()

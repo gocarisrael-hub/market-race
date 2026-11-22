@@ -9,6 +9,8 @@ import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { orders, uploads } from '../../src/server/db/schema.ts'
 import { alphaBox, checkCutout, illustrateCutout, subjectWindow } from '../../src/server/photos/illustrate.ts'
+import { photoLook, renderGamePhoto } from '../../src/server/photos/look.ts'
+import { rerenderPhotos } from '../../src/server/photos/rerender.ts'
 import { buildOrderGame } from '../../src/server/services/orders.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
 import { largestBlob, MIN_COVERAGE, maskToRgba, personMask } from '../../src/web/shared/cutout-mask.ts'
@@ -207,6 +209,11 @@ describe('photo background route', () => {
     expect(p).toMatchObject({ background: 'remove', hasCutout: true, cutFailed: false })
     expect(p.previewUrl).toMatch(/-cut-ill\.jpg$/)
     expect(existsSync(file(p.previewUrl))).toBe(true)
+    // The live look, from the cutout, seeded by the photo's id.
+    const look = await photoLook(t.db, o)
+    expect(
+      readFileSync(file(p.previewUrl)).equals(await renderGamePhoto(DOG_CUT, 'cut', photoId, look)),
+    ).toBe(true)
     const [row] = await t.db.select().from(uploads).where(eq(uploads.id, photoId))
     expect(existsSync(file(row.cutoutPath!))).toBe(true)
     expect((await sharp(file(row.cutoutPath!)).metadata()).hasAlpha).toBe(true)
@@ -269,6 +276,81 @@ describe('photo background route', () => {
     expect(del.json().ok).toBe(true)
     for (const p of [row.originalPath, row.bgPath!, row.cutoutPath!, row.cutPath!])
       expect(existsSync(file(p))).toBe(false)
+  })
+})
+
+describe('redrawing existing photos', () => {
+  it('redraws both versions under new names, and the order and its game follow', async () => {
+    const t = await makeTestApp()
+    try {
+      const ids = await seedDemo(t.db)
+      const res = await t.app.inject({
+        method: 'POST',
+        url: '/api/orders',
+        payload: {
+          occasionKey: 'birthday_friend',
+          form: 'he',
+          honoreeName: 'דני',
+          themeId: ids.carmelThemeId,
+          people: 3,
+          buyer: { name: 'רון', phone: '0501234567', email: 'ron@example.com' },
+        },
+      })
+      const tok = res.json().manageToken
+      const up = async () =>
+        (
+          await t.app.inject({
+            method: 'POST',
+            url: `/api/orders/${tok}/photos`,
+            ...multipart([{ name: 'file', data: DOG, type: 'image/jpeg' }]),
+          })
+        ).json().photo.id as number
+      const [kept, cut] = [await up(), await up()]
+      await t.app.inject({
+        method: 'PUT',
+        url: `/api/orders/${tok}/photos/${cut}/background`,
+        ...multipart([
+          { name: 'background', value: 'remove' },
+          { name: 'cutout', data: DOG_CUT, type: 'image/png' },
+        ]),
+      })
+      const [o] = await t.db.select().from(orders).where(eq(orders.manageToken, tok))
+      await buildOrderGame(t.db, o.id)
+      const before = await t.db.select().from(uploads).where(eq(uploads.orderId, o.id))
+      const file = (p: string) => path.join(t.config.uploadDir, p)
+
+      const dry = await rerenderPhotos(t.db, t.config.uploadDir, { dry: true })
+      expect(dry.failed).toBe(0)
+      expect(await t.db.select().from(uploads).where(eq(uploads.orderId, o.id))).toEqual(before)
+
+      const r = await rerenderPhotos(t.db, t.config.uploadDir)
+      expect(r).toEqual({ done: 2, failed: 0 })
+      const after = await t.db.select().from(uploads).where(eq(uploads.orderId, o.id))
+      const look = await photoLook(t.db, (await t.db.select().from(orders).where(eq(orders.id, o.id)))[0])
+      for (const u of after) {
+        const old = before.find((b) => b.id === u.id)!
+        expect(u.bgPath).not.toBe(old.bgPath)
+        expect(existsSync(file(old.bgPath!))).toBe(false)
+        const original = readFileSync(file(u.originalPath))
+        expect(readFileSync(file(u.bgPath!)).equals(await renderGamePhoto(original, 'bg', u.id, look))).toBe(
+          true,
+        )
+      }
+      const k = after.find((u) => u.id === kept)!
+      const c = after.find((u) => u.id === cut)!
+      expect(k.path).toBe(k.bgPath)
+      expect(c.path).toBe(c.cutPath)
+      expect(c.cutPath).not.toBe(before.find((b) => b.id === cut)!.cutPath)
+      const cutout = readFileSync(file(c.cutoutPath!))
+      expect(readFileSync(file(c.cutPath!)).equals(await renderGamePhoto(cutout, 'cut', cut, look))).toBe(
+        true,
+      )
+      const [o2] = await t.db.select().from(orders).where(eq(orders.id, o.id))
+      expect(o2.photos).toEqual([k.path, c.path])
+      expect(o2.game!.letter.photos).toEqual([k.path, c.path])
+    } finally {
+      await t.close()
+    }
   })
 })
 

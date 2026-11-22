@@ -46,7 +46,7 @@ export const COPY = {
   'hintq.skip': 'דילוג, בלי רמז',
   'riddle.wrong': 'כמעט! נסו שוב',
   'riddle.empty': 'קודם כותבים תשובה',
-  'riddle.photoAlt': 'תמונה מצוירת',
+  'riddle.photoAlt': 'תמונה במסגרת מצוירת',
 
   'reveal.correct': 'נכון!',
   'reveal.answerWas': 'התשובה הייתה {answer}',
@@ -74,7 +74,7 @@ export const COPY = {
   'letter.summaryTastings': '{n} טעימות',
   'letter.summaryEnd': 'ושוק אחד שלם',
   'letter.route': 'איפה היינו',
-  'letter.photoAlt': 'תמונה מצוירת',
+  'letter.photoAlt': 'תמונה במסגרת מצוירת',
   'photo.open': 'להגדיל את התמונה',
   'photo.dialog': 'התמונה בגדול',
   'photo.close': 'סגירה',

@@ -1,5 +1,6 @@
-// Order photos (up to 5): uploaded by the buyer via the manage token, converted to the
-// illustrated style, used in riddles and the final letter. Stored on the volume.
+// Order photos (up to 5): uploaded by the buyer via the manage token, drawn in the game-photo look
+// (photos/doodle-frame.ts: the photo itself in a hand-drawn frame with the occasion's doodles,
+// seeded by the photo's id), used in riddles and the final letter. Stored on the volume.
 // Photos can change until the game starts: a built game that has not started gets the new photos
 // in its frozen snapshot (riddles and letter), without being rebuilt from the catalog.
 import { randomBytes } from 'node:crypto'
@@ -13,7 +14,8 @@ import type { DB } from '../db/index.ts'
 import { orders, uploads } from '../db/schema.ts'
 import { attachPhotos, MAX_GAME_PHOTOS } from '../domain/builder.ts'
 import { type OrderStatus, PHOTO_BACKGROUNDS } from '../domain/types.ts'
-import { checkCutout, illustrate, illustrateCutout, normalizePhoto } from '../photos/illustrate.ts'
+import { checkCutout, normalizePhoto } from '../photos/illustrate.ts'
+import { photoLook, renderGamePhoto } from '../photos/look.ts'
 
 export const MAX_PHOTOS = MAX_GAME_PHOTOS
 /** Statuses before the game starts. Later, a game in play or done keeps its photos. */
@@ -33,7 +35,7 @@ type Tx = Parameters<Parameters<DB['transaction']>[0]>[0]
  * the game is already built, into the frozen game. Runs inside the caller's transaction, after the
  * order row was locked, so concurrent uploads never lose each other.
  */
-async function syncPhotos(tx: Tx, order: typeof orders.$inferSelect) {
+export async function syncPhotos(tx: Tx, order: typeof orders.$inferSelect) {
   const rows = await tx
     .select({ path: uploads.path })
     .from(uploads)
@@ -94,10 +96,8 @@ export async function publicPhotoRoutes(app: FastifyInstance, ctx: AppContext) {
       if (!ACCEPTED.has(file.mimetype)) return reply.code(415).send({ error: 'unsupported_type' })
       const raw = await file.toBuffer()
       let original: Buffer
-      let ill: Buffer
       try {
         original = await normalizePhoto(raw)
-        ill = await illustrate(original)
       } catch {
         return reply.code(415).send({ error: 'unreadable_image' })
       }
@@ -105,7 +105,6 @@ export async function publicPhotoRoutes(app: FastifyInstance, ctx: AppContext) {
       const rel = { original: `photos/${name}.jpg`, ill: `photos/${name}-ill.jpg` }
       await mkdir(path.join(config.uploadDir, 'photos'), { recursive: true })
       await writeFile(path.join(config.uploadDir, rel.original), original)
-      await writeFile(path.join(config.uploadDir, rel.ill), ill)
       // Converting takes a moment: re-check under the lock (the game may have started meanwhile,
       // or another upload filled the last place).
       const result = await db.transaction(async (tx) => {
@@ -130,10 +129,24 @@ export async function publicPhotoRoutes(app: FastifyInstance, ctx: AppContext) {
         return row
       })
       if (typeof result === 'string') {
-        for (const p of [rel.original, rel.ill]) await unlink(path.join(config.uploadDir, p)).catch(() => {})
+        await unlinkAll([rel.original])
         return reply.code(result === 'locked' ? 409 : 400).send({ error: result })
       }
       const row = result
+      // The look is seeded by the photo's id, known now. Drawn before answering, so the buyer
+      // sees it at once; a photo that cannot be drawn is taken back.
+      try {
+        const ill = await renderGamePhoto(original, 'bg', row.id, await photoLook(db, order))
+        await writeFile(path.join(config.uploadDir, rel.ill), ill)
+      } catch {
+        await db.transaction(async (tx) => {
+          const fresh = await lockOrder(tx, order.id)
+          await tx.delete(uploads).where(eq(uploads.id, row.id))
+          if (fresh) await syncPhotos(tx, fresh)
+        })
+        await unlinkAll([rel.original, rel.ill])
+        return reply.code(415).send({ error: 'unreadable_image' })
+      }
       return { photo: view(row) }
     },
   )
@@ -209,7 +222,7 @@ export async function publicPhotoRoutes(app: FastifyInstance, ctx: AppContext) {
         if (refused) return reply.code(415).send({ error: refused })
         let ill: Buffer
         try {
-          ill = await illustrateCutout(cutout)
+          ill = await renderGamePhoto(cutout, 'cut', row.id, await photoLook(db, order))
         } catch {
           return reply.code(415).send({ error: 'no_subject' })
         }

@@ -1,4 +1,4 @@
-// Step 3: optional photos, each shown next to its illustrated version (a taped polaroid, as it
+// Step 3: optional photos, each shown next to its game version (the doodle frame) (a taped polaroid, as it
 // appears in the game). Also reachable from the manage page until the game starts.
 import { useEffect, useState } from 'react'
 import { Doodles, Icon } from '../../shared/decor.tsx'

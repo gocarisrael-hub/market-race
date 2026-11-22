@@ -1,6 +1,6 @@
 // "With / without background" end to end, with the real cutout: the buyer picks a photo, asks for
 // it without background, the browser cuts the dog out (MediaPipe, self-hosted under
-// /vendor/mediapipe), the server illustrates the cutout on paper, and the choice can be changed
+// /vendor/mediapipe), the server draws the cutout on paper, and the choice can be changed
 // back and forth on the photos step and on the manage page.
 // Sample photo: "Dog on grass" (Ina Meyer, public domain, Wikimedia Commons).
 import { expect, test } from '@playwright/test'
