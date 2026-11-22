@@ -21,13 +21,14 @@ import { israelDate } from '../domain/dates.ts'
 import { questionTextFor } from '../domain/template.ts'
 import { ALLERGENS, DIETS, FORMS, type Form, type OrderStatus } from '../domain/types.ts'
 import { iconUrl } from '../lib/icons.ts'
+import { captainToken } from '../lib/tokens.ts'
 import { cardEnabled } from '../services/context.ts'
-import { interpolate, links, qrPng } from '../services/delivery.ts'
+import { interpolate, links, qrPng, sendManageLinks, sendToBuyer } from '../services/delivery.ts'
 import { BuildError, buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
 import { afterBuilt, handleNotify, PaymentError, priceFor, startPayment } from '../services/payments.ts'
 import { completeMockPayment, mockPaymentInfo } from '../services/payments-mock.ts'
 import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
-import { fileUrl, startBlock, startGame } from '../services/play.ts'
+import { fileUrl, isPaused, resumeBlock, resumeGame, startBlock, startGame } from '../services/play.ts'
 import { getSetting, messageTemplate } from '../services/settings.ts'
 import { PHOTOS_EDITABLE } from './public-photos.ts'
 
@@ -39,6 +40,9 @@ const hintQuestion = z.object({ question: z.string().trim().max(140), answer: z.
 const hintQuestionList = z.array(hintQuestion).max(MAX_HINT_QUESTIONS)
 const cleanHintQuestions = (list: z.infer<typeof hintQuestionList>) =>
   list.filter((q) => q.question && q.answer)
+
+/** One lost-link email per address per this long (lifted in the test env, as the rate limits are). */
+export const LOST_LINK_INTERVAL_MS = 10 * 60 * 1000
 
 export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   const { db, config, services } = ctx
@@ -416,6 +420,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const block = startBlock(order, state, israelDate())
     const started = !!state && state.step !== 'opening'
     const gameLink = links(base, order).gameLink
+    const paused = !!state && isPaused(state) && order.status === 'active'
+    const resumeWhy = resumeBlock(order, state, israelDate())
     // After the start: the captain shares the players' link (the owner's text) and joins the game.
     let invite: { text: string } | null = null
     if (started && order.status === 'active') {
@@ -452,6 +458,13 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       started,
       players: state?.players ?? (started ? (order.game?.people ?? order.people) : null),
       invite,
+      // Paused by the captain: where they stopped, and whether it can resume now (or why not).
+      paused: paused ? { stop: state.stopIndex + 1, total: order.game?.stops.length ?? 0 } : null,
+      resume: { can: paused && resumeWhy === null, reason: paused ? resumeWhy : 'not_paused' },
+      // The captain's own way into the game: the game link plus the captain token in the hash
+      // (never sent to the server in the URL), which lets that phone pause the game.
+      captainLink:
+        started && order.status === 'active' ? `${gameLink}#c=${captainToken(order.manageToken)}` : null,
       qr: playable ? `/api/qr/${order.gameToken}.png` : null,
       progress: state
         ? {
@@ -555,7 +568,49 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         if (res.error === 'not_found') return reply.code(404).send({ error: res.error })
         return reply.code(res.error === 'bad_players' ? 400 : 409).send({ error: res.error })
       }
+      // Once per start (a second start is refused above; resuming sends nothing): the game link
+      // and QR by email, and the manage link to continue from if they stop.
+      try {
+        await sendToBuyer(db, services, base, order, 'game_started')
+      } catch (e) {
+        console.error('[start] email failed', e)
+      }
       return { ok: true, gameLink: links(base, order).gameLink, players: res.view.players }
+    },
+  )
+
+  // The captain resumes a paused game: any day it is valid, any number of times, at the same stop,
+  // with the same game link and the players fixed at the start.
+  app.post(
+    '/api/manage/:token/resume',
+    { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } },
+    async (req, reply) => {
+      const { token } = z.object({ token: z.string().min(10).max(64) }).parse(req.params)
+      const [order] = await db.select().from(orders).where(eq(orders.manageToken, token))
+      if (!order) return reply.code(404).send({ error: 'not_found' })
+      const res = await resumeGame(db, order.gameToken, { pollSeconds: await getSetting(db, 'poll_seconds') })
+      if (!res.ok) return reply.code(res.error === 'not_found' ? 404 : 409).send({ error: res.error })
+      return {
+        ok: true,
+        stop: res.view.stopIndex + 1,
+        captainLink: `${links(base, order).gameLink}#c=${captainToken(order.manageToken)}`,
+      }
+    },
+  )
+
+  // "איבדתי את הקישור": the same answer whether or not the address has orders, and the email goes
+  // out after the response, so neither the answer nor its timing tells. Limited per address too.
+  app.post(
+    '/api/lost-link',
+    { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+    async (req, reply) => {
+      const body = z.object({ email: z.string().trim().email().max(120) }).safeParse(req.body)
+      if (!body.success) return reply.code(400).send({ error: 'invalid' })
+      const minIntervalMs = config.env === 'test' ? 0 : LOST_LINK_INTERVAL_MS
+      void sendManageLinks(db, services, base, body.data.email, { minIntervalMs }).catch((e) =>
+        console.error('[lost-link] failed', e),
+      )
+      return { ok: true }
     },
   )
 

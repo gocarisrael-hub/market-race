@@ -25,6 +25,18 @@ export const COPY = {
   // Before the captain starts the game (on the manage page), every phone waits here.
   'wait.title': 'המשחק עוד לא התחיל',
   'wait.body': 'מי שהזמין את המשחק מתחיל אותו בשוק, כשכולם שם. המסך יתעדכן לבד.',
+  // The captain paused the game ("עוצרים להיום"); every phone shows this until it is resumed.
+  'paused.title': 'המשחק בהפסקה',
+  'paused.body': 'ממשיכים בפעם הבאה, מאותה תחנה. מי שהזמין את המשחק ממשיך אותו מהקישור שלו.',
+  'paused.stop': 'עצרתם בתחנה {n} מתוך {total}',
+  // The captain's own phone: pause for today, after a confirm.
+  'pause.open': 'עוצרים להיום',
+  'pause.title': 'עוצרים להיום?',
+  'pause.body':
+    'המשחק נעצר אצל כולם, בתחנה {n} מתוך {total}. ממשיכים בכל יום עד שהתוקף נגמר, מהקישור של ההזמנה, מאותה תחנה.',
+  'pause.confirm': 'כן, עוצרים',
+  'pause.cancel': { default: 'לא, ממשיכים לשחק', she: 'לא, ממשיכות לשחק' },
+  'pause.failed': 'לא הצלחנו לעצור, נסו שוב',
   'start.logoAlt': 'הלוגו של {company}',
   'start.mapAlt': 'מפה מאוירת של השוק',
 

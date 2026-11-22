@@ -1726,3 +1726,13 @@ h2 {
   float: right;
   margin: 0 0 0 8px;
 }
+
+/* ---------- Paused (the opening sheet, stopped for today) ---------- */
+
+.opening.paused .paused-stop {
+  margin: 2px 0 0;
+  font-family: var(--hand);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+}

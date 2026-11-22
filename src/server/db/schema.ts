@@ -238,6 +238,9 @@ export const gameStates = pgTable('game_states', {
   // Bumped on every change; clients poll and re-render when it moves.
   version: integer().notNull().default(0),
   startedAt: timestamp({ withTimezone: true }),
+  // Set while the captain has paused the game ("עוצרים להיום"); null while it is playable.
+  // Resumed from the manage link, any day it is valid, at the same stop.
+  pausedAt: timestamp({ withTimezone: true }),
   finishedAt: timestamp({ withTimezone: true }),
   lastActivityAt: now(),
 })

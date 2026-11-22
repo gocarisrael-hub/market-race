@@ -1,0 +1,1 @@
+ALTER TABLE "game_states" ADD COLUMN "paused_at" timestamp with time zone;

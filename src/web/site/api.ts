@@ -85,6 +85,12 @@ export type Manage = {
   players: number | null
   /** After the start: the WhatsApp text for the players (the owner's template, filled). */
   invite: { text: string } | null
+  /** Paused by the captain: the stop they stopped at, of how many. */
+  paused: { stop: number; total: number } | null
+  /** Whether the captain can resume now, or why not. */
+  resume: { can: boolean; reason: 'not_paused' | 'expired' | null }
+  /** The game link with the captain token: the captain's own phone, which can pause the game. */
+  captainLink: string | null
   progress: { step: string; stopIndex: number; total: number; redeemed: number } | null
   needsAnswers: boolean
   photos: { count: number; editable: boolean }
@@ -193,6 +199,12 @@ export const startGame = (token: string, players: number) =>
     method: 'POST',
     json: { players },
   })
+export const resumeGame = (token: string) =>
+  api<{ ok: true; stop: number; captainLink: string }>(`/api/manage/${encodeURIComponent(token)}/resume`, {
+    method: 'POST',
+  })
+export const lostLink = (email: string) =>
+  api<{ ok: true }>('/api/lost-link', { method: 'POST', json: { email } })
 export const sendLead = (lead: Record<string, unknown>) =>
   api<{ ok: true }>('/api/leads', { method: 'POST', json: lead })
 

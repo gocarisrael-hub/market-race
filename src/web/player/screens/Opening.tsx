@@ -1,12 +1,14 @@
 // Opening: the market map and the race title on a ribbon, waiting for the captain. There is no
 // start here: the buyer starts the game from the manage page, and every phone follows by polling.
+// The same sheet is the paused screen ("המשחק בהפסקה"): the captain stopped for today, nothing of
+// the stop is shown, and every phone moves on by itself when the captain resumes.
 import { Doodles, Icon } from '../../shared/decor.tsx'
 import { joinList } from '../copy.ts'
 import { Paper, Ribbon, TornEdge } from '../draw.tsx'
 import { iconUrl, ribbonFontSize } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
 
-export function Opening({ view, t }: Omit<ScreenProps, 'act'>) {
+export function Opening({ view, t, paused = false }: Omit<ScreenProps, 'act'> & { paused?: boolean }) {
   const title = t('start.ribbon', { name: view.honoree })
   const stops = view.totalStops
   const summary = view.allergens.length
@@ -16,7 +18,7 @@ export function Opening({ view, t }: Omit<ScreenProps, 'act'>) {
   const tint = view.theme?.palette.mapTint
 
   return (
-    <main className="scr opening" data-decor={view.decor}>
+    <main className={`scr opening${paused ? ' paused' : ''}`} data-decor={view.decor}>
       <div className="opening-map" aria-hidden={!map}>
         {map && <img className="kb" src={map} alt={t('start.mapAlt')} fetchPriority="high" />}
         {map && tint && <span className="map-tint" style={{ background: tint }} />}
@@ -52,19 +54,27 @@ export function Opening({ view, t }: Omit<ScreenProps, 'act'>) {
           ]}
         />
         <Ribbon text={title} fontSize={ribbonFontSize(title)} />
-        <p className="opening-summary">{summary}</p>
-        <p className="opening-together">{t('start.together')}</p>
-        <Paper className="wait-note rise" tilt={-1.4}>
+        {paused ? (
+          <p className="opening-summary paused-stop">
+            {t('paused.stop', { n: view.stopIndex + 1, total: stops })}
+          </p>
+        ) : (
+          <>
+            <p className="opening-summary">{summary}</p>
+            <p className="opening-together">{t('start.together')}</p>
+          </>
+        )}
+        <Paper className="wait-note rise" tilt={paused ? 1.2 : -1.4}>
           <span className="wait-doodles" aria-hidden="true">
-            <Icon name="clock" size={40} tilt={-12} className="wait-d1" />
-            <Icon name="ticket" size={36} tilt={10} className="wait-d2" />
+            <Icon name={paused ? 'pin' : 'clock'} size={40} tilt={-12} className="wait-d1" />
+            <Icon name={paused ? 'map' : 'ticket'} size={36} tilt={10} className="wait-d2" />
           </span>
           <h2 className="wait-title">
-            <Icon name="hourglass" size={38} tilt={-8} />
-            <span>{t('wait.title')}</span>
+            <Icon name={paused ? 'clock' : 'hourglass'} size={38} tilt={-8} />
+            <span>{t(paused ? 'paused.title' : 'wait.title')}</span>
           </h2>
           <p className="wait-body" role="status">
-            {t('wait.body')}
+            {t(paused ? 'paused.body' : 'wait.body')}
           </p>
           <span className="wait-dots" aria-hidden="true">
             <i />

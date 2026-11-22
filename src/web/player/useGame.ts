@@ -1,6 +1,15 @@
 // Loads the game, keeps it in sync across phones, and sends actions.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchGame, type Loaded, type PlayAction, type PlayerView, type Support, sendAction } from './api.ts'
+import {
+  fetchGame,
+  type Loaded,
+  type PlayAction,
+  type PlayerView,
+  type Support,
+  sendAction,
+  sendPause,
+} from './api.ts'
+import { captainTokenFor } from './captain.ts'
 import { type Poller, pickView, startPoller } from './sync.ts'
 
 export type GameState =
@@ -15,6 +24,10 @@ export function useGame(token: string) {
   const [texts, setTexts] = useState<Record<string, string>>({})
   const [support, setSupport] = useState<Support>({ whatsapp: '', message: '' })
   const [offline, setOffline] = useState(false)
+  // The captain token this phone holds (from the manage page's "continue to the game"), and
+  // whether the server accepted it.
+  const [captainToken] = useState(() => (token ? captainTokenFor(token) : null))
+  const [captain, setCaptain] = useState(false)
   const viewRef = useRef<PlayerView | null>(null)
   const pollerRef = useRef<Poller | null>(null)
 
@@ -29,6 +42,7 @@ export function useGame(token: string) {
     if (r.kind === 'view') {
       if (r.texts) setTexts(r.texts)
       if (r.support) setSupport(r.support)
+      if (r.captain !== undefined) setCaptain(r.captain)
       const next = pickView(viewRef.current, r.view)
       if (next !== viewRef.current) {
         viewRef.current = next
@@ -39,7 +53,10 @@ export function useGame(token: string) {
     if (!viewRef.current) setState({ phase: r.kind })
   }, [])
 
-  const load = useCallback(async () => apply(await fetchGame(token)), [token, apply])
+  const load = useCallback(
+    async () => apply(await fetchGame(token, captainToken)),
+    [token, captainToken, apply],
+  )
 
   useEffect(() => {
     if (!token) {
@@ -69,10 +86,17 @@ export function useGame(token: string) {
     [token, apply],
   )
 
+  const pause = useCallback(async (): Promise<Loaded> => {
+    if (!captainToken) return { kind: 'error' }
+    const r = await sendPause(token, captainToken)
+    if (r.kind === 'view') apply(r)
+    return r
+  }, [token, captainToken, apply])
+
   const retry = useCallback(() => {
     setState({ phase: 'loading' })
     void load()
   }, [load])
 
-  return { state, texts, support, offline, act, retry }
+  return { state, texts, support, offline, act, retry, captain: captain && !!captainToken, pause }
 }

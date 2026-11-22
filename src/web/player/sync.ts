@@ -20,6 +20,7 @@ export function screenKey(v: PlayerView): string {
   if (v.status === 'expired') return 'expired'
   if (v.step === 'done') return 'done'
   if (v.step === 'opening') return 'opening'
+  if (v.status === 'paused') return `paused-${v.stopIndex}`
   return `${v.step}-${v.stopIndex}`
 }
 

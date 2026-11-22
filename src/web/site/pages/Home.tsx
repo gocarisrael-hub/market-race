@@ -287,6 +287,11 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
               {copy.home.companies}
             </Sketch>
           </p>
+          <p className="section lost-link-entry">
+            <Sketch href="/lost-link" icon="magnifier" small>
+              {copy.lostLink.entry}
+            </Sketch>
+          </p>
 
           <Cta onClick={next} error={error}>
             {copy.home.next(d.form)}
