@@ -31,6 +31,7 @@ import {
   step2Error,
   withRecipient,
 } from '../logic.ts'
+import { OrderSide } from '../order-side.tsx'
 import { navigate } from '../router.ts'
 import {
   Back,
@@ -116,6 +117,7 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
   const decor = decorFor(shop, d.occasionKey)
   return (
     <main className="page" data-decor={decor ?? undefined}>
+      <OrderSide shop={shop} draft={d} />
       <Doodles
         className="deco"
         decor={decor}

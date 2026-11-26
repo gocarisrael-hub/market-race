@@ -124,9 +124,16 @@ button {
   user-select: none;
   z-index: 0;
 }
-.page > *:not(.deco):not(.doodles) {
+.page > *:not(.deco):not(.doodles),
+.page > .m-spread > .m-page > *:not(.deco):not(.doodles) {
   position: relative;
   z-index: 1;
+}
+/* The manage page's notebook spread: on phones the two pages read one after the other, as if
+   the wrappers were not there (wide screens lay them side by side, below). */
+.m-spread,
+.m-page {
+  display: contents;
 }
 .back {
   display: inline-block;
@@ -1929,5 +1936,154 @@ ol.howto.drawn li {
     margin-top: 36px;
     padding: 0;
     background: none;
+  }
+}
+
+/* Computers (from 1024px): the order pages use the width. The form on the reading side, a large
+   live preview beside it (order-side.tsx), sticky while the form scrolls. Type and the drawn
+   illustrations grow with the window. */
+@media (min-width: 1024px) {
+  :root:has(.order-side) {
+    --sheet-w: min(1200px, 100% - 160px);
+  }
+  html .page:has(> .order-side) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 0.78fr);
+    align-items: start;
+    column-gap: clamp(48px, 5vw, 96px);
+    padding: 48px clamp(48px, 5vw, 84px) 56px;
+  }
+  .page:has(> .order-side) > * {
+    grid-column: 1;
+  }
+  /* Spans every row of the form, so it can stay in view the whole way down. */
+  .page > .order-side {
+    position: sticky;
+    top: 28px;
+    grid-column: 2;
+    grid-row: 1 / span 80;
+    padding-top: 70px;
+  }
+  .page:has(> .order-side) .cta-wrap {
+    max-width: 460px;
+  }
+  .side-look {
+    position: relative;
+  }
+  .order-side .look-preview {
+    max-width: none;
+    margin: 0;
+  }
+  .order-side .pv-map {
+    height: clamp(220px, 26vh, 320px);
+  }
+  .order-side .pv-ribbon span {
+    font-size: clamp(30px, 2.4vw, 40px);
+  }
+  .order-side .pv-button {
+    height: 52px;
+  }
+  .order-side .pv-button span {
+    font-size: clamp(24px, 1.9vw, 30px);
+  }
+  .side-doodles {
+    z-index: 2;
+  }
+  .side-caption {
+    margin: 14px 0 0;
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .order-side .tastings {
+    margin-top: 30px;
+  }
+  .order-side .price {
+    margin-top: 22px;
+  }
+
+  /* Bigger type and choices; the maps become a wider grid. */
+  h1.title {
+    font-size: clamp(72px, 6vw, 108px);
+  }
+  .lead {
+    max-width: 34em;
+    font-size: 17px;
+  }
+  .hint {
+    font-size: 15px;
+  }
+  .opt {
+    font-size: clamp(30px, 2.5vw, 38px);
+  }
+  .opt.small {
+    font-size: clamp(26px, 2vw, 30px);
+  }
+  .themes {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 26px 26px;
+  }
+  .theme .name {
+    font-size: 30px;
+  }
+  /* The drawn illustrations scale with the window instead of staying phone-sized. */
+  .page > img.deco {
+    scale: 1.3;
+    transform-origin: top left;
+  }
+}
+/* Manage, from 1024px: a notebook spread, two pages side by side with a fold between them. */
+@media (min-width: 1024px) {
+  :root:has(.manage) {
+    --sheet-w: min(1200px, 100% - 160px);
+  }
+  html .page.manage {
+    padding: 48px clamp(48px, 5vw, 84px) 56px;
+  }
+  .m-spread {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    column-gap: clamp(56px, 6vw, 110px);
+    margin-top: 18px;
+  }
+  .m-page {
+    display: block;
+    min-width: 0;
+  }
+  .m-page:empty {
+    display: none;
+  }
+  .m-spread:has(> .m-page:empty) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 640px;
+  }
+  /* The fold: a hand-drawn dashed line down the middle of the spread. */
+  .m-page + .m-page {
+    position: relative;
+  }
+  .m-page + .m-page::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    inset-inline-start: calc(clamp(56px, 6vw, 110px) / -2);
+    border-inline-start: 2px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  }
+  .m-page:empty + .m-page::before {
+    display: none;
+  }
+  .m-page > .section:first-child,
+  .m-page > :first-child {
+    margin-top: 0;
+  }
+  .m-edit .cta-wrap {
+    margin-top: 30px;
+  }
+}
+@media (min-width: 1600px) {
+  .page > img.deco {
+    scale: 1.5;
   }
 }

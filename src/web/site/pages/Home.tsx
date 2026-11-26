@@ -2,6 +2,7 @@
 // allergens and diets, live price. The recipient picks the questions of step 2.
 import { useState } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
+import { useWide } from '../../shared/useWide.ts'
 import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
 import {
@@ -22,6 +23,7 @@ import {
   toggle,
   withRecipient,
 } from '../logic.ts'
+import { OrderSide } from '../order-side.tsx'
 import { navigate } from '../router.ts'
 import { RouteTastings } from '../tastings.tsx'
 import {
@@ -60,6 +62,8 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
   const pal = currentPalette(shop, d)
   const recipients = recipientsFor(occasions.find((o) => o.key === d.occasionKey))
   const recipient = draftRecipient(shop, d)
+  // Wide screens show the preview, the tastings and the price in the side panel instead.
+  const wide = useWide()
 
   const next = () => {
     const e = step1Error(d, shop)
@@ -94,7 +98,9 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
         />
       )}
 
-      <div style={{ marginTop: 74, marginLeft: 50 }}>
+      <OrderSide shop={shop} draft={d} />
+
+      <div className="page-head" style={{ marginTop: 74, marginLeft: 50 }}>
         <StepTrail step={1} total={STEPS} />
         <div className="title-row">
           <h1 className="title rise">
@@ -223,7 +229,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
                   {pal.name}
                 </p>
               )}
-              {pal && <LookPreview map={theme.map} palette={pal.palette} name={pal.name} />}
+              {pal && !wide && <LookPreview map={theme.map} palette={pal.palette} name={pal.name} />}
               <p className="hint">{copy.home.paletteHint}</p>
             </section>
           )}
@@ -292,14 +298,16 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
             <p className="hint">{copy.home.allergensHint}</p>
           </section>
 
-          <RouteTastings
-            shop={shop}
-            themeId={theme?.id ?? themes[0]?.id ?? null}
-            allergens={d.allergens}
-            diets={d.diets}
-          />
+          {!wide && (
+            <RouteTastings
+              shop={shop}
+              themeId={theme?.id ?? themes[0]?.id ?? null}
+              allergens={d.allergens}
+              diets={d.diets}
+            />
+          )}
 
-          {total !== null && per && (
+          {!wide && total !== null && per && (
             <section className="section price" aria-live="polite" data-testid="price">
               <span className="hint">{copy.home.total}</span>
               <span className="total">

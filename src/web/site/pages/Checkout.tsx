@@ -12,6 +12,7 @@ import {
   errorText,
   formatShekels,
 } from '../logic.ts'
+import { OrderSide } from '../order-side.tsx'
 import { PayLayer, usePay } from '../pay.tsx'
 import { navigate } from '../router.ts'
 import { Back, Cta, Deco, Failed, Field, Loading, Sketch, StepTrail, TitleIcon, TornPaper } from '../ui.tsx'
@@ -65,6 +66,7 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
 
   return (
     <main className="page" data-decor={decor ?? undefined}>
+      <OrderSide shop={shop} draft={draft} />
       <Doodles
         className="deco"
         decor={decor}

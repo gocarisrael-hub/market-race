@@ -167,59 +167,94 @@ export function Manage({ token, search }: { token: string; search: string }) {
             </p>
           )}
 
-        {/* Started: share the players' link, then into the game (the captain's own phone). */}
-        {m.started && m.status === 'active' && !m.paused && <ShareGame m={m} decor={decor} />}
-        {/* Paused by the captain in the game: resume here, at the same stop. */}
-        {m.paused && <ResumeGame token={token} m={m} decor={decor} onResumed={load} />}
-        {m.gameLink && m.status === 'done' && (
-          <div className="m-action">
-            <Brush href={m.gameLink} external small icon="trophy">
-              {copy.manage.openGame}
-            </Brush>
-          </div>
-        )}
+        {/* Wide screens: a notebook spread. The game and its sharing on one page, the edits on the
+            other; phones read the two pages one after the other, as before. */}
+        <div className="m-spread">
+          <div className="m-page m-page-play">
+            {/* Started: share the players' link, then into the game (the captain's own phone). */}
+            {m.started && m.status === 'active' && !m.paused && <ShareGame m={m} decor={decor} />}
+            {/* Paused by the captain in the game: resume here, at the same stop. */}
+            {m.paused && <ResumeGame token={token} m={m} decor={decor} onResumed={load} />}
+            {m.gameLink && m.status === 'done' && (
+              <div className="m-action">
+                <Brush href={m.gameLink} external small icon="trophy">
+                  {copy.manage.openGame}
+                </Brush>
+              </div>
+            )}
 
-        {/* Before the start: how it works (no game link to pass around yet), then the start itself. */}
-        {m.gameLink && !m.started && m.status === 'ready' && (
-          <TornPaper tilt="l">
-            <SectionHead icon="map">{copy.manage.gameTitle}</SectionHead>
-            <h3 className="howto-title">{copy.manage.howToTitle}</h3>
-            <ol className="howto drawn">
-              {copy.manage.howTo.map((l, i) => (
-                <li key={l}>
-                  <Icon name={HOWTO_ICONS[i % HOWTO_ICONS.length]} size={34} tilt={i % 2 ? 6 : -6} />
-                  <span>{l}</span>
-                </li>
-              ))}
-            </ol>
-            {m.validUntil && (
-              <p className="hint valid-until">
-                <Icon name="hourglass" size={24} />
-                {copy.manage.validUntil(
-                  new Date(m.validUntil).toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }),
+            {/* Before the start: how it works (no game link to pass around yet), then the start itself. */}
+            {m.gameLink && !m.started && m.status === 'ready' && (
+              <TornPaper tilt="l">
+                <SectionHead icon="map">{copy.manage.gameTitle}</SectionHead>
+                <h3 className="howto-title">{copy.manage.howToTitle}</h3>
+                <ol className="howto drawn">
+                  {copy.manage.howTo.map((l, i) => (
+                    <li key={l}>
+                      <Icon name={HOWTO_ICONS[i % HOWTO_ICONS.length]} size={34} tilt={i % 2 ? 6 : -6} />
+                      <span>{l}</span>
+                    </li>
+                  ))}
+                </ol>
+                {m.validUntil && (
+                  <p className="hint valid-until">
+                    <Icon name="hourglass" size={24} />
+                    {copy.manage.validUntil(
+                      new Date(m.validUntil).toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }),
+                    )}
+                  </p>
                 )}
+              </TornPaper>
+            )}
+
+            {m.status === 'ready' && !m.started && !showForm && m.start.can && (
+              <StartGame token={token} m={m} decor={decor} onStarted={load} />
+            )}
+            {m.status === 'ready' && m.start.reason === 'expired' && (
+              <div className="m-status">
+                <Icon name="hourglass" size={40} tilt={-6} />
+                <p className="status">{copy.manage.start.expired}</p>
+              </div>
+            )}
+          </div>
+          <div className="m-page m-page-edit">
+            {submitted && !editing && (
+              <p className="status saved-note" role="status">
+                <Icon name="check" size={32} />
+                {submitted === 'first' ? copy.manage.submitted : copy.manage.saved}
               </p>
             )}
-          </TornPaper>
-        )}
-
-        {m.status === 'ready' && !m.started && !showForm && m.start.can && (
-          <StartGame token={token} m={m} decor={decor} onStarted={load} />
-        )}
-        {m.status === 'ready' && m.start.reason === 'expired' && (
-          <div className="m-status">
-            <Icon name="hourglass" size={40} tilt={-6} />
-            <p className="status">{copy.manage.start.expired}</p>
+            {!showForm && m.editable && (
+              <section className="section m-edit-entry">
+                <Icon name="pencil" size={54} tilt={-10} className="entry-icon" />
+                <div>
+                  <p className="entry-ask">{copy.manage.editIntro}</p>
+                  <Brush
+                    small
+                    icon="pencil"
+                    onClick={() => {
+                      setSubmitted(null)
+                      setEditing(true)
+                    }}
+                  >
+                    {copy.manage.edit}
+                  </Brush>
+                  <p className="hint">{copy.manage.editHint}</p>
+                </div>
+              </section>
+            )}
+            {!showForm && m.photos?.editable && (
+              <section className="section">
+                <SectionHead icon="frame" tilt={6}>
+                  {copy.manage.photosTitle}
+                </SectionHead>
+                <PhotoDrop token={token} count={m.photos.count} />
+                <p className="hint">{copy.manage.photosHint}</p>
+              </section>
+            )}
           </div>
-        )}
-
-        {submitted && !editing && (
-          <p className="status saved-note" role="status">
-            <Icon name="check" size={32} />
-            {submitted === 'first' ? copy.manage.submitted : copy.manage.saved}
-          </p>
-        )}
-        {showForm ? (
+        </div>
+        {showForm && (
           <ManageEdit
             token={token}
             m={m}
@@ -231,35 +266,6 @@ export function Manage({ token, search }: { token: string; search: string }) {
               load()
             }}
           />
-        ) : (
-          m.editable && (
-            <section className="section m-edit-entry">
-              <Icon name="pencil" size={54} tilt={-10} className="entry-icon" />
-              <div>
-                <p className="entry-ask">{copy.manage.editIntro}</p>
-                <Brush
-                  small
-                  icon="pencil"
-                  onClick={() => {
-                    setSubmitted(null)
-                    setEditing(true)
-                  }}
-                >
-                  {copy.manage.edit}
-                </Brush>
-                <p className="hint">{copy.manage.editHint}</p>
-              </div>
-            </section>
-          )
-        )}
-        {!showForm && m.photos?.editable && (
-          <section className="section">
-            <SectionHead icon="frame" tilt={6}>
-              {copy.manage.photosTitle}
-            </SectionHead>
-            <PhotoDrop token={token} count={m.photos.count} />
-            <p className="hint">{copy.manage.photosHint}</p>
-          </section>
         )}
         <Deco
           icon="spices"

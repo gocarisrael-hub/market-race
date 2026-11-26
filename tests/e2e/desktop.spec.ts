@@ -1,10 +1,18 @@
-// Tablets and computers: the phone column is a sheet on the desk, and the corner and action
-// buttons belong to the sheet, not to the window. Phones keep the sticky button and fixed help.
+// Tablets and computers: the page is a sheet on the desk, the corner and action buttons belong
+// to the sheet, and from 1024px the pages use the width (side panels, spreads). Phones keep the
+// sticky button, the fixed help and their single column.
 import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test'
 
 test.use({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 })
 
 async function startedGame(request: APIRequestContext) {
+  const g = await newOrder(request)
+  const start = await request.post(`/api/manage${g.manage.slice(2)}/start`, { data: { players: 4 } })
+  expect(start.ok()).toBe(true)
+  return g.url
+}
+
+async function newOrder(request: APIRequestContext) {
   const login = await request.post('/admin/api/login', {
     data: { email: 'owner@example.com', password: 'e2e-password' },
   })
@@ -28,9 +36,7 @@ async function startedGame(request: APIRequestContext) {
   })
   expect(res.ok()).toBe(true)
   const body = await res.json()
-  const start = await request.post(`/api/manage/${body.order.manageToken}/start`, { data: { players: 4 } })
-  expect(start.ok()).toBe(true)
-  return body.links.game as string
+  return { url: body.links.game as string, manage: `/m/${body.order.manageToken}` }
 }
 
 const box = async (l: Locator) => {
@@ -48,6 +54,14 @@ async function expectInside(inner: Locator, outer: Locator) {
   expect(i.y + i.height).toBeLessThanOrEqual(o.y + o.height)
 }
 
+/** Side by side: no horizontal overlap, and they share some height. */
+async function expectBeside(a: Locator, b: Locator) {
+  const x = await box(a)
+  const y = await box(b)
+  expect(x.x + x.width <= y.x || y.x + y.width <= x.x).toBe(true)
+  expect(x.y < y.y + y.height && y.y < x.y + x.height).toBe(true)
+}
+
 const sheetWidth = (page: Page, sel: string) =>
   page.locator(sel).evaluate((el) => el.getBoundingClientRect().width)
 
@@ -63,7 +77,12 @@ test('game at 1440: help and the main button sit inside the sheet, the button un
   const sheet = page.locator('main.scr.riddle')
   await expect(sheet).toBeVisible()
   await expect(page.getByTestId('desk')).toBeVisible()
-  expect(await sheetWidth(page, 'main.scr')).toBeLessThan(600)
+  // Wide: the map and the route beside the riddle, the riddle card large.
+  const side = page.locator('.game-side')
+  await expect(side).toBeVisible()
+  await expectInside(side, sheet)
+  await expectBeside(side, page.locator('.riddle .note'))
+  expect(await sheetWidth(page, 'main.scr')).toBeGreaterThan(1000)
 
   const help = page.getByRole('button', { name: 'עזרה' })
   const submit = page.getByRole('button', { name: 'בודקות!' })
@@ -84,8 +103,43 @@ test('site at 1440: the order button sits inside the sheet', async ({ page }) =>
   const cta = page.locator('.cta-wrap .brush')
   await cta.scrollIntoViewIfNeeded()
   await expectInside(cta, sheet)
-  expect(await sheetWidth(page, 'main.page')).toBeLessThan(600)
+  // The live preview beside the form, not under it.
+  await page.evaluate(() => window.scrollTo(0, 0))
+  const side = page.locator('.order-side')
+  await expect(side.getByTestId('look-preview')).toBeVisible()
+  await expectBeside(side, page.locator('main.page h1'))
+  expect(await sheetWidth(page, 'main.page')).toBeGreaterThan(1000)
 })
+
+test('manage at 1440: the edit form is a two-page spread', async ({ page, request }) => {
+  const g = await newOrder(request)
+  await page.goto(g.manage)
+  await page.locator('.m-edit-entry button').click()
+  const pages = page.locator('.m-edit .m-page')
+  await expect(pages).toHaveCount(2)
+  await expectBeside(pages.nth(0), pages.nth(1))
+  await expect(pages.nth(1).getByTestId('look-preview')).toBeVisible()
+})
+
+for (const viewport of [
+  { width: 1024, height: 768 },
+  { width: 1280, height: 800 },
+  { width: 1728, height: 1117 },
+]) {
+  test(`game at ${viewport.width}: help and the button stay in the sheet, the side beside the riddle`, async ({
+    browser,
+    request,
+  }) => {
+    const ctx = await browser.newContext({ viewport, locale: 'he-IL' })
+    const page = await ctx.newPage()
+    await page.goto(await startedGame(request))
+    const sheet = page.locator('main.scr.riddle')
+    await expectInside(page.getByRole('button', { name: 'עזרה' }), sheet)
+    await expectInside(page.getByRole('button', { name: 'בודקות!' }), sheet)
+    await expectBeside(page.locator('.game-side'), page.locator('.riddle .note'))
+    await ctx.close()
+  })
+}
 
 test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
@@ -101,5 +155,12 @@ test.describe('phone', () => {
     expect(await pos('.foot')).toBe('sticky')
     expect(await pos('.help-btn')).toBe('fixed')
     expect(await sheetWidth(page, 'main.scr')).toBe(390)
+    await expect(page.locator('.game-side')).toHaveCount(0)
+  })
+
+  test('the order page keeps one column with the preview inline', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('.order-side')).toHaveCount(0)
+    await expect(page.getByTestId('look-preview')).toHaveCount(1)
   })
 })
