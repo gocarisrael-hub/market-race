@@ -329,9 +329,6 @@
 .co-form .co-lead {
   color: var(--muted);
 }
-.co-occ {
-  margin-top: 22px;
-}
 .co-form .cta-wrap {
   position: static;
   margin: 26px 0 0;
@@ -430,9 +427,6 @@
   }
   .co-form-head {
     align-self: start;
-  }
-  .co-occ {
-    margin-top: 0;
   }
   .co-thanks {
     display: block;

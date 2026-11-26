@@ -196,15 +196,12 @@ for (const [name, opts] of [
 
       // The call to action leads to the form; the form sends a lead.
       await page.getByRole('button', { name: 'לקבלת הצעת מחיר' }).click()
-      await expect(page.getByLabel('שם החברה')).toBeInViewport()
+      await expect(page.getByLabel('טלפון')).toBeInViewport()
       await page.getByRole('button', { name: 'שלחו לנו' }).click()
-      await expect(page.getByText('כתבו את שם החברה')).toBeVisible()
-      await page.getByRole('radio', { name: 'יום צוות' }).click()
+      await expect(page.getByText('מספר הטלפון לא נראה תקין')).toBeVisible()
+      await page.getByLabel('טלפון').fill('052-7654321')
       await page.getByLabel('שם החברה').fill('אקמה')
       await page.getByLabel('שם איש או אשת הקשר').fill('רון')
-      await page.getByLabel('טלפון').fill('052-7654321')
-      await page.getByLabel('אימייל').fill('ron@acme.co.il')
-      await page.getByLabel('כמה משתתפים בערך?').fill('40')
       await page.getByRole('button', { name: 'שלחו לנו' }).click()
       await expect(page.getByText('נחזור אליכם בקרוב עם הצעה.')).toBeVisible()
       await noBareLinks(page)
