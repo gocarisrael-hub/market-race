@@ -42,6 +42,9 @@ export type Shop = {
   prices: Record<string, { base: number; perPerson: number }>
   minPeople: number
   maxPeople: number
+  validYears: number
+  /** How long a game takes, in the owner's words; empty when not set. */
+  gameDuration: string
   allergens: string[]
   diets: string[]
   cardEnabled: boolean

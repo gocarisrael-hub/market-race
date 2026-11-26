@@ -65,7 +65,7 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
   }, [recipient, d, setDraft])
 
   useEffect(() => {
-    if (incomplete) return navigate('/', { replace: true })
+    if (incomplete) return navigate('/order', { replace: true })
     if (!recipient) return setQuestions([])
     // The questions follow who the game is for: a birthday for her asks about her, a love game for
     // him asks about him from the giver's side.
@@ -136,7 +136,7 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
         className="sway"
         style={{ top: 440, right: -40, width: 70, transformOrigin: '50% 100%' }}
       />
-      <Back href="/" />
+      <Back href="/order" />
       <div style={{ marginTop: 18, marginLeft: 80 }}>
         <StepTrail step={2} total={STEPS} />
         <div className="title-row">

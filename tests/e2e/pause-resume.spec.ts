@@ -172,7 +172,7 @@ test('lost link: the same answer for any address, the links emailed to a buyer',
   const email = `lost-${run}@example.com`
   const { orderNo } = await paidOrder(request, email)
 
-  await page.goto('/')
+  await page.goto('/order')
   const entry = page.getByRole('link', { name: 'איבדתי את הקישור' })
   await expect(entry).toHaveClass(/sketch/)
   await entry.click()

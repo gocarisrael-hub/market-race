@@ -12,7 +12,7 @@ const ANSWERS = ['תקווה', "ג'חנון", 'בוריק', 'פלאפל', 'לח�
 
 test('an order with two photos: on the riddles, in a lightbox, and in the letter', async ({ page }) => {
   test.setTimeout(120_000)
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('radio', { name: 'רווקות' }).click()
   await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
   await page.getByLabel(/איך קוראים לה/).fill('מיכל')

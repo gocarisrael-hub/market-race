@@ -571,3 +571,28 @@ export function Polaroid({ src, alt, tilt = -3 }: { src: string; alt: string; ti
     </figure>
   )
 }
+
+/** The links between the landing page, the tastings and the order, in handwriting. */
+export function SiteNav({ current }: { current: 'about' | 'tastings' | 'order' }) {
+  const items = [
+    { key: 'about', href: '/', label: copy.nav.about },
+    { key: 'tastings', href: '/tastings', label: copy.nav.tastings },
+    { key: 'order', href: '/order', label: copy.nav.order },
+  ] as const
+  return (
+    <nav className="site-nav" aria-label={copy.nav.label}>
+      {items.map((it) =>
+        it.key === current ? (
+          <span key={it.key} className="site-nav-item" aria-current="page">
+            {it.label}
+            <Underline />
+          </span>
+        ) : (
+          <Link key={it.key} href={it.href} className="site-nav-item">
+            {it.label}
+          </Link>
+        ),
+      )}
+    </nav>
+  )
+}

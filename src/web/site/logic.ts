@@ -361,6 +361,8 @@ export function clearDraft() {
 
 /** Parses the site path into a page. */
 export type Route =
+  | { page: 'landing' }
+  | { page: 'tastings' }
   | { page: 'home' }
   | { page: 'questions' }
   | { page: 'photos'; token: string }
@@ -375,7 +377,11 @@ export type Route =
 
 export function parseRoute(pathname: string): Route {
   const p = pathname.replace(/\/+$/, '') || '/'
-  if (p === '/') return { page: 'home' }
+  // The landing page explains the product; the order starts at /order (old links to /order/... keep
+  // working).
+  if (p === '/') return { page: 'landing' }
+  if (p === '/tastings') return { page: 'tastings' }
+  if (p === '/order') return { page: 'home' }
   if (p === '/order/questions') return { page: 'questions' }
   if (p === '/companies') return { page: 'companies' }
   if (p === '/lost-link') return { page: 'lostLink' }

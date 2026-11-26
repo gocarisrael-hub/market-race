@@ -22,12 +22,14 @@ import { Checkout } from './pages/Checkout.tsx'
 import { Companies } from './pages/Companies.tsx'
 import { CompanyPay } from './pages/CompanyPay.tsx'
 import { Home } from './pages/Home.tsx'
+import { Landing } from './pages/Landing.tsx'
 import { LostLink } from './pages/LostLink.tsx'
 import { Manage } from './pages/Manage.tsx'
 import { PayDone } from './pages/PayDone.tsx'
 import { PayMock } from './pages/PayMock.tsx'
 import { Photos } from './pages/Photos.tsx'
 import { Questions } from './pages/Questions.tsx'
+import { Tastings } from './pages/Tastings.tsx'
 import { useLocation } from './router.ts'
 import { Failed, Loading, Sketch } from './ui.tsx'
 
@@ -96,6 +98,12 @@ function App() {
   if (!shop || !draft) return bare(<Loading />)
   let page: React.ReactNode
   switch (route.page) {
+    case 'landing':
+      page = <Landing shop={shop} />
+      break
+    case 'tastings':
+      page = <Tastings shop={shop} />
+      break
     case 'home':
       page = <Home shop={shop} draft={draft} setDraft={setDraft} />
       break

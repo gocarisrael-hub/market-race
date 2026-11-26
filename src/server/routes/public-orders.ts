@@ -132,6 +132,9 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       prices: await getSetting(db, 'prices'),
       minPeople: await getSetting(db, 'min_people'),
       maxPeople: await getSetting(db, 'max_people'),
+      // For the landing page's FAQ.
+      validYears: await getSetting(db, 'valid_years'),
+      gameDuration: await getSetting(db, 'game_duration'),
       allergens: ALLERGENS,
       diets: DIETS,
       cardEnabled: cardEnabled(services),

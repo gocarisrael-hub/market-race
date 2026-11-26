@@ -25,7 +25,7 @@ const cssVar = (page: Page, name: string) =>
   page.evaluate((n) => document.documentElement.style.getPropertyValue(n), name)
 
 test('step 1 recolors the map preview live, in three palettes', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   // The occasion's doodles and a playful line appear once it is picked.
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
@@ -65,7 +65,7 @@ test('step 1 recolors the map preview live, in three palettes', async ({ page })
 })
 
 test('the occasion and palette picked on the site open the game in that look', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   await page.getByRole('radio', { name: 'כחול ים' }).click()
   await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
