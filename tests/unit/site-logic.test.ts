@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { isIsraeliPhone } from '../../src/server/domain/phone.ts'
 import type { Occasion, Question, Shop } from '../../src/web/site/api.ts'
 import { copy, peopleCount } from '../../src/web/site/copy.ts'
 import {
@@ -269,21 +270,43 @@ describe('site logic', () => {
       'email',
     ])
     expect(buyerErrors({ name: 'נועה', phone: '050-1234567', email: 'noa@example.com' })).toEqual({})
-    const lead = {
-      companyName: 'אקמה',
-      contactName: 'רון',
-      phone: '052 7654321',
-      email: 'ron@acme.co.il',
-      occasionKey: null,
-      people: '',
-      preferredDate: '',
-      message: '',
-    }
+    const lead = { companyName: '', contactName: '', phone: '052 7654321', email: '', message: '' }
+    // Only the phone is required.
     expect(leadErrors(lead)).toEqual({})
-    expect(Object.keys(leadErrors({ ...lead, companyName: ' ', people: '3x' }))).toEqual([
-      'companyName',
-      'people',
+    expect(leadErrors({ ...lead, companyName: 'אקמה', contactName: 'רון', email: 'ron@acme.co.il' })).toEqual(
+      {},
+    )
+    expect(Object.keys(leadErrors({ ...lead, phone: '' }))).toEqual(['phone'])
+    expect(Object.keys(leadErrors({ ...lead, phone: '12' }))).toEqual(['phone'])
+    // An optional email is checked only when filled.
+    expect(Object.keys(leadErrors({ ...lead, email: 'ron@' }))).toEqual(['email'])
+  })
+
+  it('accepts Israeli phone numbers in a forgiving way', () => {
+    for (const ok of [
+      '0527654321',
+      '052-765-4321',
+      '052 765 4321',
+      '+972 52-765-4321',
+      '+972527654321',
+      '972527654321',
+      '00972 52 7654321',
+      '+972 (0)52 765 4321',
+      '03-1234567',
+      '077-1234567',
+      ' 054 1234567 ',
     ])
+      expect(isIsraeliPhone(ok), ok).toBe(true)
+    for (const bad of [
+      '',
+      '12345',
+      '052765432',
+      '05276543210',
+      '+1 212 555 1234',
+      '052-abc-4321',
+      '0127654321',
+    ])
+      expect(isIsraeliPhone(bad), bad).toBe(false)
   })
 
   it('finds the route of a theme and lists its stops as listed', () => {

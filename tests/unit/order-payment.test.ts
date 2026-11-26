@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { orders, paySessions } from '../../src/server/db/schema.ts'
+import { leads, orders, paySessions } from '../../src/server/db/schema.ts'
 import { normalizeRow } from '../../src/server/payments/tranzila.ts'
 import { createPaymentSweeper, decideRow } from '../../src/server/services/payments.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
@@ -229,5 +229,18 @@ describe('order and payment flow', () => {
       },
     })
     expect(res.json().ok).toBe(true)
+  })
+
+  it('records a lead with only a phone, and rejects one without a valid phone', async () => {
+    const post = (payload: Record<string, unknown>) =>
+      t.app.inject({ method: 'POST', url: '/api/leads', payload })
+    const ok = await post({ phone: '+972 52-765-4321' })
+    expect(ok.statusCode).toBe(200)
+    const [row] = await t.db.select().from(leads).where(eq(leads.id, ok.json().id))
+    expect(row).toMatchObject({ phone: '+972 52-765-4321', companyName: '', contactName: '', email: '' })
+    expect((await post({ companyName: 'אקמה', email: 'ron@acme.co' })).statusCode).toBe(400)
+    expect((await post({ phone: '123' })).statusCode).toBe(400)
+    expect((await post({ phone: '0527654321', email: 'ron@' })).statusCode).toBe(400)
+    expect((await post({ phone: '0527654321', email: '' })).statusCode).toBe(200)
   })
 })

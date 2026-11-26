@@ -6,16 +6,8 @@ import { type CSSProperties, useState } from 'react'
 import { type DoodleName, Doodles, Icon, SketchShape } from '../../shared/decor.tsx'
 import { ApiError, type Shop, sendLead } from '../api.ts'
 import { copy } from '../copy.ts'
-import {
-  companyOccasions,
-  errorText,
-  type Lead,
-  leadErrors,
-  orderableThemes,
-  routeForTheme,
-  type Site,
-} from '../logic.ts'
-import { Brush, Cta, Field, Opt, Ring, Underline } from '../ui.tsx'
+import { errorText, type Lead, leadErrors, orderableThemes, routeForTheme, type Site } from '../logic.ts'
+import { Brush, Cta, Field, Ring, Underline } from '../ui.tsx'
 
 /** The company colours the map is shown in: an example, as a company would choose them. */
 const SAMPLE = { ink: '#1d3f7a', sun: '#f2b632', leaf: '#2f8f83' }
@@ -155,7 +147,7 @@ export function Companies({ shop, site }: { shop: Shop; site: Site }) {
           </ol>
         </section>
 
-        <LeadForm shop={shop} people={people} />
+        <LeadForm />
       </main>
 
       <footer className="co-foot">
@@ -169,27 +161,25 @@ export function Companies({ shop, site }: { shop: Shop; site: Site }) {
   )
 }
 
-function LeadForm({ shop, people }: { shop: Shop; people: { min: number; max: number } }) {
+function LeadForm() {
   const c = copy.companiesSite
   const [lead, setLead] = useState<Lead>({
     companyName: '',
     contactName: '',
     phone: '',
     email: '',
-    occasionKey: null,
-    people: '',
-    preferredDate: '',
     message: '',
   })
   const [errors, setErrors] = useState<ReturnType<typeof leadErrors>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
-  const set = (k: keyof Lead, v: string | null) => {
+  const set = (k: keyof Lead, v: string) => {
     setErrors({})
     setError(null)
     setLead({ ...lead, [k]: v })
   }
+  const optional = (label: string) => `${label} (${copy.optional})`
 
   const submit = async () => {
     const e = leadErrors(lead)
@@ -202,9 +192,6 @@ function LeadForm({ shop, people }: { shop: Shop; people: { min: number; max: nu
         contactName: lead.contactName.trim(),
         phone: lead.phone.trim(),
         email: lead.email.trim(),
-        ...(lead.occasionKey ? { occasionKey: lead.occasionKey } : {}),
-        ...(lead.people.trim() ? { people: Number(lead.people) } : {}),
-        preferredDate: lead.preferredDate.trim(),
         message: lead.message.trim(),
       })
       setSent(true)
@@ -216,7 +203,6 @@ function LeadForm({ shop, people }: { shop: Shop; people: { min: number; max: nu
     }
   }
 
-  const occasions = companyOccasions(shop)
   if (sent) {
     const [a, b] = copy.companies.thanks
     return (
@@ -240,40 +226,7 @@ function LeadForm({ shop, people }: { shop: Shop; people: { min: number; max: nu
         <p className="co-lead">{c.formIntro}</p>
       </div>
       <div className="co-form-body">
-        {occasions.length > 0 && (
-          <div className="co-occ">
-            <div className="label" id="co-occ">
-              {copy.companies.occasion}
-            </div>
-            <div className="row" role="radiogroup" aria-labelledby="co-occ">
-              {occasions.map((o) => (
-                <Opt
-                  key={o.key}
-                  role="radio"
-                  pressed={lead.occasionKey === o.key}
-                  onClick={() => set('occasionKey', lead.occasionKey === o.key ? null : o.key)}
-                >
-                  {o.label}
-                </Opt>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="co-fields">
-          <Field
-            label={copy.companies.companyName}
-            value={lead.companyName}
-            autoComplete="organization"
-            error={errors.companyName}
-            onChange={(v) => set('companyName', v)}
-          />
-          <Field
-            label={copy.companies.contactName}
-            value={lead.contactName}
-            autoComplete="name"
-            error={errors.contactName}
-            onChange={(v) => set('contactName', v)}
-          />
           <Field
             label={copy.companies.phone}
             value={lead.phone}
@@ -285,7 +238,19 @@ function LeadForm({ shop, people }: { shop: Shop; people: { min: number; max: nu
             onChange={(v) => set('phone', v)}
           />
           <Field
-            label={copy.companies.email}
+            label={optional(copy.companies.contactName)}
+            value={lead.contactName}
+            autoComplete="name"
+            onChange={(v) => set('contactName', v)}
+          />
+          <Field
+            label={optional(copy.companies.companyName)}
+            value={lead.companyName}
+            autoComplete="organization"
+            onChange={(v) => set('companyName', v)}
+          />
+          <Field
+            label={optional(copy.companies.email)}
             value={lead.email}
             type="email"
             inputMode="email"
@@ -294,23 +259,9 @@ function LeadForm({ shop, people }: { shop: Shop; people: { min: number; max: nu
             error={errors.email}
             onChange={(v) => set('email', v)}
           />
-          <Field
-            label={copy.companies.people}
-            value={lead.people}
-            inputMode="numeric"
-            placeholder={c.peopleHint(people.min, people.max)}
-            error={errors.people}
-            onChange={(v) => set('people', v)}
-          />
-          <Field
-            label={copy.companies.date}
-            value={lead.preferredDate}
-            placeholder={copy.companies.datePlaceholder}
-            onChange={(v) => set('preferredDate', v)}
-          />
         </div>
         <Field
-          label={copy.companies.message}
+          label={optional(copy.companies.message)}
           value={lead.message}
           multiline
           onChange={(v) => set('message', v)}

@@ -18,6 +18,7 @@ import {
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
 import { israelDate } from '../domain/dates.ts'
+import { isIsraeliPhone } from '../domain/phone.ts'
 import {
   occasionRecipients,
   orderRecipient,
@@ -715,14 +716,20 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     async (req, reply) => {
       const body = z
         .object({
-          companyName: z.string().trim().min(1).max(80),
-          contactName: z.string().trim().min(1).max(60),
-          phone: phone,
-          email: z.string().email().max(120),
+          // Only the phone is required. Old clients may still send occasion, people and date.
+          phone: z.string().trim().max(30).refine(isIsraeliPhone),
+          companyName: z.string().trim().max(80).default(''),
+          contactName: z.string().trim().max(60).default(''),
+          email: z
+            .string()
+            .trim()
+            .max(120)
+            .refine((v) => !v || z.email().safeParse(v).success)
+            .default(''),
           occasionKey: z.string().max(40).optional(),
           people: z.number().int().min(1).max(500).optional(),
           preferredDate: z.string().max(40).default(''),
-          message: z.string().max(2000).default(''),
+          message: z.string().trim().max(2000).default(''),
         })
         .safeParse(req.body)
       if (!body.success) return reply.code(400).send({ error: 'invalid', issues: body.error.issues })

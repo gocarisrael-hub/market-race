@@ -47,7 +47,6 @@ export function CompaniesPage() {
   const [filter, setFilter] = useState('')
   const { items, reload } = useList<Lead>(`/leads${filter ? `?status=${filter}` : ''}`)
   const occasions = useList<Occasion>('/catalog/occasions').items ?? []
-  const occLabel = (k: string | null) => (k ? (occasions.find((o) => o.key === k)?.label ?? k) : '')
   const selected = items?.find((l) => String(l.id) === loc.id) ?? null
   return (
     <div className="crud">
@@ -72,8 +71,7 @@ export function CompaniesPage() {
               <tr>
                 <th>חברה</th>
                 <th>איש קשר</th>
-                <th>אירוע</th>
-                <th>אנשים</th>
+                <th>טלפון</th>
                 <th>התקבל</th>
                 <th>סטטוס</th>
                 <th>הזמנה</th>
@@ -86,10 +84,9 @@ export function CompaniesPage() {
                   className={String(l.id) === loc.id ? 'selected' : ''}
                   onClick={() => go(`/companies/${l.id}`)}
                 >
-                  <td>{l.companyName}</td>
-                  <td>{l.contactName}</td>
-                  <td>{occLabel(l.occasionKey)}</td>
-                  <td>{l.people ?? ''}</td>
+                  <td>{l.companyName || '—'}</td>
+                  <td>{l.contactName || '—'}</td>
+                  <td dir="ltr">{l.phone}</td>
                   <td>{when(l.createdAt)}</td>
                   <td>{LEAD_LABELS[l.status]}</td>
                   <td>
@@ -126,6 +123,7 @@ function LeadEditor({
   const themes = (useList<Theme>('/catalog/themes').items ?? []).filter((t) => t.active)
   const routes = (useList<Route>('/catalog/routes').items ?? []).filter((r) => r.active)
   const companyOccasions = occasions.filter((o) => o.audience === 'company' && o.active)
+  const occLabel = (k: string) => occasions.find((o) => o.key === k)?.label ?? k
   const [q, setQ] = useState({
     occasionKey: lead.occasionKey ?? '',
     people: lead.people ?? 10,
@@ -161,16 +159,33 @@ function LeadEditor({
   }
   return (
     <div className="editor">
-      <h2>{lead.companyName}</h2>
+      <h2>{lead.companyName || lead.contactName || lead.phone}</h2>
       <dl className="facts">
         <dt>איש קשר</dt>
-        <dd>{lead.contactName}</dd>
+        <dd>{lead.contactName || '—'}</dd>
         <dt>טלפון</dt>
         <dd dir="ltr">{lead.phone}</dd>
         <dt>אימייל</dt>
-        <dd dir="ltr">{lead.email}</dd>
-        <dt>תאריך מועדף</dt>
-        <dd>{lead.preferredDate || '—'}</dd>
+        <dd dir="ltr">{lead.email || '—'}</dd>
+        {/* Older leads were sent with an occasion, a group size and a date. */}
+        {lead.occasionKey && (
+          <>
+            <dt>אירוע</dt>
+            <dd>{occLabel(lead.occasionKey)}</dd>
+          </>
+        )}
+        {lead.people != null && (
+          <>
+            <dt>אנשים</dt>
+            <dd>{lead.people}</dd>
+          </>
+        )}
+        {lead.preferredDate && (
+          <>
+            <dt>תאריך מועדף</dt>
+            <dd>{lead.preferredDate}</dd>
+          </>
+        )}
         <dt>הודעה</dt>
         <dd className="pre">{lead.message || '—'}</dd>
       </dl>

@@ -14,3 +14,17 @@ export function waLink(phone: string, text = ''): string | null {
   if (!id) return null
   return text ? `https://wa.me/${id}?text=${encodeURIComponent(text)}` : `https://wa.me/${id}`
 }
+
+/**
+ * Forgiving Israeli phone check: spaces, dashes, dots, brackets and a +972 / 972 / 00972 prefix are
+ * fine. Accepts mobiles and 07x numbers (10 digits with the 0) and landlines (9 digits with the 0).
+ */
+export function isIsraeliPhone(phone: string): boolean {
+  let d = phone.trim()
+  if (!/^[0-9+\-\s().]+$/.test(d)) return false
+  d = d.replace(/\D/g, '')
+  if (d.startsWith('00972')) d = d.slice(5)
+  else if (d.startsWith('972')) d = d.slice(3)
+  if (!d.startsWith('0')) d = `0${d}`
+  return /^0(?:[23489]\d{7}|[57]\d{8})$/.test(d)
+}

@@ -1,4 +1,5 @@
 // Pure logic of the order flow: prices, validation, the draft kept between stages.
+import { isIsraeliPhone } from '../../server/domain/phone.ts'
 import { themesFor } from '../../server/domain/themes.ts'
 import type {
   Buyer,
@@ -308,20 +309,14 @@ export type Lead = {
   contactName: string
   phone: string
   email: string
-  occasionKey: string | null
-  people: string
-  preferredDate: string
   message: string
 }
 
-/** Field errors of a lead form, empty when it can be sent. */
+/** Field errors of a lead form, empty when it can be sent. Only the phone is required. */
 export function leadErrors(l: Lead): Partial<Record<keyof Lead, string>> {
   const e: Partial<Record<keyof Lead, string>> = {}
-  if (!l.companyName.trim()) e.companyName = copy.companies.badCompany
-  if (!l.contactName.trim()) e.contactName = copy.companies.badContact
-  if (!validPhone(l.phone)) e.phone = copy.checkout.badPhone
-  if (!validEmail(l.email)) e.email = copy.checkout.badEmail
-  if (l.people.trim() && !/^\d{1,3}$/.test(l.people.trim())) e.people = copy.companies.badPeople
+  if (!isIsraeliPhone(l.phone)) e.phone = copy.checkout.badPhone
+  if (l.email.trim() && !validEmail(l.email)) e.email = copy.checkout.badEmail
   return e
 }
 
