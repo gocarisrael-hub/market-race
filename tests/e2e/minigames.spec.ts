@@ -12,6 +12,7 @@ const TITLES: Record<string, string> = {
 }
 
 type Mini = {
+  afterStop: number
   type: string
   options?: string[]
   statements?: unknown[]
@@ -45,7 +46,7 @@ async function newGame(request: APIRequestContext) {
   expect(res.ok()).toBe(true)
   const body = await res.json()
   const minis: Mini[] = body.order.game.minigames
-  expect(minis.map((m: { afterStop: number }) => m.afterStop)).toEqual([2, 4])
+  expect(minis.map((m) => m.afterStop)).toEqual([2, 4])
   const r = await request.post(`/api/manage/${body.order.manageToken}/start`, { data: { players: 4 } })
   expect(r.ok()).toBe(true)
   return { url: body.links.game as string, manageToken: body.order.manageToken as string, minis }

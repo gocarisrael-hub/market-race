@@ -540,13 +540,15 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
           if (!qs) return invalid(reply, [{ path: 'questionSetId', message: 'question set not found' }])
           questions = qs.questions
         }
-        const answers =
-          body.answers ??
-          Object.fromEntries(questions.map((q) => [q.slot, fallbackFor(q, body.form) || `[${q.slot}]`]))
+        // Sample answers: each question's fallback, and a placeholder for the name slots.
+        const keep = [...nameSlots(body.form), 'company_name']
+        const answers = body.answers ?? {
+          ...Object.fromEntries(keep.map((k) => [k, `[${k}]`])),
+          ...Object.fromEntries(questions.map((q) => [q.slot, fallbackFor(q, body.form) || `[${q.slot}]`])),
+        }
         const slots = extractSlots(body.template)
         const known = new Set(questions.map((q) => q.slot))
         // The same riddle when the buyer answered nothing: personal lines fall back or are skipped.
-        const keep = [...nameSlots(body.form), 'company_name']
         const bareAnswers = Object.fromEntries(keep.map((k) => [k, answers[k] || `[${k}]`]))
         return {
           ...fillTemplate(body.template, answers, questions, body.form),

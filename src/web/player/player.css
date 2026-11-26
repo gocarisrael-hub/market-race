@@ -2378,6 +2378,9 @@ h2 {
   .riddle.minigame .game-options {
     grid-template-columns: 1fr 1fr;
   }
+  .riddle.minigame > .trail {
+    margin-bottom: 18px;
+  }
   .riddle.minigame .game-skip {
     justify-content: flex-start;
   }

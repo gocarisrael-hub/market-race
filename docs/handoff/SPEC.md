@@ -36,7 +36,26 @@ Rules:
 - Hints are plain, no wordplay.
 - Answer checking is forgiving: trim, case-fold, strip niqqud and punctuation, then exact match against the accepted list, then edit distance ≤ 1.
 
+Riddles in lines (decided 2026-11-26). A riddle is 3-4 lines, rhymed where it reads naturally, each line bringing the group closer to the stall, with at least one line weaving in a personal memory ("וכמו שיואב לא מוותר על הקפה של שמונה בבוקר…"). Template syntax, one line per line of text:
+- A plain line is always shown; its slots use the answer or the fallback.
+- A line starting with `?` is a personal line: shown only when the buyer answered every slot in it (name slots always count; a hidden question's set phrase counts; a fallback never does). `||` separates alternatives tried in order, so the last one can be a plain line that keeps the rhyme. When none fits, the line is skipped and nothing is flagged.
+- Grammar per recipient comes from the per-form templates (she, he, couple, group for group and family, company).
+- The player keeps the line breaks and sets the final short question ("מה אני?") apart. The admin editor takes multi-line text, explains the syntax, previews the riddle with sample answers and with none, and lists each line as fixed or personal with its slots.
+- `catchphrase`, `group_saying` and `company_catchphrase` are kept out of the demo riddles: they feed "מי אמר את זה?" and would give it away.
+
 Personal text is shown in the riddle in the theme's accent color, in the handwritten font (see the mockup).
+
+## Personal mini-games
+
+Decided 2026-11-26. Besides the stall riddles, a game has up to two personal mini-games between stops, built only from the order's own answers and photos, so only people who know the honoree can solve them.
+- Placement: the `minigames` setting's `after` (default `[2, 4]`: after stop 2 and after stop 4). Always after a stop and before the last one; a shorter route gets fewer.
+- Types (`types` in the setting): "מי אמר את זה?" (the honoree's saying among 3 curated lines from `lines`), "נכון או לא נכון" (3-4 statements from the answers via `facts`; false ones swap in an alternative from `swaps`, e.g. another food or place; at least one of each), "מה בתמונה?" (the first photo zoomed in on a spot and revealed step by step, "where was this?" with places from `swaps.place`; needs a photo and the optional `photo_where` answer), "צופן אישי" (a short answer shifted along the alef-bet by the letter count of another personal answer, with a hint naming that answer, e.g. "כמספר האותיות של המקום שהכי עושה למיכל טוב"). All lists and texts are in the `minigames` setting, edited in the admin (a stored value without a key keeps the default).
+- The builder picks, per placement, a type the order has enough data for (seeded by the order number, so a sold game is reproducible), each type once, preferring answers the earlier riddles have not shown. Fewer answers: fewer games, or none.
+- Reward, the same every time: a line of the closing letter, on a torn taped piece of paper with confetti ("קטע מהמכתב, המכתב המלא מחכה בסוף"). The buyer's letter notes in order, else a line we write from `rewards`.
+- Play: the `minigame` step of the shared, version-guarded state, with `game_states.minigames_solved` and `minigames_skipped`. The server never sends a solution, and the reward only once solved. Wrong answers say so; a solved game waits for "ממשיכים לחידה הבאה". Only the captain (captain token) can skip one, after a confirm. Pause and resume work on it like on a stop.
+- Progress counts stops and mini-games: "שלב X מתוך Y" on the trail (mini-games drawn as their doodle) and the side list. Emails, the manage page and the paused screen still speak of stops.
+- Admin: the order view lists the mini-games with their solutions and rewards, and "לייצר מחדש" per game (another type or other choices), allowed until the group reaches it.
+- Questions: every demo set has the optional `photo_where` ("אם תוסיפו תמונות: איפה צולמה הראשונה?"); everything else maps from answers the sets already ask.
 
 ## Questions
 
@@ -90,7 +109,7 @@ Occasion doodles: each occasion has a `decor` set (birthday, love, family, frien
 | occasions | key, label, audience, question_set_id (default), recipients {she/he/couple/group/family: set id or null}, forms (kept in step), players_feminine, decor |
 | routes | id, market_id, name, stops[] {stall_id, tasting_id, riddle_id, backup_stall_id}; the last stop is the finale |
 | themes | id, name, market_id, map file, palette |
-| settings | prices, texts, odd-answer rules, everything else business-side |
+| settings | prices, texts, odd-answer rules, mini-game placement and lists, everything else business-side |
 
 Allergens are a fixed list, never free text: גלוטן, חלב, אגוזים, בוטנים, ביצים, שומשום, סויה, דגים, פירות ים. Diets: vegan, vegetarian, gluten_free.
 
@@ -124,7 +143,7 @@ Playing:
   - The manage page of a paused game shows "המשחק בהפסקה, עצרתם בתחנה X מתוך Y" and a brush-stroke "ממשיכים". Resume is allowed any day while the game is valid (one year from purchase), any number of times. Everyone continues at exactly the same stop and step, on the same game link. The players count is fixed at the start and does not change on resume. The closed-stall check and backup work as on any day (stall availability is checked on the day each stop is played).
   - State: `game_states.paused_at` (null while playable). The admin's live view and order view show a paused game.
 - Lost link: the site has "איבדתי את הקישור" (`/lost-link`). The buyer enters the email they ordered with; if it has paid, valid orders, that address gets one email with their manage links (the `links_reminder` template). The page answers the same whether or not the address has orders, and the email goes out after the answer. Rate limited per client (5 per 15 minutes) and one email per address per 10 minutes; both lifted in the test env.
-- Stop flow: riddle → correct answer → stall revealed on the map → "we're here" → redemption screen.
+- Stop flow: riddle → correct answer → stall revealed on the map → "we're here" → redemption screen. A mini-game placed after that stop comes before the next riddle.
 - The game never sends a later stop's answer or stall to the client before it is reached.
 
 ## Redemption (screen only, no SMS)
