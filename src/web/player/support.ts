@@ -3,9 +3,12 @@ import { waLink } from '../../server/domain/phone.ts'
 import type { PlayerView, Support } from './api.ts'
 import { fill, type T } from './copy.ts'
 
-/** The stop the group is on (1-based), or null before the start and after the end. */
+/**
+ * The stop the group is on (1-based; on a mini-game, the stop it leads to), or null before the
+ * start and after the end.
+ */
 export function currentStopNumber(view: PlayerView): number | null {
-  if (view.step === 'riddle' || view.step === 'revealed' || view.step === 'redeem') return view.stopIndex + 1
+  if (['riddle', 'revealed', 'redeem', 'minigame'].includes(view.step)) return view.stopIndex + 1
   return null
 }
 

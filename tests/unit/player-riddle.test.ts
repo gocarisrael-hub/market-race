@@ -22,8 +22,15 @@ const riddleView = (over: { version?: number; hint?: string | null } = {}): Play
   allergens: [],
   diets: [],
   totalStops: 5,
+  stages: [0, 1, 2, 3, 4].map((index) => ({
+    kind: 'stop' as const,
+    index,
+    state: index === 0 ? ('now' as const) : ('later' as const),
+  })),
+  stage: 1,
   step: 'riddle',
   stopIndex: 0,
+  minigame: null,
   current: {
     index: 0,
     finale: false,

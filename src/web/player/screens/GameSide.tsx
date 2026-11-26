@@ -1,16 +1,18 @@
-// Beside the riddle on wide screens (from 1024px): the market map and the route so far. Done
-// stops name their stall and tasting, the current one is circled, the rest wait. Phones keep the
+// Beside the riddle or mini-game on wide screens (from 1024px): the market map and the route so
+// far, stops and mini-games. Done stops name their stall and tasting, the current stage is circled. Phones keep the
 // trail of icons at the top and never render this.
 import { Doodles } from '../../shared/decor.tsx'
-import { riddleTitle, type T } from '../copy.ts'
+import { stageTitle, type T } from '../copy.ts'
 import { HandCircle, Tick } from '../draw.tsx'
 import { stopIcon } from '../logic.ts'
 import { MapCrop } from './Reveal.tsx'
+import { StageIcon } from './Stages.tsx'
 import type { ScreenProps } from './types.ts'
 
 export function GameSide({ view, t }: { view: ScreenProps['view']; t: T }) {
-  const cur = view.current!
   const done = new Map(view.completed.map((c) => [c.index, c]))
+  // The map shows the stop being played, or (on a mini-game) the next one.
+  const at = view.current?.index ?? view.stopIndex
   return (
     <aside className="game-side">
       <div className="side-map">
@@ -24,7 +26,7 @@ export function GameSide({ view, t }: { view: ScreenProps['view']; t: T }) {
         <MapCrop
           map={view.theme?.map ?? null}
           pin={null}
-          icon={stopIcon(cur.index)}
+          icon={stopIcon(at)}
           company={view.company}
           tint={view.theme?.palette.mapTint}
           t={t}
@@ -32,21 +34,24 @@ export function GameSide({ view, t }: { view: ScreenProps['view']; t: T }) {
       </div>
       <ol
         className="side-route"
-        aria-label={t('riddle.stopOf', { n: cur.index + 1, total: view.totalStops })}
+        aria-label={t('riddle.stopOf', { n: view.stage, total: view.stages.length })}
       >
-        {Array.from({ length: view.totalStops }, (_, i) => {
-          const c = done.get(i)
-          const state = c ? 'done' : i === cur.index ? 'now' : 'later'
+        {view.stages.map((s) => {
+          const c = s.kind === 'stop' ? done.get(s.index) : undefined
+          const state = s.state === 'now' ? 'now' : s.state === 'later' ? 'later' : 'done'
           return (
-            // biome-ignore lint/suspicious/noArrayIndexKey: stops are positional
-            <li key={i} className={state} aria-current={state === 'now' ? 'step' : undefined}>
+            <li
+              key={`${s.kind}${s.index}`}
+              className={`${state} ${s.kind}`}
+              aria-current={state === 'now' ? 'step' : undefined}
+            >
               <span className="side-stop-icon">
-                <img src={stopIcon(i)} alt="" />
-                {c && <Tick />}
+                <StageIcon stage={s} size={40} />
+                {s.state === 'done' && <Tick />}
               </span>
               <span className="side-stop-text">
                 <span className="side-stop-title">
-                  {riddleTitle(t, i, i === view.totalStops - 1)}
+                  {stageTitle(t, s, view.totalStops)}
                   {state === 'now' && <HandCircle />}
                 </span>
                 {c && (

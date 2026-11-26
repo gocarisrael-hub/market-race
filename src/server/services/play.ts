@@ -22,6 +22,7 @@ import {
   type GameSnapshot,
   type HintQuestion,
   isDecor,
+  type MinigameType,
   type Palette,
   type SnapshotStall,
   type SnapshotTasting,
@@ -40,6 +41,8 @@ export interface Stage {
   kind: 'stop' | 'game'
   /** The stop's index, or the mini-game's index in the snapshot. */
   index: number
+  /** A mini-game's type (shown as its icon on the trail). */
+  type?: MinigameType
   state: 'done' | 'skipped' | 'now' | 'later'
 }
 
@@ -70,7 +73,7 @@ export function stagesOf(game: Pick<GameSnapshot, 'stops' | 'minigames'>, state:
   const seq: Omit<Stage, 'state'>[] = []
   game.stops.forEach((_, s) => {
     ;(game.minigames ?? []).forEach((g, i) => {
-      if (g.afterStop === s) seq.push({ kind: 'game', index: i })
+      if (g.afterStop === s) seq.push({ kind: 'game', index: i, type: g.type })
     })
     seq.push({ kind: 'stop', index: s })
   })

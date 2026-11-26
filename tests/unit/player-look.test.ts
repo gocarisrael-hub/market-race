@@ -66,6 +66,12 @@ describe('splitQuestion', () => {
     expect(splitQuestion([]).question).toBeNull()
   })
 
+  it('takes the question off the last line of a multi-line riddle', () => {
+    const r = splitQuestion([text('שורה ראשונה,\nו'), slot('מיכל'), text(' יודעת.\nמה היא?')])
+    expect(r.question).toBe('מה היא?')
+    expect(r.body).toEqual([text('שורה ראשונה,\nו'), slot('מיכל'), text(' יודעת.')])
+  })
+
   it('splits after a colon too', () => {
     expect(splitQuestion([text('לכבוד '), slot('מיכל'), text(' מרימים כוסות: מה אומרים?')]).question).toBe(
       'מה אומרים?',

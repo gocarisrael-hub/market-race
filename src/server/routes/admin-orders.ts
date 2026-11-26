@@ -28,6 +28,7 @@ import {
   getOrder,
   type Order,
   questionsForOrder,
+  regenerateOrderMinigame,
   updateAnswersAndRebuild,
 } from '../services/orders.ts'
 import { afterBuilt } from '../services/payments.ts'
@@ -273,6 +274,22 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         return reply.code(400).send({ error: `order is ${order.status}; a started game is frozen` })
       try {
         return { order: await buildOrderGame(db, id) }
+      } catch (err) {
+        return fail(reply, err)
+      }
+    })
+
+    // Rebuilds one mini-game (another type or other choices) until the group reaches it.
+    r.post('/admin/api/orders/:id/minigames/:index/regenerate', async (req, reply) => {
+      const { id } = idParam.parse(req.params)
+      const index = z.coerce
+        .number()
+        .int()
+        .min(0)
+        .safeParse((req.params as { index?: string }).index)
+      if (!index.success) return reply.code(400).send({ error: 'invalid' })
+      try {
+        return { order: await regenerateOrderMinigame(db, id, index.data) }
       } catch (err) {
         return fail(reply, err)
       }

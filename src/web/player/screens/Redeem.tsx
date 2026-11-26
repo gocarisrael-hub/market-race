@@ -14,7 +14,7 @@ export function Redeem({ view, t, act }: ScreenProps) {
   return (
     <main className="scr redeem">
       <header className="redeem-head">
-        <div className="muted-label">{t('redeem.stopOf', { n: cur.index + 1, total: view.totalStops })}</div>
+        <div className="muted-label">{t('redeem.stopOf', { n: view.stage, total: view.stages.length })}</div>
         <h1 className="redeem-title">{t('redeem.title')}</h1>
         {cur.reveal && <div className="redeem-stall">{cur.reveal.stall.name}</div>}
       </header>

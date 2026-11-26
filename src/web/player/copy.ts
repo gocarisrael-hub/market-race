@@ -44,7 +44,8 @@ export const COPY = {
   'riddle.title': 'חידה {ordinal}',
   'riddle.titleNumber': 'חידה {n}',
   'riddle.titleLast': 'חידה אחרונה',
-  'riddle.stopOf': 'תחנה {n} מתוך {total}',
+  // Progress counts stops and the mini-games between them.
+  'riddle.stopOf': 'שלב {n} מתוך {total}',
   'riddle.answerLabel': { default: 'התשובה שלכם', she: 'התשובה שלכן' },
   'riddle.submit': { default: 'בודקים!', she: 'בודקות!' },
   'riddle.checking': 'רגע...',
@@ -60,6 +61,36 @@ export const COPY = {
   'riddle.empty': 'קודם כותבים תשובה',
   'riddle.photoAlt': 'תמונה במסגרת מצוירת',
 
+  // Personal mini-games between stops.
+  'game.kicker': 'משחק אישי',
+  'game.only': 'רק מי שמכיר את {name} באמת יפתור',
+  'game.who_said.title': 'מי אמר את זה?',
+  'game.true_false.title': 'נכון או לא נכון',
+  'game.photo.title': 'מה בתמונה?',
+  'game.cipher.title': 'צופן אישי',
+  'game.true': 'נכון',
+  'game.false': 'לא נכון',
+  'game.statement': 'משפט {n}',
+  'game.check': { default: 'בודקים!', she: 'בודקות!' },
+  'game.checking': 'רגע...',
+  'game.wrong': 'כמעט! נסו שוב',
+  'game.tfWrong': 'משהו פה עוד לא נכון. נסו שוב',
+  'game.pickAll': 'קודם מסמנים נכון או לא נכון ליד כל משפט',
+  'game.zoomOut': 'להתרחק קצת',
+  'game.photoAlt': 'תמונה שלכם, מקרוב',
+  'game.cipherLabel': 'הצופן',
+  'game.alefbet': 'האלף-בית, מימין לשמאל',
+  'game.answerLabel': { default: 'הפתרון שלכם', she: 'הפתרון שלכן' },
+  'game.empty': 'קודם כותבים פתרון',
+  'game.solved': { default: 'פתרתם!', she: 'פתרתן!' },
+  'game.reward': 'קטע מהמכתב',
+  'game.rewardNote': 'המכתב המלא מחכה בסוף המסלול',
+  'game.continue': 'ממשיכים לחידה הבאה',
+  'game.skip': 'דילוג על המשחק',
+  'game.skipAsk': 'לדלג על המשחק? הקטע מהמכתב יחכה לסוף.',
+  'game.skipYes': 'כן, מדלגים',
+  'game.skipNo': { default: 'לא, משחקים', she: 'לא, משחקות' },
+
   'reveal.correct': 'נכון!',
   'reveal.answerWas': 'התשובה הייתה {answer}',
   'reveal.next': 'התחנה הבאה',
@@ -70,7 +101,7 @@ export const COPY = {
   'reveal.stampAlt': 'הלוגו של {company}',
   'reveal.button': 'הגענו, למימוש',
 
-  'redeem.stopOf': 'תחנה {n} מתוך {total}',
+  'redeem.stopOf': 'שלב {n} מתוך {total}',
   'redeem.title': 'הראו את המסך בדוכן',
   'redeem.codeLabel': 'הקוד של היום',
   'redeem.portions': '{n} מנות {tasting}',
@@ -149,4 +180,14 @@ export function riddleTitle(t: T, index: number, finale: boolean): string {
     .map((s) => s.trim())
   const ordinal = ordinals[index]
   return ordinal ? t('riddle.title', { ordinal }) : t('riddle.titleNumber', { n: index + 1 })
+}
+
+/** A stage's title on the trail and the side list: the riddle's, or the mini-game's. */
+export function stageTitle(
+  t: T,
+  stage: { kind: 'stop' | 'game'; index: number; type?: string },
+  totalStops: number,
+): string {
+  if (stage.kind === 'game' && stage.type) return t(`game.${stage.type}.title` as CopyKey)
+  return riddleTitle(t, stage.index, stage.index === totalStops - 1)
 }
