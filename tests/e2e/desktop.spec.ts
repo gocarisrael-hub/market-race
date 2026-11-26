@@ -182,7 +182,11 @@ test.describe('phone', () => {
     const h = await box(page.locator('main.page h1'))
     expect(s.y + s.height).toBeLessThanOrEqual(h.y)
     expect(s.height).toBeLessThan(160)
-    // Back and next stay at the bottom of the window.
+    // Back and next stay at the bottom of the window, also when the stage is taller than it.
     expect(await page.locator('.stage-nav').evaluate((el) => getComputedStyle(el).position)).toBe('sticky')
+    await page.setViewportSize({ width: 390, height: 480 })
+    const nav = await box(page.locator('.stage-nav'))
+    expect(nav.y + nav.height).toBeLessThanOrEqual(481)
+    await expect(page.locator('.stage-nav .brush')).toBeInViewport({ ratio: 1 })
   })
 })

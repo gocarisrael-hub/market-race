@@ -19,7 +19,9 @@
 html,
 body {
   background: var(--bg);
-  overflow-x: hidden;
+  /* Clip, not hidden: hidden makes the body a scroll box, and the sticky bottom buttons would
+     never stick. */
+  overflow-x: clip;
 }
 body {
   font-family: Heebo, sans-serif;
