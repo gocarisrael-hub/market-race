@@ -112,11 +112,6 @@ export function OccasionStage({ shop, d, set }: StageProps) {
           {copy.cheer[decor] ?? copy.cheer.generic}
         </p>
       )}
-      <div className="stage-links">
-        <Sketch href="/lost-link" icon="magnifier" small>
-          {copy.lostLink.entry}
-        </Sketch>
-      </div>
     </>
   )
 }

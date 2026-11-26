@@ -25,6 +25,14 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   const bar = progress(page)
   const map = page.getByTestId('build-map')
   await expect(page.getByRole('heading', { name: 'איזה משחק בונים?' })).toBeVisible()
+  // The top nav: the current page is circled, never underlined, like the other items.
+  const current = page.locator('.site-nav [aria-current="page"]')
+  await expect(current).toHaveText('להזמנה')
+  await expect(current.locator('.ring')).toHaveCount(1)
+  await expect(current.locator('.underline')).toHaveCount(0)
+  expect(await current.evaluate((e) => getComputedStyle(e).textDecorationLine)).toBe('none')
+  // A first order has no "lost the link" entry.
+  await expect(page.getByRole('link', { name: 'איבדתי את הקישור' })).toHaveCount(0)
   await expect(bar).toHaveAttribute('aria-valuenow', '1')
   // A pencil sketch until the colour is picked; no ribbon before the name is asked.
   await expect(map).not.toHaveAttribute('data-painted', /.*/)
@@ -258,6 +266,9 @@ test('one participant is enough: the stepper goes down to one, priced per person
 test('the diet stage shows what is tasted on the way and follows the allergens', async ({ page }) => {
   await buildToPhotos(page, { occasion: 'רווקות', name: 'מיכל' })
   await page.goto('/order/diet')
+  // The allergy and diet picker is here (and only here, not on the landing or /tastings).
+  await expect(page.getByText('מישהו לא אוכל משהו?')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: 'טבעוני' })).toBeVisible()
   const list = page.getByTestId('tastings')
   await expect(list.getByText('מה טועמים בדרך')).toBeVisible()
   const stops = list.locator('li')

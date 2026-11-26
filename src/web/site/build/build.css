@@ -87,12 +87,6 @@ h1.stage-title {
 .stage-options .opt.small {
   font-size: 30px;
 }
-.stage-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-top: 30px;
-}
 .stage-wait {
   display: flex;
   justify-content: center;

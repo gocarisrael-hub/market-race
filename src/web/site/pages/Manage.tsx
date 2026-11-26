@@ -92,7 +92,7 @@ export function Manage({ token, search }: { token: string; search: string }) {
     return (
       <>
         <Desk />
-        <Failed text={loadError === copy.errors.not_found ? copy.manage.notFound : loadError} />
+        <Failed text={loadError === copy.errors.not_found ? copy.manage.notFound : loadError} lostLink />
       </>
     )
   if (!m)

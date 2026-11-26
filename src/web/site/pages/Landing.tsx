@@ -87,10 +87,18 @@ export function Landing({ shop }: { shop: Shop }) {
       </Fold>
 
       <footer className="l-footer">
-        {c.footer.text}{' '}
-        <Sketch href="/companies" icon="briefcase" small className="l-footer-link">
-          {c.footer.link}
-        </Sketch>
+        <p>
+          {c.footer.text}{' '}
+          <Sketch href="/companies" icon="briefcase" small className="l-footer-link">
+            {c.footer.link}
+          </Sketch>
+        </p>
+        <p>
+          {c.footer.lostText}{' '}
+          <Sketch href="/lost-link" icon="magnifier" small className="l-footer-link">
+            {copy.lostLink.entry}
+          </Sketch>
+        </p>
       </footer>
     </main>
   )
