@@ -33,41 +33,67 @@ for (const [name, opts] of [
   test.describe(name, () => {
     test.use(opts)
 
-    test('landing explains the game and leads into the order', async ({ page, request }) => {
+    test('landing: a short explanation, the tastings folded, a choice of two games', async ({
+      page,
+      request,
+    }) => {
       const shop = await (await request.get('/api/shop')).json()
+      const names = await stallNames(request)
       await page.goto('/')
       await expect(page.getByRole('heading', { level: 1 })).toContainText('מירוץ טעימות')
-      await expect(page.getByRole('heading', { name: 'איך זה עובד' })).toBeVisible()
-      await expect(page.locator('.l-step')).toHaveCount(4)
-      await expect(page.getByRole('heading', { name: 'שאלות' })).toBeVisible()
-      // Validity and group size come from the settings.
-      await expect(page.getByText(`מ־${shop.minPeople} עד ${shop.maxPeople} משתתפים`)).toBeVisible()
-      // Prices come from the settings too.
-      const priced = Object.entries(shop.prices as Record<string, { base: number }>).find(
-        ([, p]) => p.base > 0,
-      )
-      if (priced) {
-        const shekels = String(priced[1].base / 100).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-        await expect(page.getByTestId('landing-prices')).toContainText(shekels)
-      }
+      await expect(page.locator('.l-strip li')).toHaveCount(4)
       await expect(page.locator('body')).not.toContainText('המירוץ למיליון')
-      await expect(page.getByTestId('tastings-peek').locator('li').first()).toBeVisible()
       await noHorizontalScroll(page)
+
+      // The tastings open in place, from a button that says whether it is open.
+      const tastings = page.getByRole('button', { name: 'מה טועמים?' })
+      await expect(tastings).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.locator('.l-tastings .stop')).toHaveCount(0)
+      await tastings.click()
+      await expect(tastings).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.locator('.l-tastings .stop').first()).toBeVisible()
+      await expect(page.locator('.l-tastings .stop img').first()).toBeVisible()
+      await expectNoStalls(page, names)
+      await page.locator('.l-tastings').getByRole('checkbox', { name: 'טבעוני' }).click()
+      await expect(page.locator('.l-tastings .stop.swapped, .l-tastings .stop.blocked').first()).toBeVisible()
+      await expectNoStalls(page, names)
+      await tastings.click()
+      await expect(tastings).toHaveAttribute('aria-expanded', 'false')
+
+      // The FAQ is folded too; group size comes from the settings.
+      const faq = page.getByRole('button', { name: 'שאלות' })
+      await expect(faq).toHaveAttribute('aria-expanded', 'false')
+      await faq.click()
+      await expect(page.getByText(`מ־${shop.minPeople} עד ${shop.maxPeople} משתתפים`)).toBeVisible()
+
+      // Two products; the private one shows its lowest per-person price from the settings.
+      const cards = page.locator('.l-product')
+      await expect(cards).toHaveCount(2)
+      const per = Object.values(shop.prices as Record<string, { perPerson: number }>)
+        .map((p) => p.perPerson)
+        .filter((p) => p > 0)
+      if (per.length) {
+        const shekels = String(Math.min(...per) / 100).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+        await expect(cards.first()).toContainText(shekels)
+      }
+      const a = await cards.nth(0).boundingBox()
+      const b = await cards.nth(1).boundingBox()
       if (name === 'desktop') {
-        // The hero is two columns: the text beside the map.
+        // Side by side, the text beside the map in the hero.
+        expect(a && b && Math.abs(a.y - b.y) < 40).toBe(true)
         const text = await page.locator('.l-hero-text').boundingBox()
         const map = await page.locator('.l-hero-map').boundingBox()
         expect(text && map && (text.x >= map.x + map.width || map.x >= text.x + text.width)).toBe(true)
+      } else {
+        expect(a && b && b.y >= a.y + a.height - 1).toBe(true)
       }
 
-      await page.getByRole('link', { name: 'בונים מירוץ' }).first().click()
+      await cards.nth(0).getByRole('link', { name: 'בונים משחק' }).click()
       await expect(page).toHaveURL(/\/order$/)
       await expect(page.getByRole('radiogroup').first()).toBeVisible()
-      // The order's header links back to the landing page and the tastings.
-      await page.getByRole('navigation').getByRole('link', { name: 'מה טועמים' }).click()
-      await expect(page).toHaveURL(/\/tastings$/)
-      await page.getByRole('navigation').getByRole('link', { name: 'מה זה' }).click()
-      await expect(page).toHaveURL(/\/$/)
+      await page.goto('/')
+      await page.locator('.l-product').nth(1).getByRole('link', { name: 'מתחילים' }).click()
+      await expect(page).toHaveURL(/\/companies$/)
     })
 
     test('tastings show the teasers and swaps, never a stall', async ({ page, request }) => {

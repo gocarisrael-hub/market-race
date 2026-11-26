@@ -93,6 +93,12 @@ export function formatShekels(agorot: number) {
 export const privateOccasions = (shop: Shop) => shop.occasions.filter((o) => o.audience === 'private')
 export const companyOccasions = (shop: Shop) => shop.occasions.filter((o) => o.audience === 'company')
 
+/** The lowest per-person price among these occasions' prices (agorot), or null when none is set. */
+export function fromPerPerson(shop: Pick<Shop, 'prices'>, occasions: { key: string }[]): number | null {
+  const per = occasions.map((o) => shop.prices[o.key]?.perPerson ?? 0).filter((p) => p > 0)
+  return per.length ? Math.min(...per) : null
+}
+
 /** The grammatical forms the buyer can pick for an occasion (company is never a site form). */
 export const formsFor = (occ: Occasion | undefined): SiteForm[] =>
   occ ? SITE_FORMS.filter((f) => occ.forms.includes(f)) : []

@@ -2122,24 +2122,14 @@ ol.howto.drawn li {
 
 /* ---------- Landing page (/) ---------- */
 .l-hero {
-  margin-top: 40px;
+  margin-top: 64px;
 }
 .l-hero .eyebrow {
   margin: 0 0 6px;
 }
-.l-ctas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px 22px;
-  margin-top: 22px;
-}
-.l-ctas .brush.inline {
-  width: min(100%, 300px);
-}
 .l-hero-map {
   position: relative;
-  margin: 30px 0 0;
+  margin: 26px 0 0;
   transform: rotate(-1.5deg);
 }
 .l-hero-map img {
@@ -2152,136 +2142,172 @@ ol.howto.drawn li {
 .l-hero-map .doodles {
   z-index: 2;
 }
-.l-steps {
+/* How it works, as one compact strip: four small illustrations with a word or two each. */
+.l-strip {
   display: grid;
-  gap: 22px;
-  margin: 18px 0 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+  margin: 26px 0 0;
   padding: 0;
   list-style: none;
 }
-.l-step {
-  position: relative;
-  display: grid;
-  grid-template-columns: 76px 1fr;
-  column-gap: 14px;
-  align-items: start;
-}
-.l-step-art {
-  grid-row: 1 / span 3;
-  width: 76px;
-  --r: -6deg;
-}
-.l-step:nth-child(even) .l-step-art {
-  --r: 6deg;
-}
-.l-step-no {
-  font-family: var(--display);
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--accent);
-}
-.l-step h3 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 32px;
-  line-height: 1;
-}
-.l-step p {
-  margin: 4px 0 0;
-  font-size: 15px;
-  line-height: 1.5;
-}
-.l-occasions {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 14px 18px;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.l-occasions li {
+.l-strip li {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--display);
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1;
+  min-width: 0;
 }
-/* Companies lead to their own page, drawn like the other occasions. */
-.l-occ-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  color: inherit;
-  text-decoration: none;
-}
-.l-occ-doodle {
+.l-strip img {
   flex: none;
-  width: 44px;
-  height: 44px;
-}
-.l-pair {
-  display: grid;
-  gap: 26px;
-  margin-top: 34px;
-}
-.l-get,
-.l-peek {
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.l-get li,
-.l-peek li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-  font-size: 16px;
-  line-height: 1.4;
-}
-.l-peek img {
-  flex: none;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
 }
-.l-peek + .sketch {
-  margin-top: 10px;
-}
-.l-prices ul {
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.l-prices li {
+.l-strip-text {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 4px 16px;
-  padding: 8px 0;
-  border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
 }
-.l-price-name {
+.l-strip strong {
+  font-family: var(--display);
+  font-size: 24px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+/* Expandable sections: a handwritten heading on a button, the content opening in place. */
+.fold-head {
+  margin: 0;
+}
+.fold-head button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  background: none;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: start;
+  cursor: pointer;
+}
+.fold-arrow {
+  width: 26px;
+  height: 26px;
+  margin-inline-start: auto;
+  transition: transform 0.2s ease-out;
+}
+.fold-arrow path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.fold.open .fold-arrow {
+  transform: rotate(180deg);
+}
+.fold-body {
+  padding-top: 10px;
+  animation: fold-open 0.25s ease-out both;
+}
+@keyframes fold-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold-arrow {
+    transition: none;
+  }
+  .fold-body {
+    animation: none;
+  }
+}
+
+/* The choice: two large drawn cards, one per product. */
+.l-choice {
+  margin-top: 38px;
+}
+.l-choice > h2 {
+  margin: 0;
+}
+.l-products {
+  display: grid;
+  gap: 30px;
+  margin-top: 22px;
+}
+.l-product {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 30px 24px 26px;
+}
+.l-product:nth-child(odd) {
+  transform: rotate(-0.8deg);
+}
+.l-product:nth-child(even) {
+  transform: rotate(0.8deg);
+}
+.l-product-paper {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+}
+.l-product-paper path {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.8;
+}
+.l-product .doodles {
+  z-index: 1;
+}
+.l-product h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 40px;
+  line-height: 1;
+}
+.l-product-text {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.l-product-price {
+  margin: 10px 0 0;
   font-family: var(--display);
   font-size: 28px;
   font-weight: 700;
+  color: var(--accent);
 }
-.l-price {
-  font-size: 16px;
-  font-weight: 500;
+.l-product .brush.inline {
+  width: min(100%, 300px);
+  margin-top: auto;
+  padding-top: 18px;
+  align-self: stretch;
+}
+.l-faq {
+  margin-top: 40px;
 }
 .l-faq dl {
-  margin: 14px 0 0;
+  margin: 0;
 }
 .l-faq dt {
-  margin-top: 16px;
+  margin-top: 14px;
   font-family: var(--display);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.05;
 }
@@ -2289,19 +2315,6 @@ ol.howto.drawn li {
   margin: 4px 0 0;
   font-size: 16px;
   line-height: 1.55;
-}
-.l-closing {
-  margin-top: 44px;
-  text-align: center;
-}
-.l-closing h2 {
-  position: relative;
-  display: inline-block;
-  font-size: 48px;
-}
-.l-closing .brush.inline {
-  width: min(100%, 320px);
-  margin: 18px auto 0;
 }
 
 /* ---------- Tastings page (/tastings) ---------- */
@@ -2338,13 +2351,11 @@ ol.howto.drawn li {
   :root:has(.landing, .tastings-page) {
     --sheet-w: min(900px, 100% - 64px);
   }
-  .l-steps {
-    grid-template-columns: 1fr 1fr;
-    gap: 30px 34px;
+  .l-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .l-pair {
+  .l-products {
     grid-template-columns: 1fr 1fr;
-    align-items: start;
   }
 }
 
@@ -2376,76 +2387,39 @@ ol.howto.drawn li {
   .t-head .lead {
     font-size: clamp(17px, 1.4vw, 21px);
   }
-  .l-steps {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .l-strip {
+    gap: 20px;
+    margin-top: 40px;
   }
-  .l-step {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
+  .l-strip img {
+    width: clamp(56px, 5vw, 76px);
+    height: clamp(56px, 5vw, 76px);
   }
-  .l-step-art {
-    grid-row: auto;
-    width: clamp(96px, 9vw, 140px);
-    height: clamp(96px, 9vw, 140px);
-    margin-bottom: 8px;
-    object-fit: contain;
+  .l-strip-text {
+    font-size: 15px;
   }
-  .l-how {
-    margin-top: 64px;
+  .l-strip strong {
+    font-size: clamp(26px, 2vw, 32px);
   }
-  .l-step h3 {
-    font-size: clamp(32px, 2.6vw, 40px);
+  .fold-head button {
+    font-size: clamp(36px, 3vw, 44px);
   }
-  .l-occasions {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  .l-products {
+    column-gap: clamp(40px, 5vw, 80px);
   }
-  .l-occ-doodle {
-    width: 58px;
-    height: 58px;
+  .l-product {
+    padding: 44px clamp(32px, 3.5vw, 56px) 36px;
   }
-  .l-pair {
-    column-gap: clamp(40px, 5vw, 96px);
+  .l-product h3 {
+    font-size: clamp(44px, 3.6vw, 56px);
   }
-  .l-prices,
-  .l-faq {
-    display: grid;
-    grid-template-columns: minmax(220px, 0.6fr) minmax(0, 1.4fr);
-    column-gap: clamp(40px, 5vw, 96px);
-    align-items: start;
-  }
-  .l-prices > .hint {
-    grid-column: 2;
+  .l-product-text {
+    font-size: 18px;
   }
   .l-faq dl {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 40px;
-    margin: 0;
-  }
-  .l-faq dl > dt:nth-of-type(odd),
-  .l-faq dl > dd:nth-of-type(odd) {
-    grid-column: 1;
-  }
-  .l-faq dl > dt:nth-of-type(even),
-  .l-faq dl > dd:nth-of-type(even) {
-    grid-column: 2;
-  }
-  .l-faq dt:nth-of-type(1),
-  .l-faq dt:nth-of-type(2) {
-    grid-row: 1;
-  }
-  .l-faq dd:nth-of-type(1),
-  .l-faq dd:nth-of-type(2) {
-    grid-row: 2;
-  }
-  .l-faq dt:nth-of-type(3),
-  .l-faq dt:nth-of-type(4) {
-    grid-row: 3;
-  }
-  .l-faq dd:nth-of-type(3),
-  .l-faq dd:nth-of-type(4) {
-    grid-row: 4;
+    gap: 0 48px;
   }
 
   .t-body {
