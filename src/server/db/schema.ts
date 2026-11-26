@@ -28,6 +28,7 @@ import type {
   Recipient,
   RiddleTemplates,
   RouteStop,
+  ThemeStyle,
 } from '../domain/types.ts'
 
 const now = () => timestamp({ withTimezone: true }).notNull().defaultNow()
@@ -160,8 +161,12 @@ export const routes = pgTable('routes', {
   createdAt: now(),
 })
 
+// A game style: the map it is drawn on, its palette and its look (fonts, treatment, illustrations),
+// and the occasions it is offered for.
 export const themes = pgTable('themes', {
   id: serial().primaryKey(),
+  // Stable key of a seeded style (the demo refresh finds it by this); null for the owner's own.
+  key: text().unique(),
   name: text().notNull(),
   marketId: integer()
     .notNull()
@@ -171,8 +176,13 @@ export const themes = pgTable('themes', {
   palette: jsonb().$type<Palette>().notNull(),
   // Stall pins on this map, in percent of the image: { [stallId]: { x, y } }.
   pins: jsonb().$type<Record<string, { x: number; y: number }>>().notNull().default({}),
+  style: jsonb().$type<ThemeStyle>().notNull().default({}),
+  // The occasion keys (and recipients) it is offered for; empty: every one.
+  occasionKeys: textArray(),
+  recipients: text().array().$type<Recipient[]>().notNull().default(sql`'{}'::text[]`),
   sort: integer().notNull().default(0),
   active: boolean().notNull().default(true),
+  updatedAt: updatedAt(),
 })
 
 // A color palette the buyer can play a map in. Separate from the map: one palette can serve several

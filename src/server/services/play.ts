@@ -27,6 +27,7 @@ import {
   type SnapshotStall,
   type SnapshotTasting,
   type TextPart,
+  type ThemeStyle,
 } from '../domain/types.ts'
 import type { Services } from './context.ts'
 import { alertOwner } from './delivery.ts'
@@ -111,7 +112,7 @@ export interface PlayerView {
   status: 'ready' | 'active' | 'paused' | 'done' | 'expired' | 'not_ready'
   version: number
   pollSeconds: number
-  theme: { name: string; map: string | null; palette: Palette } | null
+  theme: { name: string; map: string | null; palette: Palette; style: ThemeStyle } | null
   /** The occasion's doodle set. */
   decor: Decor
   company: { name: string; logo: string | null } | null
@@ -285,7 +286,12 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     status,
     version: state.version,
     pollSeconds,
-    theme: { name: game.theme.name, map: fileUrl(game.theme.map), palette: game.theme.palette },
+    theme: {
+      name: game.theme.name,
+      map: fileUrl(game.theme.map),
+      palette: game.theme.palette,
+      style: game.theme.style ?? {},
+    },
     decor: await decorOf(db, order, game),
     company: game.company ? { name: game.company.name, logo: fileUrl(game.company.logo) } : null,
     honoree: game.honoree,

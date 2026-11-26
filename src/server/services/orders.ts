@@ -160,6 +160,7 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
       mapFile: theme.mapFile,
       palette: theme.palette,
       pins: theme.pins,
+      style: theme.style,
     },
     palette: palette ? { id: palette.id, palette: palette.palette } : null,
     decor: occasion?.decor ?? 'generic',

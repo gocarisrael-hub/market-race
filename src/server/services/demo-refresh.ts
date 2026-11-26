@@ -1,8 +1,8 @@
 // Versioned refresh of the demo content on a database seeded earlier (staging, local dev, e2e).
 // Runs at boot only with SEED_DEMO or E2E_SEED outside production (see index.ts): never in
 // production. When the stored `demo_seed_version` is below DEMO_SEED_VERSION it upserts the demo
-// riddles, question sets, occasion recipients and the `minigames` setting by their stable demo
-// keys, then rebuilds the games that have not started so they pick the new content up.
+// riddles, question sets, occasion recipients, game styles and the `minigames` setting by their
+// stable demo keys, then rebuilds the games that have not started so they pick the new content up.
 //
 // Rows the admin edited after the last refresh are left alone: every catalog row has an
 // `updated_at`, and the refresh records when it ran (`demo_seed_at`). A database refreshed for the
@@ -14,23 +14,33 @@ import {
   markets,
   occasions,
   orders,
+  palettes,
   paySessions,
   questionSets,
   riddles,
   settings,
   stalls,
+  themes,
 } from '../db/schema.ts'
 import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
 import { formsOfRecipients } from '../domain/recipient.ts'
 import type { Question } from '../domain/types.ts'
 import { BuildError, buildOrderGame } from './orders.ts'
 import {
+  DEMO_MAHANE,
   DEMO_MARKET,
+  DEMO_PALETTES,
   DEMO_RIDDLE_ROWS,
   demoQuestionSets,
   demoRecipients,
   demoRiddleValues,
+  demoThemeValues,
+  ensureDemoPalettes,
 } from './seed-demo.ts'
+import { DEMO_THEMES } from './seed-themes.ts'
+
+/** Palettes of earlier seeds that only repeated a locked style's own colors. */
+const RETIRED_PALETTES = ['כחול-ורוד', 'לילה']
 
 /** Demo seeding and its refresh run only when asked (SEED_DEMO or E2E_SEED) and never in production. */
 export function demoSeedingEnabled(env: Record<string, string | undefined>, appEnv: string): boolean {
@@ -38,7 +48,7 @@ export function demoSeedingEnabled(env: Record<string, string | undefined>, appE
 }
 
 /** Bump when the demo content changes, so seeded databases pick it up at their next boot. */
-export const DEMO_SEED_VERSION = 1
+export const DEMO_SEED_VERSION = 2
 
 export interface RefreshReport {
   ran: boolean
@@ -46,6 +56,7 @@ export interface RefreshReport {
   riddles: { updated: number; inserted: number; kept: number }
   questionSets: { updated: number; inserted: number; kept: number }
   occasions: { updated: number; kept: number }
+  themes: { updated: number; inserted: number; kept: number }
   minigames: 'written' | 'kept'
   rebuilt: string[]
   rebuildFailed: string[]
@@ -129,6 +140,7 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     riddles: { updated: 0, inserted: 0, kept: 0 },
     questionSets: { updated: 0, inserted: 0, kept: 0 },
     occasions: { updated: 0, kept: 0 },
+    themes: { updated: 0, inserted: 0, kept: 0 },
     minigames: 'kept',
     rebuilt: [],
     rebuildFailed: [],
@@ -223,6 +235,50 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
       .where(eq(occasions.id, o.id))
     report.occasions.updated++
   }
+
+  // Game styles, keyed by `key` (a row from an earlier seed is found by its name and gets the key).
+  const mahane = (await db.select().from(markets)).find((m) => m.name === DEMO_MAHANE)
+  const allThemes = await db.select().from(themes)
+  const carmelPins = allThemes.find((t) => t.key === 'carmel' || t.name === DEMO_THEMES[0].name)?.pins ?? {}
+  const themeIds: Record<string, number> = {}
+  for (const [i, d] of DEMO_THEMES.entries()) {
+    const row =
+      allThemes.find((t) => t.key === d.key) ??
+      allThemes.find((t) => !t.key && [d.name, ...(d.formerNames ?? [])].includes(t.name))
+    // A row without a key predates keyed styles: its updated_at is the migration's, not an edit.
+    if (row?.key && edited(row)) {
+      report.themes.kept++
+      themeIds[d.key] = row.id
+      continue
+    }
+    if (!row && d.market === 'mahane' && !mahane) continue
+    const values = {
+      ...demoThemeValues(d, i, { carmel: market.id, mahane: mahane?.id ?? market.id }, carmelPins),
+      updatedAt: now,
+    }
+    if (row) {
+      // The owner's pins and market stay; the look and the offer are the demo's.
+      const { pins: _p, marketId: _m, ...rest } = values
+      await db.update(themes).set(rest).where(eq(themes.id, row.id))
+      report.themes.updated++
+      themeIds[d.key] = row.id
+    } else {
+      const [ins] = await db.insert(themes).values(values).returning()
+      report.themes.inserted++
+      themeIds[d.key] = ins.id
+    }
+  }
+  // Palettes: the watercolor variants on the watercolor styles; the other styles are locked.
+  for (const p of await db.select().from(palettes)) {
+    const demo = DEMO_PALETTES.find((x) => x.name === p.name)
+    if (demo) {
+      const ids = demo.themes.map((k) => themeIds[k]).filter((id): id is number => id != null)
+      await db.update(palettes).set({ themeIds: ids }).where(eq(palettes.id, p.id))
+    } else if (RETIRED_PALETTES.includes(p.name)) {
+      await db.update(palettes).set({ active: false, themeIds: [] }).where(eq(palettes.id, p.id))
+    }
+  }
+  await ensureDemoPalettes(db)
 
   // The mini-game setting.
   const [mg] = await db.select().from(settings).where(eq(settings.key, 'minigames'))

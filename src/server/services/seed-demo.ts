@@ -19,6 +19,7 @@ import { formsOfRecipients, occasionRecipients } from '../domain/recipient.ts'
 import type { Decor, Form, OccasionRecipients, Palette, Question, RiddleTemplates } from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { markDemoSeeded } from './demo-refresh.ts'
+import { DEMO_THEMES, type DemoTheme, WATERCOLOR_THEMES } from './seed-themes.ts'
 import { setSetting } from './settings.ts'
 
 const hours = {
@@ -204,9 +205,12 @@ const companyQuestions: Question[] = [
   { slot: 'photo_where', text: { company: PHOTO_WHERE }, required: false, fallback: '', maxLen: 40 },
 ]
 
-const WATERCOLOR = ['כרמל בצבעי מים', 'מחנה יהודה בצבעי מים']
+const WATERCOLOR = WATERCOLOR_THEMES
 
-/** Demo palettes: which themes (by name) each one is offered on. Every one passes paletteIssues. */
+/**
+ * Demo palettes: the theme keys each one is offered on. Every one passes paletteIssues. Only the
+ * watercolor maps take color variants; every other style is locked to its own palette.
+ */
 export const DEMO_PALETTES: { name: string; themes: string[]; palette: Palette }[] = [
   {
     name: 'אדום קלאסי',
@@ -257,23 +261,40 @@ export const DEMO_PALETTES: { name: string; themes: string[]; palette: Palette }
       mapTint: '#B23A6E',
     },
   },
-  {
-    name: 'כחול-ורוד',
-    themes: ['כרמל כחול-ורוד'],
-    palette: {
-      background: '#8E99C6',
-      accent: '#F3859F',
-      accent2: '#0A297D',
-      ink: '#0A297D',
-      paper: '#F6EEF2',
-    },
-  },
-  {
-    name: 'לילה',
-    themes: ['מחנה יהודה בלילה'],
-    palette: { background: '#0B2B47', accent: '#AFC7AE', ink: '#08223A', paper: '#F3EFE4', dark: true },
-  },
 ]
+
+/** Inserts the demo styles (DEMO_THEMES) in their order; the Carmel ones get the Carmel pins. */
+export async function insertDemoThemes(
+  db: DB,
+  market: { carmel: number; mahane: number },
+  carmelPins: Record<string, { x: number; y: number }>,
+) {
+  return db
+    .insert(themes)
+    .values(DEMO_THEMES.map((t, i) => demoThemeValues(t, i, market, carmelPins)))
+    .returning()
+}
+
+/** A demo style's row values (without the id). */
+export function demoThemeValues(
+  t: DemoTheme,
+  index: number,
+  market: { carmel: number; mahane: number },
+  carmelPins: Record<string, { x: number; y: number }>,
+) {
+  return {
+    key: t.key,
+    name: t.name,
+    marketId: market[t.market],
+    mapFile: t.mapFile,
+    palette: { ...t.palette },
+    style: structuredClone(t.style),
+    occasionKeys: [...t.occasionKeys],
+    recipients: [...t.recipients],
+    pins: t.market === 'carmel' ? carmelPins : {},
+    sort: index + 1,
+  }
+}
 
 /** Doodle set per demo occasion key. */
 export const DEMO_DECOR: Record<string, Decor> = {
@@ -290,16 +311,16 @@ export const DEMO_DECOR: Record<string, Decor> = {
 }
 
 /**
- * Adds the demo palettes that are missing (by name) and links them to the themes they name.
+ * Adds the demo palettes that are missing (by name) and links them to the themes they list (by key).
  * Idempotent: used by the seed and to top up a database seeded before palettes existed.
  */
 export async function ensureDemoPalettes(db: DB): Promise<number> {
   const have = new Set((await db.select({ name: palettes.name }).from(palettes)).map((p) => p.name))
-  const allThemes = await db.select({ id: themes.id, name: themes.name }).from(themes)
+  const allThemes = await db.select({ id: themes.id, key: themes.key }).from(themes)
   let added = 0
   for (const [i, p] of DEMO_PALETTES.entries()) {
     if (have.has(p.name)) continue
-    const themeIds = allThemes.filter((t) => p.themes.includes(t.name)).map((t) => t.id)
+    const themeIds = allThemes.filter((t) => t.key && p.themes.includes(t.key)).map((t) => t.id)
     if (!themeIds.length) continue
     await db.insert(palettes).values({ name: p.name, palette: p.palette, themeIds, sort: i + 1 })
     added++
@@ -685,6 +706,7 @@ export const DEMO_RIDDLES: Record<string, RiddleTemplates> = {
 
 /** The demo market, by name: its stalls and riddles are the demo rows. */
 export const DEMO_MARKET = 'שוק הכרמל'
+export const DEMO_MAHANE = 'שוק מחנה יהודה'
 
 /** The demo riddles' fixed fields. Their stable key is the stall's name and the answer. */
 export const DEMO_RIDDLE_ROWS: {
@@ -926,7 +948,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     .returning()
   const [mahane] = await db
     .insert(markets)
-    .values({ name: 'שוק מחנה יהודה', hours, codeSecret: randomToken(24) })
+    .values({ name: DEMO_MAHANE, hours, codeSecret: randomToken(24) })
     .returning()
 
   const mk = async (name: string, locationHint: string) =>
@@ -1119,47 +1141,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     [beer.id]: { x: 22, y: 20 },
     [coffee.id]: { x: 28, y: 24 },
   }
-  const [watercolor] = await db
-    .insert(themes)
-    .values({
-      name: 'כרמל בצבעי מים',
-      marketId: carmel.id,
-      mapFile: 'builtin:carmel-watercolor.jpg',
-      palette: { background: '#EADBC8', accent: '#B4161B', ink: '#2B2420', paper: '#FFFBF4' },
-      pins: carmelPins,
-      sort: 1,
-    })
-    .returning()
-  await db.insert(themes).values([
-    {
-      name: 'כרמל כחול-ורוד',
-      marketId: carmel.id,
-      mapFile: 'builtin:carmel-riso.jpg',
-      palette: {
-        background: '#737FB0',
-        accent: '#F3859F',
-        accent2: '#0A297D',
-        ink: '#0A297D',
-        paper: '#F6EEF2',
-      },
-      pins: carmelPins,
-      sort: 2,
-    },
-    {
-      name: 'מחנה יהודה בצבעי מים',
-      marketId: mahane.id,
-      mapFile: 'builtin:mahane-yehuda-watercolor.jpg',
-      palette: { background: '#EADBC8', accent: '#B4161B', ink: '#2B2420', paper: '#FFFBF4' },
-      sort: 3,
-    },
-    {
-      name: 'מחנה יהודה בלילה',
-      marketId: mahane.id,
-      mapFile: 'builtin:mahane-yehuda-night.jpg',
-      palette: { background: '#0B2B47', accent: '#AFC7AE', ink: '#08223A', paper: '#F3EFE4', dark: true },
-      sort: 4,
-    },
-  ])
+  const [watercolor] = await insertDemoThemes(db, { carmel: carmel.id, mahane: mahane.id }, carmelPins)
 
   const [qsPrivate] = await db
     .insert(questionSets)

@@ -134,11 +134,13 @@ describe('palettes in the shop, the order and the game', () => {
   })
 
   it('refuses a palette that is not offered on the chosen map', async () => {
-    const [night] = await t.db.select().from(palettes).where(eq(palettes.name, 'לילה'))
+    // The neon style is locked to its own colors: the watercolor variants are not offered on it.
+    const [sea] = await t.db.select().from(palettes).where(eq(palettes.name, 'כחול ים'))
+    const neon = (await shop()).themes.find((x: { key?: string; name: string }) => x.name === 'ניאון בשוק')
     const res = await t.app.inject({
       method: 'POST',
       url: '/api/orders',
-      payload: draft({ paletteId: night.id }),
+      payload: draft({ themeId: neon.id, paletteId: sea.id }),
     })
     expect(res.statusCode).toBe(400)
     expect(res.json().error).toBe('bad_palette')

@@ -94,6 +94,56 @@ export interface Palette {
   mapTint?: string
 }
 
+/** Display fonts a theme can use (see FONTS in theme-style.ts for how each is loaded and sized). */
+export const THEME_FONTS = ['amatic', 'suez', 'frank'] as const
+export type ThemeFont = (typeof THEME_FONTS)[number]
+
+/** Colors a theme can set instead of the ones derived from its palette (see themeVars). */
+export const STYLE_COLORS = [
+  'onBg',
+  'ribbon',
+  'ribbonTail',
+  'ribbonLine',
+  'onRibbon',
+  'button',
+  'onButton',
+  'buttonLine',
+  'paperLine',
+  'sheetLine',
+  'kicker',
+  'slot',
+  'hint',
+  'label',
+  'mark',
+  'brand',
+  'onBrand',
+] as const
+export type StyleColor = (typeof STYLE_COLORS)[number]
+
+/**
+ * How a theme looks beyond its colors: fonts, how the button, ribbon and sheets are drawn, which
+ * food illustrations it uses, and dark or light. Every field is optional: an empty style is the
+ * base look (Amatic SC, brush strokes, the original illustrations).
+ */
+export interface ThemeStyle {
+  /** The handwritten/display font. Default amatic. */
+  font?: ThemeFont
+  /** The riddle text in the display font too (a serif theme), not the plain sans. */
+  serifBody?: boolean
+  /** dark: notes and sheets are dark too (and glow). Default light. */
+  mode?: 'light' | 'dark'
+  /** brush: ink strokes. neon: glowing lines. foil: gold-foil lettering on dark ink. */
+  treatment?: 'brush' | 'neon' | 'foil'
+  /** The ink line along the torn top of the opening sheet. Default true. */
+  sheetLine?: boolean
+  /** Riddle screen top: the food trail only, or a strip of the map behind it. Default trail. */
+  riddleTop?: 'trail' | 'banner'
+  /** Folder of recolored food illustrations under assets/icons; empty: the originals. */
+  icons?: string
+  /** Fixed colors, used when the game plays in the theme's own palette. */
+  colors?: Partial<Record<StyleColor, string>>
+}
+
 // Hand-drawn doodle sets shown around the game and the order flow, picked per occasion.
 export const DECORS = ['birthday', 'love', 'family', 'friends', 'company', 'generic'] as const
 export type Decor = (typeof DECORS)[number]
@@ -201,7 +251,15 @@ export interface GameSnapshot {
   version: 1
   builtAt: string
   market: { id: number; name: string }
-  theme: { id: number; name: string; map: string; palette: Palette; paletteId?: number | null }
+  theme: {
+    id: number
+    name: string
+    map: string
+    palette: Palette
+    paletteId?: number | null
+    /** Fonts, treatment and illustrations. Missing on games built before theme styles existed. */
+    style?: ThemeStyle
+  }
   /** Doodle set of the occasion. Missing on games built before it existed. */
   decor?: Decor
   company: { name: string; logo: string | null } | null
