@@ -12,16 +12,19 @@ export function splitQuestion(parts: TextPart[]): { body: TextPart[]; question: 
   if (!text.endsWith('?')) return { body: parts, question: null }
   // The question starts after the last sentence end before the final "?".
   const head = text.slice(0, -1)
+  // A multi-line riddle ends with the question on a line of its own.
+  const nl = head.lastIndexOf('\n')
   const cut = Math.max(
     head.lastIndexOf('. '),
     head.lastIndexOf('! '),
     head.lastIndexOf('? '),
     head.lastIndexOf(': '),
+    nl - 1,
   )
   const question = (cut >= 0 ? text.slice(cut + 2) : text).trim()
   const words = question.split(/\s+/).length
   if (words > 4 || question.length > 28) return { body: parts, question: null }
-  const rest = cut >= 0 ? text.slice(0, cut + 1) : ''
+  const rest = (cut >= 0 ? text.slice(0, cut + 1) : '').replace(/\n$/, '')
   // The whole riddle is the question: keep it as body text.
   if (rest.trim() === '' && parts.length === 1) return { body: parts, question: null }
   const body = parts.slice(0, -1)

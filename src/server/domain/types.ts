@@ -156,6 +156,47 @@ export interface SnapshotStop {
   swappedToBackup: boolean
 }
 
+// Personal mini-games between stops, built only from the order's own answers and photos.
+export const MINIGAME_TYPES = ['who_said', 'true_false', 'photo', 'cipher'] as const
+export type MinigameType = (typeof MINIGAME_TYPES)[number]
+
+/** What solving a mini-game opens: a line of the closing letter (a buyer's note, or one we write). */
+export interface MinigameReward {
+  text: string
+  signature: string
+}
+
+/**
+ * A built mini-game, frozen in the snapshot. `solution` and `reward` never reach the player client
+ * (the reward only once solved); see publicMinigame.
+ */
+export interface SnapshotMinigame {
+  type: MinigameType
+  /** Played after this many stops are done (before stop index `afterStop`). */
+  afterStop: number
+  prompt: TextPart[]
+  /** who_said, photo: the choices, in display order. */
+  options?: string[]
+  /** true_false: the statements, in display order. */
+  statements?: TextPart[][]
+  /** photo: the order's photo (a stored file) and the point the zoomed crop starts on (percent). */
+  photo?: string
+  focus?: { x: number; y: number }
+  /** cipher: the shifted text and the personal hint to the key. */
+  cipher?: string
+  keyHint?: TextPart[]
+  solution: {
+    option?: number
+    truths?: boolean[]
+    text?: string
+    accepted?: string[]
+    shift?: number
+  }
+  reward: MinigameReward
+  /** The answer slots it is built from (for the admin, and to keep two games apart). */
+  slots: string[]
+}
+
 export interface GameSnapshot {
   version: 1
   builtAt: string
@@ -178,4 +219,6 @@ export interface GameSnapshot {
   diets: string[]
   stops: SnapshotStop[]
   letter: { notes: LetterNote[]; photos: string[] }
+  /** Personal mini-games between stops. Missing on games built before they existed. */
+  minigames?: SnapshotMinigame[]
 }

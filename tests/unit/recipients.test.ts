@@ -143,7 +143,7 @@ describe('recipient-first in the demo catalog', () => {
     expect(built.flags).toEqual([])
     const first = partsToString(built.game!.stops[0].riddle.parts)
     expect(first).toBe(
-      'מאז הדייט הראשון ביפו, יואב יודע שאסור לוותר עליה. היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
+      'בסוף כל טקס שרים אותה כשכולם עומדים,\nהיא עוד לא אבדה, גם בימים הקשים.\nומאז הדייט הראשון ביפו, יואב יודע: עליה לא מוותרים.\nמה היא?',
     )
     expect(built.game).toMatchObject({ form: 'he', recipient: 'he', playersFeminine: false })
     const manage = (await t.app.inject({ url: `/api/manage/${o.manageToken}` })).json()

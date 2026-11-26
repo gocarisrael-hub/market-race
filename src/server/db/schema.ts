@@ -237,11 +237,18 @@ export const gameStates = pgTable('game_states', {
     .primaryKey()
     .references(() => orders.id, { onDelete: 'cascade' }),
   stopIndex: integer().notNull().default(0),
-  step: text().$type<'opening' | 'riddle' | 'revealed' | 'redeem' | 'done'>().notNull().default('opening'),
+  // "minigame": a personal mini-game between stops (the one placed before stop `stopIndex`).
+  step: text()
+    .$type<'opening' | 'riddle' | 'revealed' | 'redeem' | 'minigame' | 'done'>()
+    .notNull()
+    .default('opening'),
   hintsShown: integer().array().notNull().default(sql`'{}'::integer[]`),
   // Stops where the stall was closed on the day and the backup stall was used.
   backupStops: integer().array().notNull().default(sql`'{}'::integer[]`),
   wrongAnswers: integer().notNull().default(0),
+  // Mini-games (by index in the snapshot) solved, and skipped by the captain.
+  minigamesSolved: integer().array().notNull().default(sql`'{}'::integer[]`),
+  minigamesSkipped: integer().array().notNull().default(sql`'{}'::integer[]`),
   // How many players arrived, chosen by the captain (the buyer) at the start, 1..people bought.
   // Every stall serves this many portions; null on games started before it existed (= people).
   players: integer(),

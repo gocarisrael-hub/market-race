@@ -12,6 +12,12 @@ import { dailyCode } from '../domain/dailycode.ts'
 import { israelDate } from '../domain/dates.ts'
 import { matchAnswer } from '../domain/matcher.ts'
 import {
+  checkMinigame,
+  type MinigameAnswer,
+  type PublicMinigame,
+  publicMinigame,
+} from '../domain/minigames.ts'
+import {
   type Decor,
   type GameSnapshot,
   type HintQuestion,
@@ -24,7 +30,72 @@ import {
 import type { Services } from './context.ts'
 import { alertOwner } from './delivery.ts'
 
-export type Step = 'opening' | 'riddle' | 'revealed' | 'redeem' | 'done'
+export type Step = 'opening' | 'riddle' | 'revealed' | 'redeem' | 'minigame' | 'done'
+
+/** The steps of a started, unfinished game (it can be paused on any of them). */
+export const PLAYING_STEPS: Step[] = ['riddle', 'revealed', 'redeem', 'minigame']
+
+/** One stage of the route as the trail shows it: a stop, or a mini-game between stops. */
+export interface Stage {
+  kind: 'stop' | 'game'
+  /** The stop's index, or the mini-game's index in the snapshot. */
+  index: number
+  state: 'done' | 'skipped' | 'now' | 'later'
+}
+
+type StateLike = {
+  step: string
+  stopIndex: number
+  minigamesSolved?: number[] | null
+  minigamesSkipped?: number[] | null
+}
+
+/** The mini-game being played now (its index), or -1. */
+export function currentMinigame(game: Pick<GameSnapshot, 'minigames'>, state: StateLike): number {
+  if (state.step !== 'minigame') return -1
+  return (game.minigames ?? []).findIndex((g) => g.afterStop === state.stopIndex)
+}
+
+/** The mini-game waiting before stop `stopIndex`, not solved or skipped yet, or -1. */
+export function pendingMinigame(game: Pick<GameSnapshot, 'minigames'>, state: StateLike, stopIndex: number) {
+  const done = new Set([...(state.minigamesSolved ?? []), ...(state.minigamesSkipped ?? [])])
+  return (game.minigames ?? []).findIndex((g, i) => g.afterStop === stopIndex && !done.has(i))
+}
+
+/**
+ * The route as stages, stops and mini-games in playing order, with where the group is. Progress
+ * ("שלב X מתוך Y") counts both.
+ */
+export function stagesOf(game: Pick<GameSnapshot, 'stops' | 'minigames'>, state: StateLike): Stage[] {
+  const seq: Omit<Stage, 'state'>[] = []
+  game.stops.forEach((_, s) => {
+    ;(game.minigames ?? []).forEach((g, i) => {
+      if (g.afterStop === s) seq.push({ kind: 'game', index: i })
+    })
+    seq.push({ kind: 'stop', index: s })
+  })
+  const mg = currentMinigame(game, state)
+  const now =
+    state.step === 'done'
+      ? seq.length
+      : state.step === 'opening'
+        ? 0
+        : seq.findIndex((x) =>
+            mg >= 0 ? x.kind === 'game' && x.index === mg : x.kind === 'stop' && x.index === state.stopIndex,
+          )
+  const skipped = new Set(state.minigamesSkipped ?? [])
+  return seq.map((x, i) => ({
+    ...x,
+    state:
+      i < now
+        ? x.kind === 'game' && skipped.has(x.index)
+          ? 'skipped'
+          : 'done'
+        : i === now
+          ? 'now'
+          : 'later',
+  }))
+}
 
 export function fileUrl(file: string | null | undefined): string | null {
   if (!file) return null
@@ -55,8 +126,14 @@ export interface PlayerView {
   allergens: string[]
   diets: string[]
   totalStops: number
+  /** Stops and mini-games in playing order, with where the group is. */
+  stages: Stage[]
+  /** 1-based position on `stages` ("שלב X מתוך Y"). */
+  stage: number
   step: Step
   stopIndex: number
+  /** On the "minigame" step: the game, without its solution (the reward once solved). */
+  minigame: PublicMinigame | null
   current: null | {
     index: number
     finale: boolean
@@ -191,6 +268,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
   const { order, game, state } = l
   const today = israelDate(now)
   const players = playersOf(state, game)
+  const stages = stagesOf(game, state)
   const status: PlayerView['status'] = isExpired(order, today)
     ? 'expired'
     : state.step === 'done'
@@ -215,8 +293,11 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     allergens: game.allergens,
     diets: game.diets,
     totalStops: game.stops.length,
+    stages,
+    stage: state.step === 'done' ? stages.length : stages.findIndex((x) => x.state === 'now') + 1,
     step: state.step,
     stopIndex: state.stopIndex,
+    minigame: null,
     current: null,
     completed: game.stops.slice(0, state.step === 'done' ? game.stops.length : state.stopIndex).map((s) => {
       const usedBackup = state.backupStops.includes(s.index) && s.backup
@@ -235,6 +316,16 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
   }
   // Paused: where they stopped (stopIndex, totalStops) and nothing of the stop itself.
   if (state.step === 'opening' || status === 'paused') return base
+
+  if (state.step === 'minigame') {
+    const i = currentMinigame(game, state)
+    if (i >= 0) {
+      base.minigame = publicMinigame(game.minigames![i], i, state.minigamesSolved.includes(i), (f) =>
+        fileUrl(f),
+      )
+      return base
+    }
+  }
 
   const stop = game.stops[state.stopIndex]
   const hintShown = state.hintsShown.includes(stop.index)
@@ -297,6 +388,11 @@ export type PlayAction =
   // The group found the shown stall closed. `stallId` is the stall the phone shows, so a phone
   // still showing a stall another phone already reported is stale, not a second report.
   | { type: 'stall_closed'; stopIndex: number; stallId?: number }
+  // A personal mini-game between stops (`game` is its index). Skipping is the captain's (the route
+  // checks the captain token); continue moves on once it is solved.
+  | { type: 'minigame'; stopIndex: number; game: number; answer: MinigameAnswer }
+  | { type: 'minigame_continue'; stopIndex: number; game: number }
+  | { type: 'minigame_skip'; stopIndex: number; game: number }
 
 export type PlayResult =
   // noBackup: a reported closed stall has no backup; the group is told to contact us.
@@ -389,11 +485,10 @@ export async function act(
       const stall = usingBackup ? stop.backup!.stall : stop.stall
       const tasting = usingBackup ? stop.backup!.tasting : stop.tasting
       const last = state.stopIndex >= game.stops.length - 1
-      if (
-        !(await update(
-          last ? { step: 'done', finishedAt: now } : { step: 'riddle', stopIndex: state.stopIndex + 1 },
-        ))
-      )
+      // A mini-game placed before the next stop comes first.
+      const next = state.stopIndex + 1
+      const step = !last && pendingMinigame(game, state, next) >= 0 ? 'minigame' : 'riddle'
+      if (!(await update(last ? { step: 'done', finishedAt: now } : { step, stopIndex: next })))
         return stale()
       await db
         .insert(redemptions)
@@ -410,6 +505,41 @@ export async function act(
         .onConflictDoNothing()
       if (last) await db.update(orders).set({ status: 'done' }).where(eq(orders.id, order.id))
       return reload()
+    }
+    case 'minigame':
+    case 'minigame_continue':
+    case 'minigame_skip': {
+      if (state.step !== 'minigame') return stale()
+      const i = currentMinigame(game, state)
+      // A game that is no longer in the snapshot: let the group move on.
+      if (i < 0) {
+        if (action.type === 'minigame') return stale()
+        if (!(await update({ step: 'riddle' }))) return stale()
+        return reload()
+      }
+      if (action.game !== i) return stale()
+      const solved = state.minigamesSolved.includes(i)
+      if (action.type === 'minigame_skip') {
+        if (solved) return stale()
+        if (!(await update({ step: 'riddle', minigamesSkipped: [...state.minigamesSkipped, i] })))
+          return stale()
+        return reload()
+      }
+      if (action.type === 'minigame_continue') {
+        if (!solved) return stale()
+        if (!(await update({ step: 'riddle' }))) return stale()
+        return reload()
+      }
+      if (solved) return reload(true)
+      if (!checkMinigame(game.minigames![i], action.answer)) {
+        await db
+          .update(gameStates)
+          .set({ wrongAnswers: sql`${gameStates.wrongAnswers} + 1`, lastActivityAt: now })
+          .where(eq(gameStates.orderId, order.id))
+        return { ok: true, view: await buildView(db, l, pollSeconds, now), correct: false }
+      }
+      if (!(await update({ minigamesSolved: [...state.minigamesSolved, i] }))) return stale()
+      return reload(true)
     }
     case 'stall_closed': {
       if (state.step !== 'revealed' && state.step !== 'redeem') return stale()
@@ -526,7 +656,7 @@ export async function pauseGame(
       and(
         eq(gameStates.orderId, l.order.id),
         isNull(gameStates.pausedAt),
-        inArray(gameStates.step, ['riddle', 'revealed', 'redeem']),
+        inArray(gameStates.step, PLAYING_STEPS),
       ),
     )
     .returning()

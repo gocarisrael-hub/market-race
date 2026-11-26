@@ -43,7 +43,73 @@ export interface FillResult {
   missing: string[] // slots that ended up empty (no answer and no fallback)
 }
 
+/**
+ * A riddle template is one or more lines. A line that starts with "?" is a personal line: it is
+ * shown only when the buyer answered every slot in it (the name slots always count, and so does a
+ * hidden question, whose fallback is written on purpose). "||" separates alternatives, tried in
+ * order; the first one whose slots are all answered is used, so the last can be a plain line that
+ * keeps the rhyme. When no alternative fits, the line is skipped. Other lines use fallbacks.
+ */
+export interface TemplateLine {
+  personal: boolean
+  alternatives: { text: string; slots: string[] }[]
+}
+
+export function templateLines(template: string): TemplateLine[] {
+  return template
+    .split(/\r?\n/)
+    .map((raw) => raw.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const personal = line.startsWith('?')
+      const body = personal ? line.slice(1).trim() : line
+      const alts = personal ? body.split('||').map((a) => a.trim()) : [body]
+      return {
+        personal,
+        alternatives: alts.filter(Boolean).map((text) => ({ text, slots: extractSlots(text) })),
+      }
+    })
+}
+
+/** A slot has a real answer: the buyer's (or the order's name), or a hidden question's set phrase. */
+export function isAnswered(
+  slot: string,
+  answers: Record<string, string>,
+  questions: Question[],
+  form: Form,
+): boolean {
+  if ((answers[slot] ?? '').trim()) return true
+  const q = questions.find((x) => x.slot === slot)
+  return !!q?.hidden && !!fallbackFor(q, form).trim()
+}
+
 export function fillTemplate(
+  template: string,
+  answers: Record<string, string>,
+  questions: Question[],
+  form: Form,
+): FillResult {
+  const parts: TextPart[] = []
+  const missing: string[] = []
+  let first = true
+  for (const line of templateLines(template)) {
+    let text: string | undefined
+    if (line.personal) {
+      text = line.alternatives.find((a) =>
+        a.slots.every((s) => isAnswered(s, answers, questions, form)),
+      )?.text
+      if (text === undefined) continue
+    } else text = line.alternatives[0]?.text ?? ''
+    if (!first) parts.push({ t: 'text', v: '\n' })
+    first = false
+    const r = fillLine(text, answers, questions, form)
+    parts.push(...r.parts)
+    missing.push(...r.missing)
+  }
+  return { parts: mergeText(parts), missing: [...new Set(missing)] }
+}
+
+function fillLine(
   template: string,
   answers: Record<string, string>,
   questions: Question[],
@@ -63,7 +129,7 @@ export function fillTemplate(
     last = m.index + m[0].length
   }
   if (last < template.length) parts.push({ t: 'text', v: template.slice(last) })
-  return { parts: mergeText(parts), missing }
+  return { parts, missing }
 }
 
 function mergeText(parts: TextPart[]): TextPart[] {
