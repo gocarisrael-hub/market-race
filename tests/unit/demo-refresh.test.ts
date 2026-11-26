@@ -11,6 +11,7 @@ import {
   questionSets,
   riddles,
   settings,
+  tastings,
 } from '../../src/server/db/schema.ts'
 import {
   DEMO_SEED_VERSION,
@@ -20,7 +21,7 @@ import {
 } from '../../src/server/services/demo-refresh.ts'
 import { buildOrderGame, createOrder } from '../../src/server/services/orders.ts'
 import { startGame } from '../../src/server/services/play.ts'
-import { DEMO_RIDDLES, RECIPIENT_SETS, seedDemo } from '../../src/server/services/seed-demo.ts'
+import { DEMO_RIDDLES, KIDS_DRINK, RECIPIENT_SETS, seedDemo } from '../../src/server/services/seed-demo.ts'
 import { makeTestApp, ownerCookie } from '../helpers/app.ts'
 
 const RICH = {
@@ -224,6 +225,21 @@ describe('demo content refresh', () => {
     expect(r.riddles.kept).toBe(1)
     expect(r.minigames).toBe('kept')
     expect(await setting('minigames')).toEqual({ after: [3] })
+  })
+
+  it("version 3: kids get juice at the beer stall (adults-only flags, the kid's birthday for kids)", async () => {
+    await t.db.update(occasions).set({ forKids: false, updatedAt: new Date(0) })
+    await t.db.update(tastings).set({ adultsOnly: false })
+    await t.db.delete(tastings).where(eq(tastings.name, KIDS_DRINK.name))
+    await t.db.update(settings).set({ value: 3 }).where(eq(settings.key, 'demo_seed_version'))
+    const r = await refreshDemoContent(t.db)
+    expect(r.ran).toBe(true)
+    const [kid] = await t.db.select().from(occasions).where(eq(occasions.key, 'birthday_kid'))
+    expect(kid.forKids).toBe(true)
+    const all = await t.db.select().from(tastings)
+    expect(all.filter((x) => x.adultsOnly).map((x) => x.name)).toEqual(['בירה מהחבית', 'סיידר תפוחים'])
+    expect(all.filter((x) => x.name === KIDS_DRINK.name)).toHaveLength(1)
+    expect(r.kids.some((l) => l.includes(`added "${KIDS_DRINK.name}"`))).toBe(true)
   })
 
   it('renames, adds and retires demo occasions, leaving one the admin edited alone', async () => {

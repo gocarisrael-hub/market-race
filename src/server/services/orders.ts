@@ -171,6 +171,7 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
     questions,
     minigames: await minigameContent(db),
     occasionKey: order.occasionKey,
+    forKids: occasion?.forKids ?? false,
     seed: order.orderNo,
     order: {
       form: order.form,

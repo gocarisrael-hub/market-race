@@ -102,6 +102,8 @@ export const tastings = pgTable('tastings', {
   allergens: textArray(),
   diets: textArray(),
   feeAgorot: integer().notNull().default(0),
+  // Alcohol: a kids' game (occasion `for_kids`) swaps it like an allergen, never telling buyers.
+  adultsOnly: boolean().notNull().default(false),
   active: boolean().notNull().default(true),
   createdAt: now(),
 })
@@ -147,6 +149,8 @@ export const occasions = pgTable('occasions', {
   recipientLabels: jsonb().$type<RecipientLabels>().notNull().default({}),
   // The players are addressed in the feminine plural (a bachelorette), whoever the game is for.
   playersFeminine: boolean().notNull().default(false),
+  // A game for kids: adults-only tastings (alcohol) are swapped for something else.
+  forKids: boolean().notNull().default(false),
   // Doodle set drawn around the game and the order flow (see DECORS).
   decor: text().$type<Decor>().notNull().default('generic'),
   sort: integer().notNull().default(0),

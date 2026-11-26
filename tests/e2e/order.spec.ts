@@ -307,6 +307,22 @@ test('the diet stage shows what is tasted on the way and follows the allergens',
   await next(page, /\/details$/)
 })
 
+test("a kid's birthday previews juice at the last stop, never a swap", async ({ page }) => {
+  await buildToPhotos(page, { occasion: 'יום הולדת לילד', name: 'נועה', later: true })
+  await page.goto('/order/diet')
+  const list = page.getByTestId('tastings')
+  const stops = list.locator('li')
+  await expect(stops).toHaveCount(5)
+  await expect(stops.last()).toContainText('מיץ טרי או לימונדה קרה לסיום')
+  await expect(list).not.toContainText('משהו קר מהחבית לסיום')
+  await expect(list).not.toContainText('מוחלף')
+  for (let i = 0; i < 5; i++) await expect(stops.nth(i)).toHaveAttribute('data-status', 'as_listed')
+  // An allergy changes nothing for the kids' drink.
+  await page.getByRole('checkbox', { name: 'גלוטן', exact: true }).click()
+  await expect(stops.nth(1)).toHaveAttribute('data-status', 'blocked')
+  await expect(stops.last()).toContainText('מיץ טרי או לימונדה קרה לסיום')
+})
+
 test('answers later, then from the manage page', async ({ page }) => {
   const token = await buildToPhotos(page, { occasion: 'רווקות', name: 'דנה', later: true })
   // No notes or hint questions to write now: straight on to how many.

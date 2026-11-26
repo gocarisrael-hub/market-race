@@ -13,6 +13,8 @@ export type Occasion = {
   recipientLabels?: Record<string, string>
   /** Doodle set of the occasion (birthday, love, ...). */
   decor?: string
+  /** A kids' game (some tastings are served differently). Missing from older servers. */
+  forKids?: boolean
 }
 /** A color palette a map can be played in. */
 export type ShopPalette = { id: number; name: string; palette: Palette }
@@ -198,9 +200,10 @@ export const getRoutePreview = (
   allergens: string[],
   diets: string[],
   signal?: AbortSignal,
+  occasionKey?: string | null,
 ) =>
   api<{ stops: PreviewStop[] }>(
-    `/api/shop/route-preview?themeId=${themeId}&allergens=${encodeURIComponent(allergens.join(','))}&diets=${encodeURIComponent(diets.join(','))}`,
+    `/api/shop/route-preview?themeId=${themeId}&allergens=${encodeURIComponent(allergens.join(','))}&diets=${encodeURIComponent(diets.join(','))}${occasionKey ? `&occasion=${encodeURIComponent(occasionKey)}` : ''}`,
     { signal },
   ).then((r) => r.stops)
 

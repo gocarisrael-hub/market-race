@@ -43,6 +43,8 @@ export interface Tasting {
   allergens: string[]
   diets: string[]
   feeAgorot: number
+  /** Alcohol: a kids' game serves another tasting. */
+  adultsOnly?: boolean
   active: boolean
 }
 export interface Riddle {
@@ -73,6 +75,8 @@ export interface Occasion {
   /** The occasion's own name for a recipient on the order (e.g. "לילדה"); empty: the default. */
   recipientLabels?: RecipientLabels
   playersFeminine: boolean
+  /** A game for kids: adults-only tastings are swapped. */
+  forKids?: boolean
   decor: Decor
   sort: number
   active: boolean

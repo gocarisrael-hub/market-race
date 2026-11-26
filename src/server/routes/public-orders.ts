@@ -97,6 +97,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         // The occasion's own names for them (e.g. "לילדה"), where it has one.
         recipientLabels: o.recipientLabels ?? {},
         decor: o.decor,
+        // A kids' game: its tastings preview waits for the server (no adults-only teaser first).
+        forKids: o.forKids,
       })),
       markets: mk,
       themes: th.map((t) => ({
@@ -195,6 +197,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     themeId: z.coerce.number().int().positive(),
     allergens: list(ALLERGENS),
     diets: list(DIETS),
+    // The order's occasion: a kids' occasion swaps adults-only tastings (alcohol).
+    occasion: z.string().max(60).optional(),
   })
   app.get(
     '/api/shop/route-preview',
@@ -204,9 +208,12 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       if (!q.success) return reply.code(400).send({ error: 'invalid' })
       const { route } = await routeForTheme(q.data.themeId)
       if (!route) return reply.code(404).send({ error: 'no_route' })
-      const [marketStalls, marketTastings] = await Promise.all([
+      const [marketStalls, marketTastings, [occ]] = await Promise.all([
         db.select().from(stalls).where(eq(stalls.marketId, route.marketId)),
         routeTastings(route.marketId),
+        q.data.occasion
+          ? db.select().from(occasions).where(eq(occasions.key, q.data.occasion))
+          : Promise.resolve([]),
       ])
       const preview = previewRoute({
         stops: route.stops,
@@ -214,13 +221,15 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         tastings: marketTastings,
         allergens: q.data.allergens,
         diets: q.data.diets,
+        forKids: occ?.forKids ?? false,
       })
       return {
         stops: preview.map((p) => ({
           teaser: p.tasting?.teaser ?? '',
           icon: iconUrl(p.tasting?.teaserIcon),
           finale: p.finale,
-          status: p.status,
+          // Buyers are never told a stop was swapped for a kids' game: it reads as listed.
+          status: p.status === 'swapped' && p.reason === 'kids' ? 'as_listed' : p.status,
         })),
       }
     },
