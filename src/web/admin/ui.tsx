@@ -78,6 +78,8 @@ export interface Occasion {
   /** A game for kids: adults-only tastings are swapped. */
   forKids?: boolean
   decor: Decor
+  /** Library icons drawn with the doodles (empty: the set's defaults). */
+  icons?: string[]
   sort: number
   active: boolean
 }

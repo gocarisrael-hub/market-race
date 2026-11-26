@@ -1,5 +1,6 @@
 // Markets (with the printable daily-code sheet), stalls, tastings, occasions, settings.
 import { useEffect, useState } from 'react'
+import { iconUrl } from '../../../server/domain/icons.ts'
 import { occasionRecipients } from '../../../server/domain/recipient.ts'
 import {
   ALLERGENS,
@@ -12,6 +13,7 @@ import {
   RECIPIENTS,
 } from '../../../server/domain/types.ts'
 import { ApiError, api, type Issue } from '../api.ts'
+import { IconPicker, iconLabel } from '../IconPicker.tsx'
 import {
   Check,
   CrudPage,
@@ -283,7 +285,6 @@ function useStallOptions() {
 
 function TastingEditor({ value, set, isNew }: EditorProps<Tasting>) {
   const st = useStallOptions()
-  const icons = useList<string>('/catalog/icons').items ?? []
   return (
     <>
       <Select
@@ -296,18 +297,11 @@ function TastingEditor({ value, set, isNew }: EditorProps<Tasting>) {
       <Text label="שם" value={value.name} onChange={(name) => set({ name })} required />
       <Text label="תיאור לקונים" value={value.teaser} onChange={(teaser) => set({ teaser })} />
       <p className="muted">מוצג לקונים לפני הרכישה. לא לכתוב את שם הדוכן או משהו שמסגיר חידה.</p>
-      <div className="row">
-        <Select
-          label="איור לתיאור"
-          value={value.teaserIcon ?? ''}
-          placeholder="בלי איור"
-          options={icons.map((i) => ({ value: i, label: i }))}
-          onChange={(v) => set({ teaserIcon: v || null })}
-        />
-        {value.teaserIcon && (
-          <img src={`/static/icons/${value.teaserIcon}.png`} alt="" width={48} height={48} />
-        )}
-      </div>
+      <IconPicker
+        label="איור (ליד התיאור, ובמשחק אחרי שפותרים את התחנה)"
+        value={value.teaserIcon ? [value.teaserIcon] : []}
+        onChange={([k]) => set({ teaserIcon: k ?? null })}
+      />
       <fieldset>
         <legend>אלרגנים</legend>
         {ALLERGENS.map((a) => (
@@ -369,6 +363,20 @@ export function TastingsPage() {
         active: true,
       })}
       columns={[
+        {
+          label: 'איור',
+          render: (t) =>
+            t.teaserIcon ? (
+              <img
+                className="list-icon"
+                src={iconUrl(t.teaserIcon)}
+                alt={iconLabel(t.teaserIcon)}
+                loading="lazy"
+              />
+            ) : (
+              <span className="muted">—</span>
+            ),
+        },
         { label: 'שם', render: (t) => t.name },
         { label: 'תיאור לקונים', render: (t) => t.teaser || <span className="muted">חסר</span> },
         { label: 'דוכן', render: (t) => st.name(t.stallId) },
@@ -488,6 +496,14 @@ function OccasionEditor({ value, set }: EditorProps<Occasion>) {
         options={DECORS.map((d) => ({ value: d, label: DECOR_LABELS[d] }))}
         onChange={(decor) => set({ decor })}
       />
+      <IconPicker
+        label="איורים לצד הקישוטים (ריק: לפי סוג הקישוטים)"
+        multiple
+        max={6}
+        initialCategory="holidays"
+        value={value.icons ?? []}
+        onChange={(icons) => set({ icons })}
+      />
       <NumberInput label="סדר" value={value.sort} onChange={(sort) => set({ sort })} />
       <Check label="פעיל" checked={value.active} onChange={(active) => set({ active })} />
     </>
@@ -512,6 +528,7 @@ export function OccasionsPage() {
         playersFeminine: false,
         forKids: false,
         decor: 'generic',
+        icons: [],
         sort: 0,
         active: true,
       })}
@@ -519,6 +536,16 @@ export function OccasionsPage() {
         { label: 'שם', render: (o) => o.label },
         { label: 'מפתח', render: (o) => o.key },
         { label: 'קישוטים', render: (o) => DECOR_LABELS[o.decor]?.split(' (')[0] ?? o.decor },
+        {
+          label: 'איורים',
+          render: (o) => (
+            <span className="list-icons">
+              {(o.icons ?? []).map((k) => (
+                <img key={k} className="list-icon" src={iconUrl(k)} alt={iconLabel(k)} loading="lazy" />
+              ))}
+            </span>
+          ),
+        },
         { label: 'קהל', render: (o) => (o.audience === 'company' ? 'חברה' : 'פרטי') },
         { label: 'מצב', render: (o) => activeLabel(o.active) },
       ]}
