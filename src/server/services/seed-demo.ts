@@ -18,6 +18,7 @@ import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
 import { formsOfRecipients, occasionRecipients } from '../domain/recipient.ts'
 import type { Decor, Form, OccasionRecipients, Palette, Question, RiddleTemplates } from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
+import { markDemoSeeded } from './demo-refresh.ts'
 import { setSetting } from './settings.ts'
 
 const hours = {
@@ -682,10 +683,109 @@ export const DEMO_RIDDLES: Record<string, RiddleTemplates> = {
   },
 }
 
+/** The demo market, by name: its stalls and riddles are the demo rows. */
+export const DEMO_MARKET = 'שוק הכרמל'
+
+/** The demo riddles' fixed fields. Their stable key is the stall's name and the answer. */
+export const DEMO_RIDDLE_ROWS: {
+  stall: string
+  title: string
+  answer: string
+  accepted: string[]
+  hint: string
+  afterText: string
+}[] = [
+  {
+    stall: 'דוכן המיצים של תקווה',
+    title: 'תקווה',
+    answer: 'תקווה',
+    accepted: ['התקווה', 'תיקווה'],
+    hint: 'זה גם שם של המנון',
+    afterText: 'עכשיו מצאו את תקווה בשוק.',
+  },
+  {
+    stall: 'מיצים בפינה',
+    title: 'מיץ',
+    answer: 'מיץ',
+    accepted: ['מיצים'],
+    hint: 'שותים אותו מכוס, סוחטים אותו מפרי',
+    afterText: '',
+  },
+  {
+    stall: 'המאפייה התימנית',
+    title: "ג'חנון",
+    answer: "ג'חנון",
+    accepted: ['ג׳חנון', 'גחנון', 'jachnun'],
+    hint: 'תימני, מגולגל, ישן בתנור',
+    afterText: '',
+  },
+  {
+    stall: 'בוריק',
+    title: 'בוריק',
+    answer: 'בוריק',
+    accepted: ['בריק', 'בורק טוניסאי'],
+    hint: 'המאפה הטוניסאי עם הביצה',
+    afterText: '',
+  },
+  {
+    stall: 'פלאפל בשוק',
+    title: 'פלאפל',
+    answer: 'פלאפל',
+    accepted: ['פלאפל בפיתה', 'falafel'],
+    hint: 'כדורים בפיתה',
+    afterText: '',
+  },
+  {
+    stall: 'קבב על האש',
+    title: 'קבב',
+    answer: 'קבב',
+    accepted: ['קבאב', 'שיפוד קבב'],
+    hint: 'בשר על שיפוד',
+    afterText: '',
+  },
+  {
+    stall: 'בירה בסוף השוק',
+    title: 'לחיים',
+    answer: 'לחיים',
+    accepted: ['cheers'],
+    hint: 'מה אומרים כשמרימים כוס?',
+    afterText: '',
+  },
+  {
+    stall: 'קפה של השוק',
+    title: 'קפה',
+    answer: 'קפה',
+    accepted: ['הפוך', 'אספרסו'],
+    hint: 'שותים אותו בבוקר',
+    afterText: '',
+  },
+]
+
+/** A demo riddle row as stored (without its stall id). */
+export const demoRiddleValues = (d: (typeof DEMO_RIDDLE_ROWS)[number]) => ({
+  title: d.title,
+  answer: d.answer,
+  accepted: [...d.accepted],
+  hint: d.hint,
+  afterText: d.afterText,
+  templates: DEMO_RIDDLES[d.answer] ?? {},
+  active: true,
+})
+
 /** The group version of each demo riddle, by answer. */
 export const GROUP_TEMPLATES: Record<string, string> = Object.fromEntries(
   Object.entries(DEMO_RIDDLES).map(([answer, t]) => [answer, t.group ?? '']),
 )
+
+/** Every demo question set by its key, with its stable name. */
+export function demoQuestionSets(): Record<string, { name: string; questions: readonly Question[] }> {
+  return {
+    private: { name: 'שאלות פרטיות', questions: privateQuestions },
+    company: { name: 'שאלות לחברות', questions: companyQuestions },
+    ...Object.fromEntries(GROUP_OCCASIONS.map((g) => [g.key, { name: g.setName, questions: g.questions }])),
+    ...RECIPIENT_SETS,
+  }
+}
 
 /** Demo price of the group occasions (same as the private ones). */
 export const GROUP_PRICE = { base: 0, perPerson: 9900 }
@@ -939,79 +1039,25 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     'coffee',
   )
 
-  const r = async (v: Omit<typeof riddles.$inferInsert, 'templates'>) => {
-    const templates = DEMO_RIDDLES[v.answer] ?? {}
-    return (
-      await db
-        .insert(riddles)
-        .values({ ...v, templates })
-        .returning()
-    )[0]
+  const stallIdByName = new Map(
+    [tikva, juice2, bakery, burik, falafel, kebab, beer, coffee].map((x) => [x.name, x.id]),
+  )
+  const byAnswer = new Map<string, typeof riddles.$inferSelect>()
+  for (const d of DEMO_RIDDLE_ROWS) {
+    const [row] = await db
+      .insert(riddles)
+      .values({ ...demoRiddleValues(d), stallId: stallIdByName.get(d.stall)! })
+      .returning()
+    byAnswer.set(d.answer, row)
   }
-  const rTikva = await r({
-    stallId: tikva.id,
-    title: 'תקווה',
-    answer: 'תקווה',
-    accepted: ['התקווה', 'תיקווה'],
-    hint: 'זה גם שם של המנון',
-    afterText: 'עכשיו מצאו את תקווה בשוק.',
-  })
-  const rJuice2 = await r({
-    stallId: juice2.id,
-    title: 'מיץ',
-    answer: 'מיץ',
-    accepted: ['מיצים'],
-    hint: 'שותים אותו מכוס, סוחטים אותו מפרי',
-    afterText: '',
-  })
-  const rJachnun = await r({
-    stallId: bakery.id,
-    title: "ג'חנון",
-    answer: "ג'חנון",
-    accepted: ['ג׳חנון', 'גחנון', 'jachnun'],
-    hint: 'תימני, מגולגל, ישן בתנור',
-    afterText: '',
-  })
-  const rBurik = await r({
-    stallId: burik.id,
-    title: 'בוריק',
-    answer: 'בוריק',
-    accepted: ['בריק', 'בורק טוניסאי'],
-    hint: 'המאפה הטוניסאי עם הביצה',
-    afterText: '',
-  })
-  const rFalafel = await r({
-    stallId: falafel.id,
-    title: 'פלאפל',
-    answer: 'פלאפל',
-    accepted: ['פלאפל בפיתה', 'falafel'],
-    hint: 'כדורים בפיתה',
-    afterText: '',
-  })
-  const rKebab = await r({
-    stallId: kebab.id,
-    title: 'קבב',
-    answer: 'קבב',
-    accepted: ['קבאב', 'שיפוד קבב'],
-    hint: 'בשר על שיפוד',
-    afterText: '',
-  })
-  const rBeer = await r({
-    stallId: beer.id,
-    title: 'לחיים',
-    answer: 'לחיים',
-    accepted: ['cheers'],
-    hint: 'מה אומרים כשמרימים כוס?',
-    afterText: '',
-  })
-  const rCoffee = await r({
-    stallId: coffee.id,
-    title: 'קפה',
-    answer: 'קפה',
-    accepted: ['הפוך', 'אספרסו'],
-    hint: 'שותים אותו בבוקר',
-    afterText: '',
-  })
+  const rTikva = byAnswer.get('תקווה')!
+  const rJuice2 = byAnswer.get('מיץ')!
+  const rJachnun = byAnswer.get("ג'חנון")!
+  const rBurik = byAnswer.get('בוריק')!
+  const rFalafel = byAnswer.get('פלאפל')!
+  const rKebab = byAnswer.get('קבב')!
+  const rBeer = byAnswer.get('לחיים')!
+  const rCoffee = byAnswer.get('קפה')!
 
   const [route] = await db
     .insert(routes)
@@ -1191,6 +1237,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     ...Object.fromEntries(GROUP_OCCASIONS.map((g) => [g.key, GROUP_PRICE])),
   })
   await setSetting(db, 'minigames', DEFAULT_MINIGAMES)
+  await markDemoSeeded(db)
   await setSetting(db, 'odd_rules', { profanity: ['זונה', 'מניאק', 'קוקסינל'], maxRepeatedChars: 4 })
 
   return { carmelRouteId: route.id, carmelThemeId: watercolor.id }

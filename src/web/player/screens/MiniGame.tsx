@@ -151,13 +151,17 @@ function Play({ view, game, t, act, captain }: ScreenProps & { game: Game; capta
           <Cipher cipher={game.cipher} alefbet={game.alefbet} t={t} />
         )}
 
-        <p className="game-prompt">
+        {/* On the cipher, what the hidden word is and the key are two different answers: each is
+            labelled so the group never mixes them up. */}
+        <p className="game-prompt" data-testid="game-prompt">
+          {game.type === 'cipher' && <span className="game-label">{t('game.cipherWhat')} </span>}
           <Parts parts={game.prompt} />
         </p>
         {game.type === 'cipher' && game.keyHint && (
-          <p className="cipher-hint">
+          <p className="cipher-hint" data-testid="cipher-key">
             <Icon name="key" size={26} tilt={8} />
             <span>
+              <span className="game-label">{t('game.cipherKey')} </span>
               <Parts parts={game.keyHint} />
             </span>
           </p>

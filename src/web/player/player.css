@@ -2391,3 +2391,13 @@ h2 {
     font-size: 68px;
   }
 }
+
+/* "המילה המוצפנת היא:" and "המפתח:" on the cipher. */
+.game-label {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.cipher-hint .game-label {
+  color: var(--slot);
+  font-weight: 700;
+}
