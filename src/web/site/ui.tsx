@@ -551,15 +551,23 @@ export function Loading() {
   )
 }
 
-export function Failed({ text }: { text: string }) {
+/** An error page. `lostLink` adds the quiet "lost the link" way back (for a buyer's broken link). */
+export function Failed({ text, lostLink }: { text: string; lostLink?: boolean }) {
   return (
     <main className="page">
       <p className="status" role="alert" style={{ marginTop: 80 }}>
         {text}
       </p>
-      <Sketch href="/" icon="house" small>
-        {copy.toHome}
-      </Sketch>
+      <div className="failed-links">
+        <Sketch href="/" icon="house" small>
+          {copy.toHome}
+        </Sketch>
+        {lostLink && (
+          <Sketch href="/lost-link" icon="magnifier" small>
+            {copy.lostLink.entry}
+          </Sketch>
+        )}
+      </div>
     </main>
   )
 }
@@ -591,7 +599,7 @@ export function SiteNav({ current }: { current: 'about' | 'tastings' | 'order' }
         it.key === current ? (
           <span key={it.key} className="site-nav-item" aria-current="page">
             {it.label}
-            <Underline />
+            <Ring />
           </span>
         ) : (
           <Link key={it.key} href={it.href} className="site-nav-item">

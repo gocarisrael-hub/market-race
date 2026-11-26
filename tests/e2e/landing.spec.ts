@@ -1,7 +1,7 @@
 // The private landing (/), the companies landing (/companies, and / on a COMPANY_HOSTS domain) and
 // the tastings page (/tastings): what you taste on the way, never which stall serves it. At phone
 // and desktop widths.
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test'
+import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test'
 import { noBareLinks } from '../helpers/links.ts'
 
 const DESKTOP = { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }
@@ -21,6 +21,14 @@ async function stallNames(request: APIRequestContext) {
 async function expectNoStalls(page: Page, names: string[]) {
   const text = (await page.locator('main').textContent()) ?? ''
   for (const n of names) expect(text, `stall "${n}" on the page`).not.toContain(n)
+}
+
+// The allergy and diet picker lives only in the order's diet stage.
+async function expectNoDietPicker(scope: Locator) {
+  await expect(scope.getByRole('checkbox')).toHaveCount(0)
+  await expect(scope.getByText('מישהו לא אוכל משהו?')).toHaveCount(0)
+  await expect(scope.getByText('תזונה', { exact: true })).toHaveCount(0)
+  await expect(scope.getByText('החלפות', { exact: true })).toHaveCount(0)
 }
 
 async function noHorizontalScroll(page: Page) {
@@ -107,8 +115,8 @@ for (const [name, opts] of [
       await expect(tastings).toHaveAttribute('aria-expanded', 'false')
       await tastings.click()
       await expect(page.locator('.l-tastings .stop').first()).toBeVisible()
-      await page.locator('.l-tastings').getByRole('checkbox', { name: 'טבעוני' }).click()
-      await expect(page.locator('.l-tastings .stop.swapped, .l-tastings .stop.blocked').first()).toBeVisible()
+      // Only the teasers: allergies and diets are marked inside the order, not here.
+      await expectNoDietPicker(page.locator('.l-tastings'))
       await expectNoStalls(page, names)
 
       // The FAQ is folded too; group size comes from the settings.
@@ -117,6 +125,13 @@ for (const [name, opts] of [
       const faq = page.locator('.l-faq')
       const peopleQ = faq.getByRole('button', { name: 'כמה אנשים יכולים לשחק?' })
       const validityQ = faq.getByRole('button', { name: 'עד מתי אפשר לשחק?' })
+      // The allergies answer stays short and promises nothing about swaps.
+      const allergiesQ = faq.getByRole('button', { name: 'ומה עם אלרגיות?' })
+      await allergiesQ.click()
+      const allergiesA = page.locator(`#${await allergiesQ.getAttribute('aria-controls')}`)
+      await expect(allergiesA).toContainText('בהזמנה מסמנים אלרגיות ותזונה')
+      await expect(allergiesA).not.toContainText('מוחלפ')
+      await allergiesQ.click()
       await expect(peopleQ).toHaveAttribute('aria-expanded', 'false')
       await peopleQ.click()
       await expect(peopleQ).toHaveAttribute('aria-expanded', 'true')
@@ -200,7 +215,7 @@ for (const [name, opts] of [
       await expect(page.getByTestId('route-teaser')).toBeVisible()
     })
 
-    test('tastings show the teasers and swaps, never a stall', async ({ page, request }) => {
+    test('tastings show the teasers only, no diet picker, never a stall', async ({ page, request }) => {
       const names = await stallNames(request)
       await page.goto('/tastings')
       await expect(page.getByRole('heading', { level: 1 })).toContainText('מה טועמים')
@@ -208,17 +223,11 @@ for (const [name, opts] of [
       await expect(stops.first()).toBeVisible()
       await expect(page.locator('.t-route .stop img').first()).toBeVisible()
       await expectNoStalls(page, names)
-      // Marking a diet shows the swaps live.
-      await page.getByRole('checkbox', { name: 'טבעוני' }).click()
-      await expect(page.locator('.t-route .stop.swapped, .t-route .stop.blocked').first()).toBeVisible()
-      await expectNoStalls(page, names)
+      // Allergies and diets are marked inside the order; here every stop is the plain tasting.
+      await expectNoDietPicker(page.locator('main'))
+      await expect(page.locator('.t-route .stop.swapped, .t-route .stop.blocked')).toHaveCount(0)
       await noHorizontalScroll(page)
       await noBareLinks(page)
-      if (name === 'desktop') {
-        const filter = await page.locator('.t-filter').boundingBox()
-        const routes = await page.locator('.t-routes').boundingBox()
-        expect(filter && routes && filter.x >= routes.x + routes.width).toBe(true)
-      }
       await page.getByRole('link', { name: 'בונים מירוץ' }).click()
       await expect(page).toHaveURL(/\/order$/)
     })

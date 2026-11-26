@@ -162,9 +162,20 @@ test('lost link: the same answer for any address, the links emailed to a buyer',
   const email = `lost-${run}@example.com`
   const { orderNo } = await paidOrder(request, email)
 
+  // Not part of a first order: the order's first stage has no lost-link entry.
   await page.goto('/order')
-  const entry = page.getByRole('link', { name: 'איבדתי את הקישור' })
-  await expect(entry).toHaveClass(/sketch/)
+  await expect(page.getByRole('heading', { name: 'איזה משחק בונים?' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'איבדתי את הקישור' })).toHaveCount(0)
+  // A broken manage link offers it, quietly.
+  await page.goto('/m/no-such-token-0000')
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'איבדתי את הקישור' })).toHaveClass(/sketch/)
+  // The landing's footer has it, styled like the companies link next to it.
+  await page.goto('/')
+  const footer = page.locator('.l-footer')
+  await expect(footer.getByRole('link', { name: 'לאתר לחברות' })).toHaveClass(/l-footer-link/)
+  const entry = footer.getByRole('link', { name: 'איבדתי את הקישור' })
+  await expect(entry).toHaveClass(/l-footer-link/)
   await entry.click()
   await expect(page.getByRole('heading', { name: /איבדתם/ })).toBeVisible()
   await noBareLinks(page)

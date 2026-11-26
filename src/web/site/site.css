@@ -1941,8 +1941,10 @@ ol.howto.drawn li {
 
 /* ---------- Lost link ---------- */
 
-.lost-link-entry {
-  margin-top: -6px;
+.failed-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
 }
 .lost-link .thanks .sketch + .sketch {
   margin-top: 10px;
@@ -2114,12 +2116,11 @@ ol.howto.drawn li {
 .site-nav-item[aria-current="page"] {
   color: var(--accent);
 }
-.site-nav-item .underline {
-  position: absolute;
-  right: 0;
-  bottom: 4px;
-  left: 0;
-  width: 100%;
+/* The current page is circled, like a chosen option; every item is otherwise plain text. */
+.site-nav-item .ring {
+  inset: 4px -10px;
+  width: calc(100% + 20px);
+  height: calc(100% - 8px);
 }
 
 /* ---------- Landing page (/) ---------- */
@@ -2170,6 +2171,12 @@ ol.howto.drawn li {
   font-size: 14px;
   color: var(--muted);
   text-align: center;
+}
+.l-footer p {
+  margin: 0;
+}
+.l-footer p + p {
+  margin-top: 4px;
 }
 .l-footer-link {
   margin-inline-start: 6px;
@@ -2609,16 +2616,6 @@ ol.howto.drawn li {
 .t-head {
   margin-top: 40px;
 }
-.t-filter {
-  margin-top: 26px;
-}
-.t-swaps {
-  margin-top: 18px;
-}
-.t-swaps .label {
-  margin: 0;
-  font-weight: 500;
-}
 .t-route {
   margin-top: 30px;
 }
@@ -2733,16 +2730,6 @@ ol.howto.drawn li {
     font-size: 17px;
   }
 
-  .t-body {
-    display: grid;
-    grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.6fr);
-    align-items: start;
-    column-gap: clamp(40px, 5vw, 96px);
-  }
-  .t-filter {
-    position: sticky;
-    top: 24px;
-  }
   .t-routes .stops {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
