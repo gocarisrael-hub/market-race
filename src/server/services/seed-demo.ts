@@ -413,6 +413,45 @@ export const DEMO_OCCASIONS: DemoOccasion[] = [
   occ('new_employee', 'עובד/ת חדש/ה', 'company', 'company', { audience: 'company' }),
 ]
 
+/** Library icons per demo occasion, drawn with its doodles (holidays, fun, animals: tasteful, few). */
+export const DEMO_OCCASION_ICONS: Record<string, string[]> = {
+  bachelorette: ['game/crown', 'drinks/cocktail', 'nature/rose', 'reactions/sparkles'],
+  couple: ['game/heart', 'nature/rose', 'drinks/white-wine', 'nature/moon'],
+  anniversary: ['nature/bouquet', 'holidays/kiddush-cup', 'fun/vinyl', 'reactions/fireworks'],
+  birthday_friend: ['game/balloon', 'game/gift', 'game/party-popper', 'sweets/cupcake'],
+  birthday_kid: ['game/balloon', 'snacks/cotton-candy', 'animals/hedgehog', 'game/kite'],
+  birthday_parent: ['game/gift', 'sweets/chocolate-cake', 'nature/bouquet', 'game/party-popper'],
+  family: ['pantry/challah', 'animals/dog', 'fun/backgammon', 'nature/sun'],
+  friends: ['drinks/beer', 'reactions/high-five', 'fun/darbuka', 'nature/matkot'],
+  generic: ['market/wicker-basket', 'game/map-pin', 'market/fruit-crate', 'nature/sun'],
+  team_day: ['game/trophy', 'game/rocket', 'reactions/high-five', 'game/target'],
+  retirement: ['travel/suitcase', 'nature/beach-umbrella', 'travel/sun-hat', 'travel/hot-air-balloon'],
+  new_employee: ['reactions/waving-hand', 'game/key', 'game/rocket', 'nature/sunflower'],
+}
+
+/**
+ * Icon per demo tasting, by name: what is served, from the icon library. The seed writes them and
+ * the demo refresh puts them on tastings that still have an older demo icon (or none).
+ */
+export const DEMO_TASTING_ICONS: Record<string, string> = {
+  'מיץ תפוזים טרי': 'drinks/orange-juice',
+  'מיץ גזר תפוזים': 'drinks/carrot-juice',
+  "ג'חנון עם ביצה ורסק": 'food/jachnun',
+  'בוריק תפוחי אדמה וביצה': 'food/brik',
+  'חצי פיתה פלאפל': 'food/falafel-cone',
+  'כדורי פלאפל בצלחת': 'falafel',
+  'שיפוד קבב בפיתה': 'food/skewers',
+  'בירה מהחבית': 'drinks/beer',
+  'סיידר תפוחים': 'produce/apples',
+  'קפה הפוך': 'drinks/cappuccino',
+  מיץ: 'drinks/lemonade',
+  לימונדה: 'drinks/lemonade',
+  'לימונדה קרה': 'drinks/lemonade',
+  'לימונענע גרוס': 'drinks/limonana-slush',
+  'מיץ תפוזים': 'drinks/orange-juice',
+  'בורקס גבינה': 'food/burekas',
+}
+
 /** Doodle set per demo occasion key. */
 export const DEMO_DECOR: Record<string, Decor> = Object.fromEntries(
   DEMO_OCCASIONS.map((o) => [o.key, o.decor]),
@@ -425,6 +464,7 @@ export function demoOccasionValues(o: DemoOccasion, index: number, setIds: Recor
     label: o.label,
     audience: o.audience,
     decor: o.decor,
+    icons: [...(DEMO_OCCASION_ICONS[o.key] ?? [])],
     questionSetId: setIds[o.set] ?? null,
     sort: index + 1,
     active: o.active,
@@ -854,7 +894,7 @@ export const ADULTS_ONLY_TASTINGS = ['בירה מהחבית', 'סיידר תפו
 export const KIDS_DRINK = {
   name: 'מיץ',
   teaser: 'מיץ טרי או לימונדה קרה לסיום',
-  teaserIcon: 'fruit',
+  teaserIcon: 'drinks/lemonade',
   allergens: [] as string[],
   diets: [...ALL_DIETS],
 }
@@ -1153,7 +1193,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
           diets,
           feeAgorot,
           teaser,
-          teaserIcon,
+          teaserIcon: DEMO_TASTING_ICONS[name] ?? teaserIcon,
           adultsOnly: ADULTS_ONLY_TASTINGS.includes(name),
         })
         .returning()

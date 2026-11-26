@@ -117,6 +117,24 @@ describe('demo content refresh', () => {
     expect(o.game!.minigames).toBeUndefined()
   })
 
+  it('gives demo tastings their library icon and the occasions theirs, keeping an icon the admin chose', async () => {
+    await makeOld()
+    const tasting = async (name: string) =>
+      (await t.db.select().from(tastings).where(eq(tastings.name, name)))[0]
+    // What earlier seeds wrote: the original map illustrations, or nothing.
+    await t.db.update(tastings).set({ teaserIcon: 'fruit' }).where(eq(tastings.name, 'מיץ תפוזים טרי'))
+    await t.db.update(tastings).set({ teaserIcon: null }).where(eq(tastings.name, 'בירה מהחבית'))
+    await t.db.update(tastings).set({ teaserIcon: 'sweets/halva' }).where(eq(tastings.name, 'קפה הפוך'))
+    await t.db.update(occasions).set({ icons: [] }).where(eq(occasions.key, 'birthday_friend'))
+    const r = await refreshDemoContent(t.db)
+    expect(r.tastingIcons).toBe(2)
+    expect((await tasting('מיץ תפוזים טרי')).teaserIcon).toBe('drinks/orange-juice')
+    expect((await tasting('בירה מהחבית')).teaserIcon).toBe('drinks/beer')
+    expect((await tasting('קפה הפוך')).teaserIcon).toBe('sweets/halva')
+    const [bday] = await t.db.select().from(occasions).where(eq(occasions.key, 'birthday_friend'))
+    expect(bday.icons).toContain('game/balloon')
+  })
+
   it('refuses the whole refresh when an order was paid through a real provider', async () => {
     await makeOld()
     const game = await oldGame()

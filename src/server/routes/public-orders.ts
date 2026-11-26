@@ -99,6 +99,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         decor: o.decor,
         // A kids' game: its tastings preview waits for the server (no adults-only teaser first).
         forKids: o.forKids,
+        icons: o.icons ?? [],
       })),
       markets: mk,
       themes: th.map((t) => ({
@@ -499,7 +500,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     // The buyer can change everything personal until the game starts (see isEditable).
     const editable = isEditable(order, state)
     const [occ] = await db
-      .select({ decor: occasions.decor })
+      .select({ decor: occasions.decor, icons: occasions.icons })
       .from(occasions)
       .where(eq(occasions.key, order.occasionKey))
     const recipient = orderRecipient(order, occ)
@@ -532,6 +533,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       occasionKey: order.occasionKey,
       // The occasion's doodle set, for the page's decorations.
       decor: occ?.decor ?? 'generic',
+      decorIcons: occ?.icons ?? [],
       people: order.people,
       amountAgorot: order.priceAgorot,
       validUntil: order.validUntil,

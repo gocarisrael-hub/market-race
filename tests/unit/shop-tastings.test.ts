@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { riddles, stalls, tastings, themes } from '../../src/server/db/schema.ts'
 import { previewRoute } from '../../src/server/domain/builder.ts'
+import { iconUrl } from '../../src/server/domain/icons.ts'
 import { seedDemo } from '../../src/server/services/seed-demo.ts'
 import { makeTestApp, ownerCookie } from '../helpers/app.ts'
 
@@ -38,7 +39,7 @@ describe('shop tastings (public, before purchase)', () => {
     expect(route.tastings).toHaveLength(5)
     expect(route.tastings[0]).toEqual({
       teaser: 'פירות העונה, סחוטים מול העיניים',
-      icon: '/static/icons/fruit.png',
+      icon: iconUrl('drinks/orange-juice'),
       allergens: [],
       diets: ['vegan', 'vegetarian', 'gluten_free'],
       finale: false,
@@ -78,7 +79,7 @@ describe('shop tastings (public, before purchase)', () => {
     expect(stops[3].teaser).toBe('כדורים ירוקים ישר מהשמן, בצלחת')
     expect(stops[4]).toEqual({
       teaser: 'משהו קר ומתוק לסיום',
-      icon: '/static/icons/fruit.png',
+      icon: iconUrl('produce/apples'),
       finale: true,
       status: 'swapped',
     })

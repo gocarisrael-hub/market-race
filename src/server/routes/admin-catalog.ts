@@ -162,6 +162,8 @@ const occasionBase = z.object({
   // A game for kids: adults-only tastings are swapped.
   forKids: z.boolean(),
   decor: z.enum(DECORS),
+  // Library icons drawn with the doodles (empty: the set's defaults).
+  icons: z.array(z.string().refine((v) => isIconKey(v), 'unknown icon')).max(8),
   sort: z.number().int(),
   active: z.boolean(),
 })

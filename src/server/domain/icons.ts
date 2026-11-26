@@ -3,6 +3,7 @@
 // light (no manifest) so the player and the site can resolve URLs without shipping the library;
 // the admin and the server import the manifest from icon-manifest.generated.ts.
 import { ICONS_VERSION, type IconKey } from './icon-keys.generated.ts'
+import type { Decor } from './types.ts'
 
 export type { IconKey }
 
@@ -73,3 +74,22 @@ export function iconUrl(key: IconKey | string, set?: string | null): string {
 export const isRecolored = (key: string, set?: string | null) => !!set && THEMED_CLASSICS.has(key)
 
 export const isClassicIcon = (key: string) => classic.has(key)
+
+/**
+ * Library icons drawn with an occasion's doodles when the occasion has none of its own (the admin
+ * picks them per occasion). Illustration, not data.
+ */
+export const DECOR_ICONS: Record<Decor, IconKey[]> = {
+  birthday: ['game/balloon', 'game/gift', 'game/party-popper', 'sweets/cupcake', 'reactions/fireworks'],
+  kids: ['game/balloon', 'snacks/cotton-candy', 'animals/hedgehog', 'game/kite', 'snacks/lollipop'],
+  love: ['game/heart', 'nature/rose', 'drinks/white-wine', 'nature/moon', 'reactions/sparkles'],
+  anniversary: ['nature/bouquet', 'holidays/kiddush-cup', 'fun/vinyl', 'game/heart', 'reactions/fireworks'],
+  family: ['pantry/challah', 'animals/dog', 'fun/backgammon', 'nature/sun', 'nature/olive-tree'],
+  friends: ['drinks/beer', 'reactions/high-five', 'fun/darbuka', 'nature/matkot', 'fun/soccer-ball'],
+  company: ['game/trophy', 'game/rocket', 'reactions/high-five', 'game/target', 'game/star'],
+  generic: ['market/wicker-basket', 'game/map-pin', 'market/fruit-crate', 'nature/sun', 'reactions/sparkles'],
+}
+
+/** The icons an occasion draws: its own, else its doodle set's defaults. */
+export const decorIcons = (decor: string | null | undefined, own?: readonly string[] | null): string[] =>
+  own?.length ? [...own] : (DECOR_ICONS[(decor ?? 'generic') as Decor] ?? DECOR_ICONS.generic)

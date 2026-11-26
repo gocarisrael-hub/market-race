@@ -20,8 +20,10 @@ import {
   riddles,
   settings,
   stalls,
+  tastings,
   themes,
 } from '../db/schema.ts'
+import { isClassicIcon } from '../domain/icons.ts'
 import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
 import type { Question } from '../domain/types.ts'
 import { updateKidsTastings } from './kids-update.ts'
@@ -32,6 +34,7 @@ import {
   DEMO_OCCASIONS,
   DEMO_PALETTES,
   DEMO_RIDDLE_ROWS,
+  DEMO_TASTING_ICONS,
   demoOccasionValues,
   demoPrices,
   demoQuestionSets,
@@ -58,6 +61,8 @@ export interface RefreshReport {
   riddles: { updated: number; inserted: number; kept: number }
   questionSets: { updated: number; inserted: number; kept: number }
   occasions: { updated: number; inserted: number; kept: number }
+  /** Demo tastings given their library icon (only those with an original illustration or none). */
+  tastingIcons: number
   /** Demo prices added for occasions that had none (existing prices are never changed). */
   prices: string[]
   themes: { updated: number; inserted: number; kept: number }
@@ -146,6 +151,7 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     riddles: { updated: 0, inserted: 0, kept: 0 },
     questionSets: { updated: 0, inserted: 0, kept: 0 },
     occasions: { updated: 0, inserted: 0, kept: 0 },
+    tastingIcons: 0,
     prices: [],
     themes: { updated: 0, inserted: 0, kept: 0 },
     minigames: 'kept',
@@ -192,6 +198,18 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
       await db.insert(riddles).values({ ...values, stallId: stall.id })
       report.riddles.inserted++
     }
+  }
+
+  // Tasting icons, by the tasting's name. Tastings have no edit time: only an icon that is still one
+  // of the original illustrations (what earlier seeds wrote), or none, is replaced.
+  const marketTastings = stallIds.length
+    ? await db.select().from(tastings).where(inArray(tastings.stallId, stallIds))
+    : []
+  for (const t of marketTastings) {
+    const icon = DEMO_TASTING_ICONS[t.name]
+    if (!icon || t.teaserIcon === icon || (t.teaserIcon && !isClassicIcon(t.teaserIcon))) continue
+    await db.update(tastings).set({ teaserIcon: icon }).where(eq(tastings.id, t.id))
+    report.tastingIcons++
   }
 
   // Question sets, keyed by name.
