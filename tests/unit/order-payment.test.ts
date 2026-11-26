@@ -59,7 +59,7 @@ describe('order and payment flow', () => {
     const res = await t.app.inject({ url: '/api/shop' })
     const shop = res.json()
     expect(shop.occasions.map((o: { key: string }) => o.key)).toContain('bachelorette')
-    expect(shop.themes).toHaveLength(4)
+    expect(shop.themes).toHaveLength(10)
     expect(shop.themes[0].map).toBe('/static/maps/carmel-watercolor.jpg')
     expect(shop.cardEnabled).toBe(true)
     const q = await t.app.inject({ url: '/api/shop/questions?occasion=bachelorette&form=he' })

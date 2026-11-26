@@ -10,6 +10,7 @@ import type {
   Recipient,
   RiddleTemplates,
   RouteStop,
+  ThemeStyle,
 } from '../../server/domain/types.ts'
 import { ApiError, api, type Issue } from './api.ts'
 
@@ -98,11 +99,18 @@ export const DECOR_LABELS: Record<Decor, string> = {
 }
 export interface Theme {
   id: number
+  /** Stable key of a seeded style (read only); null for the owner's own. */
+  key?: string | null
   name: string
   marketId: number
   mapFile: string
   palette: Palette
   pins: Record<string, { x: number; y: number }>
+  /** Fonts, treatment, illustrations and fixed colors. */
+  style: ThemeStyle
+  /** The occasions and recipients it is offered for; empty: every one. */
+  occasionKeys: string[]
+  recipients: Recipient[]
   sort: number
   active: boolean
 }

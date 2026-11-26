@@ -1,7 +1,7 @@
 // Turns a palette into the CSS variables the player (and the site preview) use, and checks it.
 // The palette only names a few colors; everything else (text on the background, button text,
 // the slot color on paper) is derived here so every theme stays readable.
-import type { Palette } from './types.ts'
+import type { Palette, StyleColor, ThemeFont, ThemeStyle } from './types.ts'
 
 type RGB = [number, number, number]
 
@@ -69,29 +69,87 @@ export interface ThemeVars {
   '--accent': string
   '--on-bg': string
   '--muted': string
+  '--button': string
   '--on-accent': string
+  '--button-line': string
   '--slot': string
   '--line': string
   '--ribbon': string
   '--ribbon-tail': string
+  '--ribbon-line': string
   '--on-ribbon': string
   '--mark': string
+  '--paper-line': string
+  '--sheet-line': string
+  '--kicker': string
+  '--hint': string
+  '--label': string
+  '--brand': string
+  '--on-brand': string
+  '--hand': string
+  '--hand-weight': string
+  '--hs': string
+  '--riddle-font': string
 }
 
 const LIGHT = '#FFFFFF'
 
-export function themeVars(p: Palette): ThemeVars {
+/**
+ * The display fonts a theme can pick. `scale` sizes the font to the room Amatic SC (a narrow
+ * hand) was designed for; `css` is the Google Fonts family parameter, loaded only for the theme in
+ * use.
+ */
+export const FONTS: Record<
+  ThemeFont,
+  { family: string; css: string; weight: number; scale: number; label: string }
+> = {
+  amatic: { family: "'Amatic SC'", css: 'Amatic+SC:wght@700', weight: 700, scale: 1, label: 'Amatic SC' },
+  suez: { family: "'Suez One'", css: 'Suez+One', weight: 400, scale: 0.66, label: 'Suez One' },
+  frank: {
+    family: "'Frank Ruhl Libre'",
+    css: 'Frank+Ruhl+Libre:wght@500;700',
+    weight: 500,
+    scale: 0.64,
+    label: 'Frank Ruhl Libre',
+  },
+}
+
+export const fontOf = (style?: ThemeStyle | null) => FONTS[style?.font ?? 'amatic'] ?? FONTS.amatic
+
+/** The Google Fonts stylesheet for a theme's display font (Heebo is always loaded). */
+export const fontHref = (style?: ThemeStyle | null) =>
+  `https://fonts.googleapis.com/css2?family=${fontOf(style).css}&display=swap`
+
+const isHex = (v: unknown): v is string => typeof v === 'string' && parseHex(v) !== null
+
+/**
+ * The CSS variables of a game look. The palette names a few colors and everything else is derived
+ * so it stays readable; a theme's style can fix any derived color (`style.colors`) and sets the
+ * display font.
+ */
+export function themeVars(p: Palette, style: ThemeStyle = {}): ThemeVars {
   const dark = p.dark ?? luminance(parseHex(p.background) ?? [255, 255, 255]) < 0.18
+  const c = style.colors ?? {}
+  const pick = (k: StyleColor, fallback: string) => {
+    const v = c[k]
+    return isHex(v) ? v : fallback
+  }
   // Text straight on the background: the ink, or the paper color on a dark/mid background.
-  const onBg = dark ? p.paper : bestOn(p.background, p.ink, LIGHT)
+  const onBg = pick('onBg', dark ? p.paper : bestOn(p.background, p.ink, LIGHT))
   const muted = mix(onBg, p.background, 0.72)
-  const onAccent = bestOn(p.accent, LIGHT, p.ink)
-  const ribbon = p.accent2 ?? p.accent
-  const ribbonTail = p.accent2 ? p.accent : shade(p.accent, 0.77)
+  const button = pick('button', p.accent)
+  const ribbon = pick('ribbon', p.accent2 ?? p.accent)
+  const ribbonTail = pick('ribbonTail', p.accent2 ? p.accent : shade(p.accent, 0.77))
   // Marks drawn on the background (circles, the X on the map, underlines) use the accent if it
   // reads, the second accent otherwise.
-  const mark =
-    contrast(p.accent, p.background) >= 2.2 ? p.accent : (p.accent2 ?? readableOn(p.accent, p.background))
+  const mark = pick(
+    'mark',
+    contrast(p.accent, p.background) >= 2.2 ? p.accent : (p.accent2 ?? readableOn(p.accent, p.background)),
+  )
+  const font = fontOf(style)
+  // Small labels on the background: a little softer than the text when that still reads.
+  const softLabel = mix(onBg, p.background, 0.85)
+  const label = contrast(softLabel, p.background) >= 4.5 ? softLabel : onBg
   return {
     '--bg': p.background,
     '--ink': p.ink,
@@ -100,14 +158,34 @@ export function themeVars(p: Palette): ThemeVars {
     '--accent': p.accent,
     '--on-bg': onBg,
     '--muted': muted,
-    '--on-accent': onAccent,
-    '--slot': readableOn(p.accent, p.paper),
+    '--button': button,
+    '--on-accent': pick('onButton', bestOn(button, LIGHT, p.ink)),
+    '--button-line': pick('buttonLine', p.ink),
+    '--slot': pick('slot', readableOn(p.accent, p.paper)),
     '--line': onBg,
     '--ribbon': ribbon,
     '--ribbon-tail': ribbonTail,
-    '--on-ribbon': bestOn(ribbon, LIGHT, p.ink),
+    '--ribbon-line': pick('ribbonLine', p.ink),
+    '--on-ribbon': pick('onRibbon', bestOn(ribbon, LIGHT, p.ink)),
     '--mark': mark,
+    '--paper-line': pick('paperLine', p.ink),
+    '--sheet-line': pick('sheetLine', p.ink),
+    '--kicker': pick('kicker', mix(p.ink, p.paper, 0.72)),
+    '--hint': pick('hint', onBg),
+    '--label': pick('label', label),
+    '--brand': pick('brand', p.paper),
+    '--on-brand': pick('onBrand', p.ink),
+    '--hand': `${font.family}, Heebo, sans-serif`,
+    '--hand-weight': String(font.weight),
+    '--hs': String(font.scale),
+    '--riddle-font': style.serifBody ? `${font.family}, Heebo, serif` : 'var(--sans)',
   }
+}
+
+/** Colors for the drawn frame round the game photos: the theme's ink, accent and personal color. */
+export function frameColors(p: Palette, style: ThemeStyle = {}) {
+  const v = themeVars(p, style)
+  return { paper: p.paper, ink: v['--paper-line'], accent: v['--mark'], accent2: v['--slot'] }
 }
 
 /** Linear mix: weight 1 = a, 0 = b. */
@@ -132,21 +210,24 @@ type Rule = {
   min: number
 }
 
-/** Minimum contrasts every palette must reach once the player has derived its colors. */
+/** Minimum contrasts every look must reach once the player has derived its colors. */
 export const CONTRAST_RULES: Rule[] = [
   { check: 'riddle text on paper', fg: (p) => p.ink, bg: (p) => p.paper, min: 4.5 },
   { check: 'text on background', fg: (_, v) => v['--on-bg'], bg: (p) => p.background, min: 4.5 },
-  { check: 'button text', fg: (_, v) => v['--on-accent'], bg: (p) => p.accent, min: 3 },
+  { check: 'button text', fg: (_, v) => v['--on-accent'], bg: (_, v) => v['--button'], min: 3 },
   { check: 'ribbon text', fg: (_, v) => v['--on-ribbon'], bg: (_, v) => v['--ribbon'], min: 3 },
   { check: 'personal text on paper', fg: (_, v) => v['--slot'], bg: (p) => p.paper, min: 3 },
   { check: 'drawn marks on background', fg: (_, v) => v['--mark'], bg: (p) => p.background, min: 3 },
+  { check: 'riddle title on paper', fg: (_, v) => v['--kicker'], bg: (p) => p.paper, min: 3 },
+  { check: 'hint on background', fg: (_, v) => v['--hint'], bg: (p) => p.background, min: 3 },
+  { check: 'labels on background', fg: (_, v) => v['--label'], bg: (p) => p.background, min: 4.5 },
 ]
 
 export type PaletteIssue = { check: string; ratio: number; min: number }
 
-/** The contrast checks a palette fails; empty when it reads well everywhere in the game. */
-export function paletteIssues(p: Palette): PaletteIssue[] {
-  const v = themeVars(p)
+/** The contrast checks a look fails; empty when it reads well everywhere in the game. */
+export function paletteIssues(p: Palette, style: ThemeStyle = {}): PaletteIssue[] {
+  const v = themeVars(p, style)
   const out: PaletteIssue[] = []
   for (const r of CONTRAST_RULES) {
     const ratio = contrast(r.fg(p, v), r.bg(p, v))

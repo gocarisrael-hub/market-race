@@ -1,6 +1,6 @@
 // The screens of the order build, one decision (or a small group) each. The shell (Build.tsx)
 // draws the progress map, the transitions and the back/next buttons; these draw the question.
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import type { Photo, Question, Shop } from '../api.ts'
 import { copy, type SiteForm, type SiteRecipient } from '../copy.ts'
 import { HintQuestions } from '../hintQuestions.tsx'
@@ -21,13 +21,27 @@ import {
   priceAgorot,
   privateOccasions,
   recipientsFor,
+  themesForDraft,
   toggle,
+  withOfferedTheme,
   withRecipient,
 } from '../logic.ts'
 import { BuyerFields } from '../pages/Checkout.tsx'
 import { PhotosPanel } from '../photos-panel.tsx'
 import { RouteTastings } from '../tastings.tsx'
-import { Daub, LookPreview, Opt, QField, QNote, Ring, Sketch, Tick, TornPaper, Underline } from '../ui.tsx'
+import {
+  Daub,
+  LookPreview,
+  Opt,
+  QField,
+  QNote,
+  Ring,
+  Sketch,
+  ThemeThumb,
+  Tick,
+  TornPaper,
+  Underline,
+} from '../ui.tsx'
 
 export type StageProps = {
   shop: Shop
@@ -175,38 +189,47 @@ export function NameStage({ shop, d, set, questions, form, recipient }: StagePro
 }
 
 export function LookStage({ shop, d, set, wide }: StageProps) {
-  const themes = orderableThemes(shop)
+  // Only the styles offered for this occasion (and who it is for), as illustrated thumbnails.
+  const themes = themesForDraft(shop, d)
   const theme = themes.find((t) => t.id === d.themeId)
   const pals = palettesFor(shop, theme?.id)
   const pal = currentPalette(shop, d)
+  useEffect(() => {
+    const fixed = withOfferedTheme(shop, d)
+    if (fixed !== d) set({ themeId: fixed.themeId, paletteId: fixed.paletteId })
+  }, [shop, d, set])
   return (
     <>
       <StageHead cheer={copy.build.cheer.look} title={copy.build.title.look} />
       <fieldset className="themes plain-set" aria-labelledby={TITLE_ID}>
-        {themes.map((t) => (
-          <button
-            type="button"
-            key={t.id}
-            className="theme"
-            aria-pressed={d.themeId === t.id}
-            onClick={() => set(chooseTheme(shop, d, t.id))}
-          >
-            <span className="thumb">
-              {t.map && <img src={t.map} alt="" loading="lazy" decoding="async" />}
-              {d.themeId === t.id && pal?.palette.mapTint && (
-                <span className="map-tint" style={{ background: pal.palette.mapTint }} />
-              )}
-            </span>
-            <span className="name">
-              {t.name}
-              {d.themeId === t.id && (
-                <Ring
-                  style={{ inset: '-4px -8px', width: 'calc(100% + 16px)', height: 'calc(100% + 8px)' }}
-                />
-              )}
-            </span>
-          </button>
-        ))}
+        {themes.map((t) => {
+          const on = d.themeId === t.id
+          return (
+            <button
+              type="button"
+              key={t.id}
+              className="theme"
+              data-theme={t.key ?? t.id}
+              aria-pressed={on}
+              onClick={() => set(chooseTheme(shop, d, t.id))}
+            >
+              <ThemeThumb
+                map={t.map}
+                palette={on && pal ? pal.palette : t.palette}
+                style={on && pal ? { ...t.style, colors: undefined } : t.style}
+                tint={on ? pal?.palette.mapTint : undefined}
+              />
+              <span className="name">
+                {t.name}
+                {on && (
+                  <Ring
+                    style={{ inset: '-4px -8px', width: 'calc(100% + 16px)', height: 'calc(100% + 8px)' }}
+                  />
+                )}
+              </span>
+            </button>
+          )
+        })}
       </fieldset>
       {theme && pals.length > 0 && (
         <section className="section" aria-labelledby="l-palette">
@@ -240,10 +263,17 @@ export function LookStage({ shop, d, set, wide }: StageProps) {
               {pal.name}
             </p>
           )}
-          {/* Phones see the opening in these colors here; computers see it on the map beside. */}
-          {pal && !wide && <LookPreview map={theme.map} palette={pal.palette} name={pal.name} />}
           <p className="hint">{copy.home.paletteHint}</p>
         </section>
+      )}
+      {/* Phones see the opening in this style here; computers see it on the map beside. */}
+      {theme && !wide && (
+        <LookPreview
+          map={theme.map}
+          palette={pal?.palette ?? theme.palette}
+          style={pal ? { ...theme.style, colors: undefined } : theme.style}
+          name={pal ? `${theme.name} · ${pal.name}` : theme.name}
+        />
       )}
     </>
   )

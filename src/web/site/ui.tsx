@@ -1,8 +1,9 @@
 // Hand-drawn building blocks, SVG paths taken from docs/mockup.
-import { type CSSProperties, type ReactNode, useId, useState } from 'react'
+import { type CSSProperties, type ReactNode, useEffect, useId, useState } from 'react'
 import { themeVars } from '../../server/domain/look.ts'
-import type { Palette } from '../../server/domain/types.ts'
+import type { Palette, ThemeStyle } from '../../server/domain/types.ts'
 import { type DoodleName, Icon, SketchShape } from '../shared/decor.tsx'
+import { loadThemeFont, lookVars } from '../shared/look.ts'
 import { copy } from './copy.ts'
 import { navigate } from './router.ts'
 
@@ -147,22 +148,58 @@ export function Daub({ palette, index }: { palette: Palette; index: number }) {
 }
 
 /**
+ * A style as an illustrated thumbnail: its map, its page under a torn edge, its ribbon and button
+ * in its own colors and treatment. `palette` shows a chosen color variant instead of its own.
+ */
+export function ThemeThumb(props: {
+  map: string | null
+  palette: Palette
+  style?: ThemeStyle
+  tint?: string
+}) {
+  return (
+    <span
+      className="thumb"
+      style={lookVars(props.palette, props.style, 'pv') as CSSProperties}
+      data-treat={props.style?.treatment ?? 'brush'}
+    >
+      {props.map && <img src={props.map} alt="" loading="lazy" decoding="async" />}
+      {props.tint && <span className="map-tint" style={{ background: props.tint }} />}
+      <span className="tt-sheet" aria-hidden="true">
+        <svg className="tt-ribbon" viewBox="0 0 330 92" preserveAspectRatio="none" aria-hidden="true">
+          <path className="tail" d="M8 26 L40 20 L34 46 L40 72 L8 66 L20 46 Z" />
+          <path className="tail" d="M322 26 L290 20 L296 46 L290 72 L322 66 L310 46 Z" />
+          <path className="main" d="M34 12 Q165 -4 296 12 L296 72 Q165 56 34 72 Z" />
+        </svg>
+        <svg className="tt-button" viewBox="0 0 346 68" preserveAspectRatio="none" aria-hidden="true">
+          <path d={BRUSH} />
+        </svg>
+      </span>
+    </span>
+  )
+}
+
+/**
  * A small "how it will look" preview: the map tinted with the palette, the palette's background
  * under a torn edge, and the ribbon and button in the colors the game derives from the palette.
  */
-export function LookPreview(props: { map: string | null; palette: Palette; name: string }) {
-  const v = themeVars(props.palette)
-  const style = {
-    '--pv-bg': v['--bg'],
-    '--pv-ribbon': v['--ribbon'],
-    '--pv-ribbon-tail': v['--ribbon-tail'],
-    '--pv-on-ribbon': v['--on-ribbon'],
-    '--pv-accent': v['--accent'],
-    '--pv-on-accent': v['--on-accent'],
-    '--pv-ink': v['--ink'],
-  } as CSSProperties
+export function LookPreview(props: {
+  map: string | null
+  palette: Palette
+  style?: ThemeStyle
+  name: string
+}) {
+  const v = themeVars(props.palette, props.style ?? {})
+  const style = lookVars(props.palette, props.style, 'pv') as CSSProperties
+  useEffect(() => loadThemeFont(props.style), [props.style])
   return (
-    <figure className="look-preview" style={style} data-testid="look-preview" data-bg={v['--bg']}>
+    <figure
+      className="look-preview"
+      style={style}
+      data-testid="look-preview"
+      data-bg={v['--bg']}
+      data-treat={props.style?.treatment ?? 'brush'}
+    >
       <div className="pv-map">
         {props.map && <img src={props.map} alt={copy.home.previewAlt(props.name)} />}
         {props.map && props.palette.mapTint && (

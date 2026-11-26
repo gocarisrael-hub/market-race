@@ -1,4 +1,5 @@
 // Pure logic of the order flow: prices, validation, the draft kept between stages.
+import { themesFor } from '../../server/domain/themes.ts'
 import type {
   Buyer,
   HintQuestion,
@@ -133,6 +134,31 @@ export function draftRecipient(shop: Shop, d: Draft): SiteRecipient | null {
 export const orderableThemes = (shop: Shop): Theme[] =>
   shop.themes.filter((t) => shop.routes.some((r) => r.marketId === t.marketId))
 
+/** The styles offered for the draft's occasion and recipient (same rule as the server). */
+export const themesForDraft = (shop: Shop, d: Pick<Draft, 'occasionKey' | 'recipient' | 'form'>): Theme[] => {
+  const recipient = draftRecipient(shop, d as Draft)
+  return themesFor(
+    orderableThemes(shop).map((t) => ({
+      ...t,
+      occasionKeys: t.occasionKeys ?? [],
+      recipients: t.recipients ?? [],
+    })),
+    d.occasionKey,
+    recipient,
+  )
+}
+
+/**
+ * Keeps the draft's style offered: after a new occasion or recipient, a style no longer offered
+ * gives way to the first one that is (with its default palette). Unchanged draft otherwise.
+ */
+export function withOfferedTheme(shop: Shop, d: Draft): Draft {
+  if (!d.occasionKey) return d
+  const offered = themesForDraft(shop, d)
+  if (!offered.length || offered.some((t) => t.id === d.themeId)) return d
+  return chooseTheme(shop, d, offered[0].id)
+}
+
 /** The route an order for this theme gets: the market's first route (same as the server). */
 export const routeForTheme = (shop: Shop, themeId: number | null | undefined) => {
   const theme = shop.themes.find((t) => t.id === themeId)
@@ -193,7 +219,7 @@ export function step1Error(d: Draft, shop: Shop): string | null {
   const occ = shop.occasions.find((o) => o.key === d.occasionKey && o.audience === 'private')
   if (!occ || recipientsFor(occ).length === 0) return copy.home.pickOccasion
   if (!draftRecipient(shop, d)) return copy.home.pickRecipient
-  if (!orderableThemes(shop).some((t) => t.id === d.themeId)) return copy.home.pickTheme
+  if (!themesForDraft(shop, d).some((t) => t.id === d.themeId)) return copy.home.pickTheme
   const pals = palettesFor(shop, d.themeId)
   if (pals.length && !pals.some((p) => p.id === d.paletteId)) return copy.home.pickPalette
   if (d.people < Math.max(1, shop.minPeople) || d.people > shop.maxPeople) return copy.errors.bad_people

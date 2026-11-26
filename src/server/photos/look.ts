@@ -3,7 +3,8 @@
 import { eq } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import { occasions, type orders, palettes, themes } from '../db/schema.ts'
-import { isDecor } from '../domain/types.ts'
+import { frameColors } from '../domain/look.ts'
+import { isDecor, type ThemeStyle } from '../domain/types.ts'
 import {
   DEFAULT_FRAME_COLORS,
   doodleFrameCutout,
@@ -32,19 +33,23 @@ export async function photoLook(db: DB, order: OrderRow): Promise<PhotoLook> {
     decor = isDecor(occ?.decor) ? occ.decor : 'generic'
   }
   let pal = order.game?.theme.palette ?? order.companyPalette ?? null
+  let style: ThemeStyle | undefined = order.game?.theme.style
   if (!pal && order.paletteId) {
     const [p] = await db.select().from(palettes).where(eq(palettes.id, order.paletteId))
     pal = p?.palette ?? null
   }
   if (!pal && order.themeId) {
-    const [t] = await db.select({ palette: themes.palette }).from(themes).where(eq(themes.id, order.themeId))
+    const [t] = await db
+      .select({ palette: themes.palette, style: themes.style })
+      .from(themes)
+      .where(eq(themes.id, order.themeId))
     pal = t?.palette ?? null
+    style = t?.style
   }
   return {
     decor,
-    palette: pal
-      ? { paper: pal.paper, ink: pal.ink, accent: pal.accent, accent2: pal.accent2 }
-      : DEFAULT_FRAME_COLORS,
+    // The theme's ink and accent colors, as the game draws them.
+    palette: pal ? frameColors(pal, style ?? {}) : DEFAULT_FRAME_COLORS,
   }
 }
 

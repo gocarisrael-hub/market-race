@@ -73,7 +73,9 @@ export function Ribbon({ text, fontSize }: { text: string; fontSize: number }) {
         <path className="ribbon-tail" d="M322 26 L290 20 L296 46 L290 72 L322 66 L310 46 Z" />
         <path className="ribbon-main" d="M34 12 Q165 -4 296 12 L296 72 Q165 56 34 72 Z" />
       </svg>
-      <span style={{ fontSize: `min(${fontSize}px, ${(fontSize / 3.9).toFixed(2)}vw)` }}>{text}</span>
+      <span style={{ fontSize: `calc(min(${fontSize}px, ${(fontSize / 3.9).toFixed(2)}vw) * var(--hs, 1))` }}>
+        {text}
+      </span>
     </h1>
   )
 }

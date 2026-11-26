@@ -2,6 +2,7 @@
 // SPEC "Building the game": safety swap → backup stall → block and flag. Never silently shorten.
 import { buildMinigames, type MinigameContent } from './minigames.ts'
 import { fillTemplate } from './template.ts'
+import { gameStyle } from './themes.ts'
 import type {
   Decor,
   Form,
@@ -16,6 +17,7 @@ import type {
   SnapshotStall,
   SnapshotStop,
   SnapshotTasting,
+  ThemeStyle,
 } from './types.ts'
 
 export interface CatalogStall {
@@ -53,6 +55,8 @@ export interface BuildInput {
     mapFile: string
     palette: Palette
     pins: Record<string, { x: number; y: number }>
+    /** Fonts, treatment and illustrations (see ThemeStyle). */
+    style?: ThemeStyle
   }
   /** The palette the buyer chose for the map; null/absent plays the theme's own palette. */
   palette?: { id: number; palette: Palette } | null
@@ -301,6 +305,7 @@ export function buildGame(input: BuildInput): BuildResult {
       map: input.theme.mapFile,
       palette: { ...palette },
       paletteId: order.company?.palette ? null : (input.palette?.id ?? null),
+      style: gameStyle(input.theme.style, palette === input.theme.palette),
     },
     decor: input.decor ?? 'generic',
     company: order.company ? { name: order.company.name, logo: order.company.logo } : null,

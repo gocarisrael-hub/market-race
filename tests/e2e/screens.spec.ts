@@ -169,7 +169,8 @@ test('photos: riddle, lightbox and letter', async ({ browser, request }) => {
 })
 
 test('riso theme', async ({ browser, request }) => {
-  const g = await game(request, 2)
+  const shop = await (await request.get('/api/shop')).json()
+  const g = await game(request, shop.themes.find((t: { key: string }) => t.key === 'riso').id)
   await shoot(browser, g.url, g.token, 'riso-1-opening')
   await g.start()
   await shoot(browser, g.url, g.token, 'riso-2-riddle')

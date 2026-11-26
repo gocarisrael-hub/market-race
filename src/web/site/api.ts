@@ -1,5 +1,5 @@
 // Thin client for the site API (src/server/routes/public-orders.ts).
-import type { Palette } from '../../server/domain/types.ts'
+import type { Palette, ThemeStyle } from '../../server/domain/types.ts'
 import type { SiteForm, SiteRecipient } from './copy.ts'
 
 export type Occasion = {
@@ -16,10 +16,17 @@ export type Occasion = {
 export type ShopPalette = { id: number; name: string; palette: Palette }
 export type Theme = {
   id: number
+  /** Stable key of a seeded style; null for the owner's own. */
+  key?: string | null
   name: string
   marketId: number
   map: string | null
   palette: Palette
+  /** Fonts, treatment and illustrations. Missing from older servers: the base look. */
+  style?: ThemeStyle
+  /** The occasions (and recipients) it is offered for; empty or missing: every one. */
+  occasionKeys?: string[]
+  recipients?: string[]
   /** The palettes offered for this map, the default first. Empty: the map's own colors. */
   palettes?: ShopPalette[]
 }
@@ -111,10 +118,13 @@ export type Manage = {
   hintQuestions?: HintQuestion[]
   /** The color choice for the edit form: the map, its palettes (default first) and the chosen id. */
   look?: {
+    /** The chosen style, and the styles it can change to (offered for the occasion, same market). */
+    themeId?: number
     map: string | null
     themePalette: Palette
     paletteId: number | null
     palettes: ShopPalette[]
+    themes?: (Pick<Theme, 'id' | 'name' | 'map' | 'palette' | 'style'> & { palettes: ShopPalette[] })[]
   } | null
   answers?: Record<string, string>
   questions?: Question[]
@@ -194,6 +204,8 @@ export const startPay = (token: string) =>
 export const getManage = (token: string) => api<Manage>(`/api/manage/${encodeURIComponent(token)}`)
 export type OrderEdit = {
   honoreeName?: string
+  /** Another style (offered for the occasion, same market); its palettes follow. */
+  themeId?: number
   paletteId?: number | null
   answers: Record<string, string>
   letterNotes: LetterNote[]

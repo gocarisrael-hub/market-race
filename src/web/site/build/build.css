@@ -267,7 +267,7 @@ h1.stage-title {
 }
 .bm-ink {
   fill: none;
-  stroke: var(--bm-accent);
+  stroke: var(--bm-mark, var(--bm-accent));
   stroke-width: 4.5;
   stroke-linecap: round;
   stroke-dasharray: 1 1;
@@ -286,7 +286,7 @@ h1.stage-title {
   width: 30px;
   height: 30px;
   transform: translate(-50%, -50%);
-  --accent: var(--bm-accent);
+  --accent: var(--bm-mark, var(--bm-accent));
 }
 .bm-stop.later::before {
   content: "";
@@ -376,13 +376,13 @@ h1.stage-title {
 }
 .bm-ribbon .main {
   fill: var(--bm-ribbon);
-  stroke: var(--bm-ink);
+  stroke: var(--bm-ribbon-line, var(--bm-ink));
   stroke-width: 2;
   transition: fill 0.9s ease;
 }
 .bm-ribbon .tail {
   fill: var(--bm-ribbon-tail);
-  stroke: var(--bm-ink);
+  stroke: var(--bm-ribbon-line, var(--bm-ink));
   stroke-width: 2;
   transition: fill 0.9s ease;
 }
@@ -396,8 +396,8 @@ h1.stage-title {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-family: var(--display);
-  font-weight: 700;
+  font-family: var(--bm-font, var(--display));
+  font-weight: var(--bm-weight, 700);
   line-height: 1.1;
   color: var(--bm-on-ribbon);
   animation: rise 0.5s ease both;
@@ -413,14 +413,37 @@ h1.stage-title {
   translate: -50% 0;
 }
 .build-map.strip .bm-ribbon span {
-  font-size: 22px;
+  font-size: calc(22px * var(--bm-hs, 1));
 }
 .build-map.side .bm-ribbon {
   width: 78%;
   margin: -42px auto 0;
 }
 .build-map.side .bm-ribbon span {
-  font-size: clamp(30px, 2.4vw, 40px);
+  font-size: calc(clamp(30px, 2.4vw, 40px) * var(--bm-hs, 1));
+}
+/* The chosen style's treatment on the map being built. */
+.build-map[data-treat="neon"] .bm-ribbon svg {
+  filter: drop-shadow(0 0 2px var(--bm-ribbon-line)) drop-shadow(0 0 7px var(--bm-ribbon-line));
+}
+.build-map[data-treat="neon"] .bm-ribbon span {
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px var(--bm-ribbon-line);
+}
+.build-map[data-treat="foil"] .bm-ribbon span.named {
+  background: linear-gradient(
+    115deg,
+    #b0843a 0%,
+    #d9b45e 25%,
+    #f1dc9c 42%,
+    #c39a4c 60%,
+    #e6c77e 78%,
+    #a97b2e 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 @keyframes bm-drop {
   from {

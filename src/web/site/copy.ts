@@ -273,6 +273,7 @@ export const copy = {
   },
 
   manage: {
+    styleTitle: 'באיזה סגנון?',
     title: (honoree: string) => ['ההזמנה של', honoree],
     orderNo: (n: string) => `הזמנה ${n}`,
     status: {

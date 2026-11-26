@@ -25,6 +25,7 @@ import {
   resolveRecipient,
 } from '../domain/recipient.ts'
 import { questionTextFor } from '../domain/template.ts'
+import { offeredFor, themesFor } from '../domain/themes.ts'
 import {
   ALLERGENS,
   DIETS,
@@ -97,10 +98,15 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       markets: mk,
       themes: th.map((t) => ({
         id: t.id,
+        key: t.key,
         name: t.name,
         marketId: t.marketId,
         map: fileUrl(t.mapFile),
         palette: t.palette,
+        // Fonts, treatment and illustrations; the occasions (and recipients) it is offered for.
+        style: t.style,
+        occasionKeys: t.occasionKeys,
+        recipients: t.recipients,
         // The colors this map can be played in; the first one is the default.
         palettes: pal
           .filter((p) => p.themeIds.includes(t.id))
@@ -273,7 +279,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     // Never below one participant, whatever the saved setting says.
     if (b.people < Math.max(1, min) || b.people > max) return { error: 'bad_people' } as const
     const { theme, route } = await routeForTheme(b.themeId)
-    if (!theme) return { error: 'bad_theme' } as const
+    if (!theme || !offeredFor(theme, b.occasionKey)) return { error: 'bad_theme' } as const
     if (!route) return { error: 'no_route' } as const
     if (b.paletteId != null) {
       const [pal] = await db.select().from(palettes).where(eq(palettes.id, b.paletteId))
@@ -422,11 +428,21 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   // Tranzila returns the pay window by POST; bounce it to a GET of the same page.
   app.post('/pay/done', async (req, reply) => reply.redirect(req.url, 303))
 
-  /** The map and the palettes an order can be played in (the default first), and its choice. */
-  async function lookFor(order: typeof orders.$inferSelect) {
+  /**
+   * The style and palettes an order can be played in (the default first), and its choice. The
+   * styles are the ones offered for the occasion on the same market (the route stays).
+   */
+  async function lookFor(order: typeof orders.$inferSelect, recipient: string | null) {
     if (!order.themeId) return null
     const [theme] = await db.select().from(themes).where(eq(themes.id, order.themeId))
     if (!theme) return null
+    const sameMarket = await db
+      .select()
+      .from(themes)
+      .where(and(eq(themes.marketId, theme.marketId), eq(themes.active, true)))
+      .orderBy(asc(themes.sort), asc(themes.id))
+    const styles = themesFor(sameMarket, order.occasionKey, recipient)
+    if (!styles.some((t) => t.id === theme.id)) styles.unshift(theme)
     const pal = await db
       .select()
       .from(palettes)
@@ -436,10 +452,21 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       .filter((p) => p.themeIds.includes(theme.id))
       .map((p) => ({ id: p.id, name: p.name, palette: p.palette }))
     return {
+      themeId: theme.id,
       map: fileUrl(theme.mapFile),
       themePalette: theme.palette,
       paletteId: order.paletteId,
       palettes: list,
+      themes: styles.map((t) => ({
+        id: t.id,
+        name: t.name,
+        map: fileUrl(t.mapFile),
+        palette: t.palette,
+        style: t.style,
+        palettes: pal
+          .filter((p) => p.themeIds.includes(t.id))
+          .map((p) => ({ id: p.id, name: p.name, palette: p.palette })),
+      })),
     }
   }
 
@@ -533,7 +560,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       // The buyer's own questions and answers, on the buyer's own link only (never in the game).
       hintQuestions: editable ? order.hintQuestions : undefined,
       // The color: the palettes this order's map can be played in, and the chosen one.
-      look: editable ? await lookFor(order) : undefined,
+      look: editable ? await lookFor(order, recipient) : undefined,
       questions:
         needsAnswers || editable
           ? publicQuestions(await questionsForOccasion(db, order.occasionKey, recipient), order.form)
@@ -552,6 +579,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       const body = z
         .object({
           honoreeName: z.string().trim().min(1).max(40).optional(),
+          themeId: z.number().int().optional(),
           paletteId: z.number().int().nullable().optional(),
           answers: z.record(z.string(), z.string().max(300)),
           letterNotes: z.array(letterNote).max(10).default([]),
@@ -565,15 +593,25 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       const [state] = await db.select().from(gameStates).where(eq(gameStates.orderId, order.id))
       if (!isEditable(order, state)) return reply.code(409).send({ error: 'locked' })
       const { paletteId } = body.data
+      // Another style: active, offered for the occasion, on the same market (the route stays).
+      let themeId = order.themeId
+      if (body.data.themeId !== undefined && body.data.themeId !== order.themeId) {
+        const [cur] = order.themeId ? await db.select().from(themes).where(eq(themes.id, order.themeId)) : []
+        const [next] = await db.select().from(themes).where(eq(themes.id, body.data.themeId))
+        if (!next?.active || !cur || next.marketId !== cur.marketId || !offeredFor(next, order.occasionKey))
+          return reply.code(400).send({ error: 'bad_theme' })
+        themeId = next.id
+      }
       if (paletteId != null) {
         const [pal] = await db.select().from(palettes).where(eq(palettes.id, paletteId))
-        if (!pal?.active || !order.themeId || !pal.themeIds.includes(order.themeId))
+        if (!pal?.active || !themeId || !pal.themeIds.includes(themeId))
           return reply.code(400).send({ error: 'bad_palette' })
       }
       const questions = await questionsForOrder(db, order)
       await db
         .update(orders)
         .set({
+          ...(themeId !== order.themeId ? { themeId, paletteId: paletteId ?? null } : {}),
           ...(paletteId !== undefined ? { paletteId } : {}),
           honoreeName: body.data.honoreeName ?? order.honoreeName,
           answers: cleanAnswers(body.data.answers, questions),

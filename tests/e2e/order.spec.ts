@@ -54,8 +54,8 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
 
   await next(page, /\/order\/look$/)
   await expect(map).toHaveAttribute('data-painted', 'true')
-  await page.getByRole('button', { name: 'כרמל כחול-ורוד' }).click()
-  await expect(page.getByRole('button', { name: 'כרמל כחול-ורוד' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'כרמל כחול־ורוד' }).click()
+  await expect(page.getByRole('button', { name: 'כרמל כחול־ורוד' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
   await shot(page, 'build-03-look')
 

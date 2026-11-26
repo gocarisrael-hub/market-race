@@ -3,9 +3,9 @@
 // stage passed; the name on the ribbon once it is written; the photos taped on as they arrive.
 // Two sizes: a strip at the top of the stage on phones and tablets, a large panel beside the form
 // on computers (with the occasion's doodles and the price).
-import { type CSSProperties, useLayoutEffect, useRef, useState } from 'react'
-import { themeVars } from '../../../server/domain/look.ts'
+import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { type DoodleName, Doodles, Icon } from '../../shared/decor.tsx'
+import { loadThemeFont, lookVars } from '../../shared/look.ts'
 import type { Photo, Shop } from '../api.ts'
 import { copy } from '../copy.ts'
 import {
@@ -108,19 +108,13 @@ export function BuildMap(props: {
   const frac = n > 1 ? index / (n - 1) : 0
   const current = stages[index]
 
-  const v = painted && palette ? themeVars(palette) : null
-  const style = (
-    v
-      ? {
-          '--bm-bg': v['--bg'],
-          '--bm-ribbon': v['--ribbon'],
-          '--bm-ribbon-tail': v['--ribbon-tail'],
-          '--bm-on-ribbon': v['--on-ribbon'],
-          '--bm-accent': v['--accent'],
-          '--bm-ink': v['--ink'],
-        }
-      : {}
-  ) as CSSProperties
+  // The chosen style paints the map: its colors (a chosen variant drops its fixed ones), font and
+  // treatment, as the game will draw them.
+  const look = pal ? { ...theme?.style, colors: undefined } : theme?.style
+  const style = (painted && palette ? lookVars(palette, look, 'bm') : {}) as CSSProperties
+  useEffect(() => {
+    if (painted) loadThemeFont(look)
+  }, [painted, look])
 
   const total = priceAgorot(shop, d.occasionKey, d.people)
   const per = d.occasionKey ? shop.prices[d.occasionKey] : undefined
@@ -131,6 +125,7 @@ export function BuildMap(props: {
       className={`build-map ${variant}`}
       data-testid="build-map"
       data-painted={painted || undefined}
+      data-treat={painted ? (look?.treatment ?? 'brush') : undefined}
       data-stage={current?.key}
       style={style}
       role="progressbar"
