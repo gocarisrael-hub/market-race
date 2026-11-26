@@ -23,7 +23,7 @@ export function Tastings({ shop }: { shop: Shop }) {
       <Deco
         icon="hummus"
         className="bob"
-        style={{ top: 210, left: -30, width: 84, ['--r' as string]: '-8deg' }}
+        style={{ top: 300, left: -34, width: 70, ['--r' as string]: '-8deg' }}
       />
       <SiteNav current="tastings" />
       <header className="t-head">
