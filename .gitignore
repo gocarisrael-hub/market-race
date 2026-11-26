@@ -9,3 +9,5 @@ playwright-report
 .DS_Store
 coverage
 .claude/worktrees
+# Icon library: only the WebP files are committed; the slicer's PNGs stay local.
+/assets/icons/*/*.png

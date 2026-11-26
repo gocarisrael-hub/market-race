@@ -67,6 +67,14 @@ export async function buildApp(ctx: AppContext) {
   await publicPhotoRoutes(app, ctx)
   await vendorRoutes(app, root)
 
+  // Library icons are asked for with the manifest's version in the URL (iconUrl), so a changed icon
+  // gets a new URL: they can be cached for a year.
+  app.addHook('onSend', async (req, reply, payload) => {
+    if (reply.statusCode === 200 && req.url.startsWith('/static/icons/') && req.url.includes('?v=')) {
+      reply.header('cache-control', 'public, max-age=31536000, immutable')
+    }
+    return payload
+  })
   // Illustrations shipped with the code (maps, icons).
   await app.register(fastifyStatic, {
     root: path.join(root, 'assets'),
