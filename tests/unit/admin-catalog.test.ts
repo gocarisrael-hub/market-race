@@ -281,6 +281,16 @@ describe('admin catalog API', () => {
     ).toBe(400)
     const upd = await call('PATCH', `/occasions/${oid}`, { forms: ['she', 'he'], sort: 2 })
     expect(upd.json()).toMatchObject({ forms: ['she', 'he'], sort: 2 })
+    // The occasion's own names for its recipients (a kid's birthday: "לילדה", "לילד").
+    const named = await call('PATCH', `/occasions/${oid}`, {
+      recipientLabels: { she: 'לילדה', he: ' לילד ' },
+      decor: 'kids',
+    })
+    expect(named.statusCode).toBe(200)
+    expect(named.json()).toMatchObject({ recipientLabels: { she: 'לילדה', he: 'לילד' }, decor: 'kids' })
+    expect(
+      (await call('PATCH', `/occasions/${oid}`, { recipientLabels: { she: 'x'.repeat(31) } })).statusCode,
+    ).toBe(400)
   })
 
   it('creates routes and validates every stop against the catalog', async () => {

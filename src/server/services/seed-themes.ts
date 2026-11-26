@@ -109,7 +109,7 @@ export const DEMO_THEMES: DemoTheme[] = [
         onBrand: '#0A297D',
       },
     },
-    occasionKeys: ['friends', 'birthday_friend', 'bachelorette', 'generic'],
+    occasionKeys: ['friends', 'birthday_friend', 'birthday_kid', 'bachelorette', 'generic'],
     recipients: [],
   },
   {
@@ -280,7 +280,7 @@ export const DEMO_THEMES: DemoTheme[] = [
         mark: '#7A1F2B',
       },
     },
-    occasionKeys: ['couple', 'birthday_parent'],
+    occasionKeys: ['couple', 'anniversary', 'birthday_friend', 'birthday_parent'],
     recipients: [],
   },
   {
@@ -311,7 +311,7 @@ export const DEMO_THEMES: DemoTheme[] = [
         mark: '#B07A10',
       },
     },
-    occasionKeys: ['family', 'birthday_parent', 'generic'],
+    occasionKeys: ['family', 'birthday_friend', 'birthday_kid', 'anniversary', 'birthday_parent', 'generic'],
     recipients: [],
   },
 ]

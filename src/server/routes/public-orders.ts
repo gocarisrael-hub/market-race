@@ -25,7 +25,7 @@ import {
   recipientForForm,
   resolveRecipient,
 } from '../domain/recipient.ts'
-import { questionTextFor } from '../domain/template.ts'
+import { exampleFor, questionTextFor } from '../domain/template.ts'
 import { offeredFor, themesFor } from '../domain/themes.ts'
 import {
   ALLERGENS,
@@ -94,6 +94,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         forms: o.forms,
         // Who the game can be for, one person first. Never the question set ids.
         recipients: occasionRecipients(o).map((c) => c.recipient),
+        // The occasion's own names for them (e.g. "לילדה"), where it has one.
+        recipientLabels: o.recipientLabels ?? {},
         decor: o.decor,
       })),
       markets: mk,
@@ -747,6 +749,7 @@ function publicQuestions(questions: Awaited<ReturnType<typeof questionsForOccasi
     .map((q) => ({
       slot: q.slot,
       text: questionTextFor(q, form),
+      example: exampleFor(q, form),
       required: q.required,
       maxLen: q.maxLen,
     }))

@@ -23,7 +23,7 @@ export function HintQuestions(props: {
             {copy.hintQuestions.title}
           </SectionHead>
           <p className="hint" style={{ margin: '4px 0 0' }}>
-            {copy.hintQuestions.intro} ({copy.optional})
+            {copy.hintQuestions.intro(props.form)} ({copy.optional})
           </p>
         </>
       )}
@@ -41,7 +41,7 @@ export function HintQuestions(props: {
           <QField
             name={`hintAnswer${i}`}
             label={`${copy.hintQuestions.answer} ${i + 1}`}
-            placeholder={copy.hintQuestions.answerPlaceholder}
+            placeholder={copy.hintQuestions.answerPlaceholder(props.form)}
             value={q.answer}
             maxLen={60}
             onChange={(v) => set(i, { answer: v })}

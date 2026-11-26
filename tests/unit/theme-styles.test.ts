@@ -34,10 +34,34 @@ describe('styles offered per occasion', () => {
   it('maps the demo occasions to their styles', () => {
     expect(keysFor('bachelorette', 'she')).toEqual(['carmel', 'mahane', 'riso', 'neon', 'blush'])
     expect(keysFor('couple', 'couple')).toEqual(['carmel', 'mahane', 'gold'])
+    expect(keysFor('anniversary', 'couple')).toEqual(['carmel', 'mahane', 'gold', 'cobalt'])
+    expect(keysFor('anniversary', 'he')).toEqual(['carmel', 'mahane', 'gold', 'cobalt'])
+    // A kid's birthday: the light, friendly ones only.
+    expect(keysFor('birthday_kid', 'she')).toEqual(['carmel', 'mahane', 'riso', 'cobalt'])
+    expect(keysFor('birthday_kid', 'he')).toEqual(['carmel', 'mahane', 'riso', 'cobalt'])
     expect(keysFor('birthday_parent', 'she')).toEqual(['carmel', 'mahane', 'gold', 'cobalt'])
     expect(keysFor('birthday_parent', 'he')).toEqual(['carmel', 'mahane', 'ink', 'gold', 'cobalt'])
-    expect(keysFor('birthday_friend', 'she')).toEqual(['carmel', 'mahane', 'night', 'riso', 'neon', 'blush'])
-    expect(keysFor('birthday_friend', 'he')).toEqual(['carmel', 'mahane', 'night', 'riso', 'neon', 'ink'])
+    // The birthday offers everything a parent's birthday did (gold, cobalt, ink for him).
+    expect(keysFor('birthday_friend', 'she')).toEqual([
+      'carmel',
+      'mahane',
+      'night',
+      'riso',
+      'neon',
+      'blush',
+      'gold',
+      'cobalt',
+    ])
+    expect(keysFor('birthday_friend', 'he')).toEqual([
+      'carmel',
+      'mahane',
+      'night',
+      'riso',
+      'neon',
+      'ink',
+      'gold',
+      'cobalt',
+    ])
     expect(keysFor('friends', 'group')).toEqual(['carmel', 'mahane', 'night', 'riso', 'neon', 'ink'])
     expect(keysFor('family', 'family')).toEqual(['carmel', 'mahane', 'cobalt'])
     expect(keysFor('generic', 'group')).toEqual(['carmel', 'mahane', 'night', 'riso', 'ink', 'cobalt'])

@@ -28,6 +28,13 @@ export function fallbackFor(q: Question | undefined, form: Form): string {
   return textFor(q.fallback, form) ?? ''
 }
 
+/** The question's example answer for a form ("" when it has none). */
+export function exampleFor(q: Question, form: Form): string {
+  if (!q.example) return ''
+  if (typeof q.example === 'string') return q.example
+  return textFor(q.example, form) ?? ''
+}
+
 /** The question as the buyer reads it for a form. */
 export function questionTextFor(q: Question, form: Form): string {
   return textFor(q.text, form) ?? q.slot

@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   gameStates,
+  occasions,
   orders,
   paySessions,
   questionSets,
@@ -19,7 +20,7 @@ import {
 } from '../../src/server/services/demo-refresh.ts'
 import { buildOrderGame, createOrder } from '../../src/server/services/orders.ts'
 import { startGame } from '../../src/server/services/play.ts'
-import { DEMO_RIDDLES, seedDemo } from '../../src/server/services/seed-demo.ts'
+import { DEMO_RIDDLES, RECIPIENT_SETS, seedDemo } from '../../src/server/services/seed-demo.ts'
 import { makeTestApp, ownerCookie } from '../helpers/app.ts'
 
 const RICH = {
@@ -223,5 +224,84 @@ describe('demo content refresh', () => {
     expect(r.riddles.kept).toBe(1)
     expect(r.minigames).toBe('kept')
     expect(await setting('minigames')).toEqual({ after: [3] })
+  })
+
+  it('renames, adds and retires demo occasions, leaving one the admin edited alone', async () => {
+    // What version 2 left: the old names, no kid's birthday or anniversary, a parent's birthday
+    // still offered, the friends' set under its old name, and no prices for the new occasions.
+    const old = new Date(0)
+    const occ = async (key: string) => (await t.db.select().from(occasions).where(eq(occasions.key, key)))[0]
+    await t.db
+      .update(occasions)
+      .set({ label: 'אהבה וזוגיות', updatedAt: old })
+      .where(eq(occasions.key, 'couple'))
+    await t.db.update(occasions).set({ label: 'משפחתי', updatedAt: old }).where(eq(occasions.key, 'family'))
+    await t.db
+      .update(occasions)
+      .set({ active: true, updatedAt: old })
+      .where(eq(occasions.key, 'birthday_parent'))
+    await t.db.delete(occasions).where(eq(occasions.key, 'birthday_kid'))
+    await t.db.delete(occasions).where(eq(occasions.key, 'anniversary'))
+    await t.db
+      .update(questionSets)
+      .set({ name: "שאלות לחבר'ה וליחידות", updatedAt: old })
+      .where(eq(questionSets.name, "שאלות לחבר'ה"))
+    const prices = (await setting('prices')) as Record<string, unknown>
+    const { birthday_kid: _k, anniversary: _a, ...oldPrices } = prices
+    await t.db.update(settings).set({ value: oldPrices }).where(eq(settings.key, 'prices'))
+    await t.db.update(settings).set({ value: 2 }).where(eq(settings.key, 'demo_seed_version'))
+    // The owner renamed the family occasion in the admin after the last refresh.
+    await new Promise((r) => setTimeout(r, 5))
+    await t.db
+      .update(occasions)
+      .set({ label: 'המשפחה שלי', updatedAt: new Date() })
+      .where(eq(occasions.key, 'family'))
+
+    const r = await refreshDemoContent(t.db)
+    expect(r.ran).toBe(true)
+    expect(r.occasions.inserted).toBe(2)
+    expect(r.occasions.kept).toBe(1)
+    expect(r.prices.sort()).toEqual(['anniversary', 'birthday_kid'])
+    expect((await occ('couple')).label).toBe('דייט רומנטי')
+    expect((await occ('family')).label).toBe('המשפחה שלי')
+    expect((await occ('birthday_friend')).label).toBe('יום הולדת')
+    expect((await occ('birthday_parent')).active).toBe(false)
+    const kid = await occ('birthday_kid')
+    expect(kid).toMatchObject({
+      label: 'יום הולדת לילד',
+      active: true,
+      decor: 'kids',
+      recipientLabels: { she: 'לילדה', he: 'לילד' },
+    })
+    expect(Object.keys(kid.recipients).sort()).toEqual(['he', 'she'])
+    expect(kid.recipients.she).toBe((await set(RECIPIENT_SETS.kidShe.name)).id)
+    const anniversary = await occ('anniversary')
+    expect(anniversary).toMatchObject({
+      label: 'יום נישואים',
+      decor: 'anniversary',
+      forms: ['she', 'he', 'couple'],
+    })
+    expect(anniversary.recipients.couple).toBe((await set(RECIPIENT_SETS.anniversaryCouple.name)).id)
+    // The friends' set is renamed in place, not duplicated.
+    expect(await set("שאלות לחבר'ה וליחידות")).toBeUndefined()
+    expect((await occ('friends')).recipients.group).toBe((await set("שאלות לחבר'ה")).id)
+    expect(Object.keys((await setting('prices')) as object)).toEqual(
+      expect.arrayContaining(['birthday_kid', 'anniversary', 'couple']),
+    )
+    // The site lists them in the new order, without the retired one.
+    const shop = (await t.app.inject({ url: '/api/shop' })).json()
+    expect(shop.occasions.map((o: { label: string }) => o.label)).toEqual([
+      'רווקות',
+      'דייט רומנטי',
+      'יום נישואים',
+      'יום הולדת',
+      'יום הולדת לילד',
+      'המשפחה שלי',
+      "חבר'ה",
+      'כללי',
+      'יום צוות',
+      'פרישה',
+      'עובד/ת חדש/ה',
+    ])
   })
 })

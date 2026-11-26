@@ -114,7 +114,7 @@ describe('group games in the demo catalog', () => {
       'group_wish',
       'photo_where',
     ])
-    expect(res.json().questions[0]).toMatchObject({ text: 'שם המשפחה?', required: true })
+    expect(res.json().questions[0]).toMatchObject({ text: 'איך קוראים למשפחה?', required: true })
   })
 
   const draft = (over: Record<string, unknown> = {}) => ({

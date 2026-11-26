@@ -131,6 +131,7 @@ const question = z.object({
   text: formText,
   required: z.boolean(),
   fallback: z.union([z.string(), formText]),
+  example: z.union([z.string().max(80), formText]).optional(),
   maxLen: z.number().int().min(1).max(1000),
   hidden: z.boolean().optional(),
 })
@@ -153,6 +154,8 @@ const occasionBase = z.object({
   forms: z.array(z.enum(FORMS)).min(1),
   // Who a private game can be for, each with its question set (null: the occasion's own).
   recipients: z.partialRecord(z.enum(RECIPIENTS), id.nullable()),
+  // The occasion's own name for a recipient on the order (empty: the site's default).
+  recipientLabels: z.partialRecord(z.enum(RECIPIENTS), z.string().trim().max(30)),
   playersFeminine: z.boolean(),
   decor: z.enum(DECORS),
   sort: z.number().int(),

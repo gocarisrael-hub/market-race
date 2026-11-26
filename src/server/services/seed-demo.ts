@@ -16,7 +16,15 @@ import {
 } from '../db/schema.ts'
 import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
 import { formsOfRecipients, occasionRecipients } from '../domain/recipient.ts'
-import type { Decor, Form, OccasionRecipients, Palette, Question, RiddleTemplates } from '../domain/types.ts'
+import type {
+  Decor,
+  Form,
+  OccasionRecipients,
+  Palette,
+  Question,
+  RecipientLabels,
+  RiddleTemplates,
+} from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { markDemoSeeded } from './demo-refresh.ts'
 import { DEMO_THEMES, type DemoTheme, WATERCOLOR_THEMES } from './seed-themes.ts'
@@ -34,62 +42,60 @@ const hours = {
 const ALL_DIETS = ['vegan', 'vegetarian', 'gluten_free']
 
 // Optional, for the "מה בתמונה?" mini-game: asked about the first photo the buyer adds.
-const PHOTO_WHERE = 'אם תוסיפו תמונות: איפה צולמה הראשונה? (נשאל על זה במשחק)'
+const PHOTO_WHERE = 'איפה צולמה התמונה הראשונה שתעלו?'
+const PHOTO_EXAMPLE = 'בטיול באילת'
+
+// Every question is one short, direct question with a short example (shown as "למשל: …").
+type PerForm = Partial<Record<Form, string>>
+const q = (
+  slot: string,
+  text: PerForm,
+  example: PerForm | string,
+  fallback: PerForm | string,
+  maxLen = 40,
+): Question => ({ slot, text, example, required: false, fallback, maxLen })
 
 const privateQuestions: Question[] = [
-  {
-    slot: 'first_love',
-    text: { she: 'מי הייתה האהבה הראשונה שלה?', he: 'מי הייתה האהבה הראשונה שלו?', couple: 'איפה הם נפגשו?' },
-    required: false,
-    fallback: 'הפעם הראשונה',
-    maxLen: 40,
-  },
-  {
-    slot: 'favorite_food',
-    text: { she: 'מה האוכל האהוב עליה?', he: 'מה האוכל האהוב עליו?', couple: 'מה האוכל האהוב עליהם?' },
-    required: false,
-    fallback: 'ארוחת שישי',
-    maxLen: 40,
-  },
-  {
-    slot: 'one_word',
-    text: { she: 'מילה אחת שמתארת אותה', he: 'מילה אחת שמתארת אותו', couple: 'מילה אחת שמתארת אותם' },
-    required: false,
-    fallback: { she: 'רכה', he: 'רך', couple: 'רכים' },
-    maxLen: 20,
-  },
-  {
-    slot: 'catchphrase',
-    text: { she: 'משפט שהיא תמיד אומרת', he: 'משפט שהוא תמיד אומר', couple: 'משפט שהם תמיד אומרים' },
-    required: false,
-    fallback: 'יאללה, זזים',
-    maxLen: 60,
-  },
-  {
-    slot: 'favorite_place',
-    text: { she: 'המקום האהוב עליה', he: 'המקום האהוב עליו', couple: 'המקום האהוב עליהם' },
-    required: false,
-    fallback: 'הים',
-    maxLen: 40,
-  },
-  {
-    slot: 'dream',
-    text: { she: 'חלום שעוד לא הגשימה', he: 'חלום שעוד לא הגשים', couple: 'חלום משותף שלהם' },
-    required: false,
-    fallback: 'כל החלומות',
-    maxLen: 60,
-  },
-  {
-    slot: 'photo_where',
-    text: {
-      she: PHOTO_WHERE,
-      he: PHOTO_WHERE,
-      couple: PHOTO_WHERE,
-    },
-    required: false,
-    fallback: '',
-    maxLen: 40,
-  },
+  q(
+    'first_love',
+    { she: 'מי הייתה האהבה הראשונה שלה?', he: 'מי הייתה האהבה הראשונה שלו?', couple: 'איפה הם הכירו?' },
+    { she: 'יואב מהשכבה', he: 'מיכל מהשכבה', couple: 'במסיבה של נועה' },
+    'הפעם הראשונה',
+  ),
+  q(
+    'favorite_food',
+    { she: 'מה האוכל האהוב עליה?', he: 'מה האוכל האהוב עליו?', couple: 'מה האוכל האהוב עליהם?' },
+    'סושי',
+    'ארוחת שישי',
+  ),
+  q(
+    'one_word',
+    { she: 'מילה אחת שמתארת אותה', he: 'מילה אחת שמתארת אותו', couple: 'מילה אחת שמתארת אותם' },
+    { she: 'עקשנית', he: 'עקשן', couple: 'מתוקים' },
+    { she: 'רכה', he: 'רך', couple: 'רכים' },
+    20,
+  ),
+  q(
+    'catchphrase',
+    { she: 'משפט שהיא תמיד אומרת', he: 'משפט שהוא תמיד אומר', couple: 'משפט שהם תמיד אומרים' },
+    'יאללה, זזים',
+    'יאללה, זזים',
+    60,
+  ),
+  q(
+    'favorite_place',
+    { she: 'המקום האהוב עליה', he: 'המקום האהוב עליו', couple: 'המקום האהוב עליהם' },
+    'הכנרת',
+    'הים',
+  ),
+  q(
+    'dream',
+    { she: 'חלום שעוד לא הגשימה', he: 'חלום שעוד לא הגשים', couple: 'חלום משותף שלהם' },
+    'לטוס ליפן',
+    'כל החלומות',
+    60,
+  ),
+  q('photo_where', { she: PHOTO_WHERE, he: PHOTO_WHERE, couple: PHOTO_WHERE }, PHOTO_EXAMPLE, ''),
 ]
 
 // ---------- Question sets per occasion × recipient ----------
@@ -102,65 +108,139 @@ const pq = (
   form: 'she' | 'he' | 'couple',
   slot: string,
   text: string,
+  example: string,
   fallback: string,
   maxLen = 40,
-): Question => ({ slot, text: { [form]: text }, required: false, fallback, maxLen })
+): Question => q(slot, { [form]: text }, example, fallback, maxLen)
 
 export const birthdaySheQuestions: Question[] = [
-  pq('she', 'first_love', 'מי או מה הייתה האהבה הראשונה שלה? (ילד מהכיתה, להקה, כלב)', 'האהבה הראשונה'),
-  pq('she', 'favorite_food', 'מה היא הייתה אוכלת כל יום, אם רק היה אפשר?', 'עוגת יום הולדת'),
-  pq('she', 'one_word', 'איך היא מבפנים, במילה אחת? (למשל: רכה, מצחיקה, עקשנית)', 'רכה', 20),
-  pq('she', 'catchphrase', 'משפט שכל מי שמכיר אותה שמע ממנה אלף פעם', 'יאללה, זזים', 60),
-  pq('she', 'favorite_place', 'המקום שהכי עושה לה טוב', 'הים'),
-  pq('she', 'dream', 'חלום שאתם מאחלים לה להגשים השנה', 'כל החלומות', 60),
-  pq('she', 'photo_where', PHOTO_WHERE, ''),
+  pq('she', 'first_love', 'מי הייתה האהבה הראשונה שלה?', 'הספייס גירלז', 'האהבה הראשונה'),
+  pq('she', 'favorite_food', 'מה האוכל האהוב עליה?', 'סושי', 'עוגת יום הולדת'),
+  pq('she', 'one_word', 'מילה אחת שמתארת אותה', 'מצחיקה', 'רכה', 20),
+  pq('she', 'catchphrase', 'משפט שהיא תמיד אומרת', 'יהיה בסדר', 'יאללה, זזים', 60),
+  pq('she', 'favorite_place', 'המקום שהכי עושה לה טוב', 'הים', 'הים'),
+  pq('she', 'dream', 'חלום שאתם מאחלים לה', 'לטוס ליפן', 'כל החלומות', 60),
+  pq('she', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
 ]
 
 export const birthdayHeQuestions: Question[] = [
-  pq(
-    'he',
-    'first_love',
-    'מי או מה הייתה האהבה הראשונה שלו? (ילדה מהכיתה, קבוצת כדורגל, אופניים)',
-    'האהבה הראשונה',
-  ),
-  pq('he', 'favorite_food', 'מה הוא היה אוכל כל יום, אם רק היה אפשר?', 'עוגת יום הולדת'),
-  pq('he', 'one_word', 'איך הוא מבפנים, במילה אחת? (למשל: רך, מצחיק, עקשן)', 'רך', 20),
-  pq('he', 'catchphrase', 'משפט שכל מי שמכיר אותו שמע ממנו אלף פעם', 'יאללה, זזים', 60),
-  pq('he', 'favorite_place', 'המקום שהכי עושה לו טוב', 'הים'),
-  pq('he', 'dream', 'חלום שאתם מאחלים לו להגשים השנה', 'כל החלומות', 60),
-  pq('he', 'photo_where', PHOTO_WHERE, ''),
+  pq('he', 'first_love', 'מי הייתה האהבה הראשונה שלו?', 'נועה מהכיתה', 'האהבה הראשונה'),
+  pq('he', 'favorite_food', 'מה האוכל האהוב עליו?', 'שווארמה', 'עוגת יום הולדת'),
+  pq('he', 'one_word', 'מילה אחת שמתארת אותו', 'מצחיק', 'רך', 20),
+  pq('he', 'catchphrase', 'משפט שהוא תמיד אומר', 'יהיה בסדר', 'יאללה, זזים', 60),
+  pq('he', 'favorite_place', 'המקום שהכי עושה לו טוב', 'הים', 'הים'),
+  pq('he', 'dream', 'חלום שאתם מאחלים לו', 'לטוס ליפן', 'כל החלומות', 60),
+  pq('he', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
 ]
 
 // A love game is a gift to her or to him, written from the giver's side.
 export const loveSheQuestions: Question[] = [
-  pq('she', 'first_love', 'איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)', 'הפעם הראשונה שנפגשנו'),
-  pq('she', 'favorite_food', 'מה היא מזמינה תמיד, בכל מסעדה, בלי להסתכל בתפריט?', 'פסטה'),
-  pq('she', 'one_word', 'איך היא מבפנים, כמו שרק מי שקרוב אליה יודע? מילה אחת', 'רכה', 20),
-  pq('she', 'catchphrase', 'כינוי או משפט שהיא אומרת רק לך', 'אני אוהבת אותך', 60),
-  pq('she', 'favorite_place', 'המקום שלכם (חוף, בית קפה, עיר)', 'הים'),
-  pq('she', 'dream', 'חלום שאתם עוד רוצים להגשים ביחד', 'כל מה שעוד מחכה לנו', 60),
-  pq('she', 'photo_where', PHOTO_WHERE, ''),
+  pq('she', 'first_love', 'איפה הכול התחיל ביניכם?', 'הדייט הראשון ביפו', 'הפעם הראשונה שנפגשנו'),
+  pq('she', 'favorite_food', 'מה היא תמיד מזמינה?', 'פסטה', 'פסטה'),
+  pq('she', 'one_word', 'מילה אחת שמתארת אותה', 'רכה', 'רכה', 20),
+  pq('she', 'catchphrase', 'משפט שהיא אומרת רק לך', 'אני אוהבת אותך', 'אני אוהבת אותך', 60),
+  pq('she', 'favorite_place', 'המקום שלכם', 'החוף בגורדון', 'הים'),
+  pq('she', 'dream', 'חלום שלכם ביחד', 'לטייל ביפן', 'כל מה שעוד מחכה לנו', 60),
+  pq('she', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
 ]
 
 export const loveHeQuestions: Question[] = [
-  pq('he', 'first_love', 'איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)', 'הפעם הראשונה שנפגשנו'),
-  pq('he', 'favorite_food', 'מה הוא מזמין תמיד, בכל מסעדה, בלי להסתכל בתפריט?', 'המבורגר'),
-  pq('he', 'one_word', 'איך הוא מבפנים, כמו שרק מי שקרוב אליו יודע? מילה אחת', 'רך', 20),
-  pq('he', 'catchphrase', 'כינוי או משפט שהוא אומר רק לך', 'אני אוהב אותך', 60),
-  pq('he', 'favorite_place', 'המקום שלכם (חוף, בית קפה, עיר)', 'הים'),
-  pq('he', 'dream', 'חלום שאתם עוד רוצים להגשים ביחד', 'כל מה שעוד מחכה לנו', 60),
-  pq('he', 'photo_where', PHOTO_WHERE, ''),
+  pq('he', 'first_love', 'איפה הכול התחיל ביניכם?', 'הדייט הראשון ביפו', 'הפעם הראשונה שנפגשנו'),
+  pq('he', 'favorite_food', 'מה הוא תמיד מזמין?', 'המבורגר', 'המבורגר'),
+  pq('he', 'one_word', 'מילה אחת שמתארת אותו', 'רך', 'רך', 20),
+  pq('he', 'catchphrase', 'משפט שהוא אומר רק לך', 'אני אוהב אותך', 'אני אוהב אותך', 60),
+  pq('he', 'favorite_place', 'המקום שלכם', 'החוף בגורדון', 'הים'),
+  pq('he', 'dream', 'חלום שלכם ביחד', 'לטייל ביפן', 'כל מה שעוד מחכה לנו', 60),
+  pq('he', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
 ]
 
 // A couple: questions about the two of them.
 export const coupleQuestions: Question[] = [
-  pq('couple', 'first_love', 'איפה הכול התחיל אצלם? (למשל: המסיבה של נועה)', 'הפעם הראשונה שנפגשו'),
-  pq('couple', 'favorite_food', 'המנה ששניהם תמיד חולקים (ורבים על הביס האחרון)', 'פיצה משותפת'),
-  pq('couple', 'one_word', 'איך הם ביחד, במילה אחת? (למשל: מתוקים, משוגעים)', 'מתוקים', 20),
-  pq('couple', 'catchphrase', 'משפט ששניהם אומרים כל הזמן', 'יאללה, זזים', 60),
-  pq('couple', 'favorite_place', 'המקום שלהם', 'הים'),
-  pq('couple', 'dream', 'חלום משותף שעוד מחכה להם', 'כל מה שעוד מחכה להם', 60),
-  pq('couple', 'photo_where', PHOTO_WHERE, ''),
+  pq('couple', 'first_love', 'איפה הם הכירו?', 'במסיבה של נועה', 'הפעם הראשונה שנפגשו'),
+  pq('couple', 'favorite_food', 'המנה שהם תמיד חולקים', 'פיצה', 'פיצה משותפת'),
+  pq('couple', 'one_word', 'מילה אחת שמתארת אותם', 'מתוקים', 'מתוקים', 20),
+  pq('couple', 'catchphrase', 'משפט ששניהם תמיד אומרים', 'יאללה, זזים', 'יאללה, זזים', 60),
+  pq('couple', 'favorite_place', 'המקום האהוב עליהם', 'הכנרת', 'הים'),
+  pq('couple', 'dream', 'חלום משותף שלהם', 'בית עם גינה', 'כל מה שעוד מחכה להם', 60),
+  pq('couple', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
+]
+
+// A kid's birthday: a parent fills it in about the child. The riddles' slots in a child's words:
+// the favourite food, the most fun place, one word for them, what they want to be (the dream),
+// a funny word they say (for "מי אמר את זה?"). "first_love" is never asked of a child: hidden,
+// with "since the day she was born". The favourite game feeds the true/false game.
+const kidHidden = (form: 'she' | 'he', slot: string, fallback: string): Question => ({
+  slot,
+  text: {},
+  required: false,
+  fallback: { [form]: fallback },
+  maxLen: 40,
+  hidden: true,
+})
+
+export const kidSheQuestions: Question[] = [
+  pq('she', 'favorite_food', 'מה האוכל האהוב עליה?', 'פיצה', 'פיצה'),
+  pq('she', 'favorite_game', 'המשחק או הסדרה האהובים עליה', 'בלואי', 'מחבואים'),
+  pq('she', 'dream', 'מה היא רוצה להיות כשתגדל?', 'וטרינרית', 'כל מה שתרצה', 60),
+  pq('she', 'catchphrase', 'משפט מצחיק שהיא אומרת', 'אני כבר גדולה!', 'עוד פעם!', 60),
+  pq('she', 'best_friend', 'מי החבר או החברה הכי טובים שלה?', 'מאיה מהגן', 'החברים מהגן'),
+  pq('she', 'one_word', 'מילה אחת שמתארת אותה', 'שובבה', 'מתוקה', 20),
+  pq('she', 'favorite_place', 'המקום הכי כיף בשבילה', 'אצל סבתא', 'גן השעשועים'),
+  pq('she', 'sweet_moment', 'משהו מתוק שהיא עשתה השנה', 'הכינה לנו ארוחת בוקר', 'כל החיבוקים', 80),
+  pq('she', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
+  kidHidden('she', 'first_love', 'היום שנולדה'),
+]
+
+export const kidHeQuestions: Question[] = [
+  pq('he', 'favorite_food', 'מה האוכל האהוב עליו?', 'פיצה', 'פיצה'),
+  pq('he', 'favorite_game', 'המשחק או הסדרה האהובים עליו', 'לגו', 'מחבואים'),
+  pq('he', 'dream', 'מה הוא רוצה להיות כשיגדל?', 'טייס', 'כל מה שירצה', 60),
+  pq('he', 'catchphrase', 'משפט מצחיק שהוא אומר', 'אני כבר גדול!', 'עוד פעם!', 60),
+  pq('he', 'best_friend', 'מי החבר או החברה הכי טובים שלו?', 'יונתן מהגן', 'החברים מהגן'),
+  pq('he', 'one_word', 'מילה אחת שמתארת אותו', 'שובב', 'מתוק', 20),
+  pq('he', 'favorite_place', 'המקום הכי כיף בשבילו', 'אצל סבתא', 'גן השעשועים'),
+  pq('he', 'sweet_moment', 'משהו מתוק שהוא עשה השנה', 'הכין לנו ארוחת בוקר', 'כל החיבוקים', 80),
+  pq('he', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
+  kidHidden('he', 'first_love', 'היום שנולד'),
+]
+
+// A wedding anniversary, from the giver's side: to her or to him from the spouse, or to the
+// couple from someone close (their kids, friends). "first_love" is where they met, and the
+// first apartment is the place the riddles take them to.
+export const anniversarySheQuestions: Question[] = [
+  pq('she', 'first_love', 'איפה נפגשתם?', 'בחתונה של רוני', 'הפעם הראשונה שנפגשנו'),
+  pq('she', 'wedding_song', 'השיר של החתונה', 'פרח בגני', 'השיר שלנו'),
+  pq('she', 'favorite_place', 'איפה הייתה הדירה הראשונה שלכם?', 'פלורנטין', 'הדירה הראשונה'),
+  pq('she', 'favorite_food', 'המנה שלכם', 'פסטה רוזה', 'פסטה'),
+  pq('she', 'wedding_moment', 'רגע מצחיק מהחתונה', 'הדוד שרקד על השולחן', 'הריקוד ההוא', 80),
+  pq('she', 'one_word', 'מילה אחת שמתארת אותה', 'רכה', 'רכה', 20),
+  pq('she', 'catchphrase', 'משפט שהיא אומרת רק לך', 'אני אוהבת אותך', 'אני אוהבת אותך', 60),
+  pq('she', 'dream', 'משאלה לשנים הבאות', 'עוד טיול לאיטליה', 'עוד הרבה שנים ביחד', 60),
+  pq('she', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
+]
+
+export const anniversaryHeQuestions: Question[] = [
+  pq('he', 'first_love', 'איפה נפגשתם?', 'בחתונה של רוני', 'הפעם הראשונה שנפגשנו'),
+  pq('he', 'wedding_song', 'השיר של החתונה', 'פרח בגני', 'השיר שלנו'),
+  pq('he', 'favorite_place', 'איפה הייתה הדירה הראשונה שלכם?', 'פלורנטין', 'הדירה הראשונה'),
+  pq('he', 'favorite_food', 'המנה שלכם', 'פסטה רוזה', 'פסטה'),
+  pq('he', 'wedding_moment', 'רגע מצחיק מהחתונה', 'הדוד שרקד על השולחן', 'הריקוד ההוא', 80),
+  pq('he', 'one_word', 'מילה אחת שמתארת אותו', 'רך', 'רך', 20),
+  pq('he', 'catchphrase', 'משפט שהוא אומר רק לך', 'אני אוהב אותך', 'אני אוהב אותך', 60),
+  pq('he', 'dream', 'משאלה לשנים הבאות', 'עוד טיול לאיטליה', 'עוד הרבה שנים ביחד', 60),
+  pq('he', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
+]
+
+export const anniversaryCoupleQuestions: Question[] = [
+  pq('couple', 'first_love', 'איפה הם נפגשו?', 'בחתונה של רוני', 'הפעם הראשונה שנפגשו'),
+  pq('couple', 'wedding_song', 'השיר של החתונה שלהם', 'פרח בגני', 'השיר שלהם'),
+  pq('couple', 'favorite_place', 'איפה הייתה הדירה הראשונה שלהם?', 'פלורנטין', 'הדירה הראשונה'),
+  pq('couple', 'favorite_food', 'המנה שלהם', 'פסטה רוזה', 'פסטה'),
+  pq('couple', 'wedding_moment', 'רגע מצחיק מהחתונה שלהם', 'הדוד שרקד על השולחן', 'הריקוד ההוא', 80),
+  pq('couple', 'one_word', 'מילה אחת שמתארת אותם', 'מתוקים', 'מתוקים', 20),
+  pq('couple', 'catchphrase', 'משפט ששניהם תמיד אומרים', 'יאללה, זזים', 'יאללה, זזים', 60),
+  pq('couple', 'dream', 'משאלה להם לשנים הבאות', 'עוד טיול לאיטליה', 'עוד הרבה שנים ביחד', 60),
+  pq('couple', 'photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
 ]
 
 /** The demo question sets per recipient, by name (each editable in the admin). */
@@ -170,39 +250,22 @@ export const RECIPIENT_SETS = {
   loveShe: { name: 'אהבה: לה, מצד מי שנותן', questions: loveSheQuestions },
   loveHe: { name: 'אהבה: לו, מצד מי שנותן', questions: loveHeQuestions },
   couple: { name: 'זוג: על שניהם', questions: coupleQuestions },
+  kidShe: { name: 'יום הולדת לילדה', questions: kidSheQuestions },
+  kidHe: { name: 'יום הולדת לילד', questions: kidHeQuestions },
+  anniversaryShe: { name: 'יום נישואים: לה, מצד מי שנותן', questions: anniversarySheQuestions },
+  anniversaryHe: { name: 'יום נישואים: לו, מצד מי שנותן', questions: anniversaryHeQuestions },
+  anniversaryCouple: { name: 'יום נישואים: על שניהם', questions: anniversaryCoupleQuestions },
 } as const
 
+const cq = (slot: string, text: string, example: string, fallback: string, maxLen = 40) =>
+  q(slot, { company: text }, example, fallback, maxLen)
 const companyQuestions: Question[] = [
-  { slot: 'company_name', text: { company: 'שם החברה' }, required: true, fallback: '', maxLen: 40 },
-  {
-    slot: 'company_catchphrase',
-    text: { company: 'משפט שכולם אומרים במשרד' },
-    required: false,
-    fallback: 'יאללה, זזים',
-    maxLen: 60,
-  },
-  {
-    slot: 'memorable_project',
-    text: { company: 'פרויקט שכולם זוכרים' },
-    required: false,
-    fallback: 'הפרויקט ההוא',
-    maxLen: 40,
-  },
-  {
-    slot: 'kitchen_favorite',
-    text: { company: 'מה נגמר ראשון במטבחון?' },
-    required: false,
-    fallback: 'הקפה',
-    maxLen: 40,
-  },
-  {
-    slot: 'last_offsite',
-    text: { company: 'איפה היה האוף-סייט האחרון?' },
-    required: false,
-    fallback: 'הים',
-    maxLen: 40,
-  },
-  { slot: 'photo_where', text: { company: PHOTO_WHERE }, required: false, fallback: '', maxLen: 40 },
+  { ...cq('company_name', 'שם החברה', 'אקמה', ''), required: true },
+  cq('company_catchphrase', 'משפט שכולם אומרים במשרד', 'יש לך דקה?', 'יאללה, זזים', 60),
+  cq('memorable_project', 'פרויקט שכולם זוכרים', 'ההשקה של 2023', 'הפרויקט ההוא'),
+  cq('kitchen_favorite', 'מה נגמר ראשון במטבחון?', 'הבמבה', 'הקפה'),
+  cq('last_offsite', 'איפה היה האוף-סייט האחרון?', 'מצפה רמון', 'הים'),
+  cq('photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
 ]
 
 const WATERCOLOR = WATERCOLOR_THEMES
@@ -296,18 +359,83 @@ export function demoThemeValues(
   }
 }
 
+/**
+ * The demo occasions, in the order the site shows them. `set` is the key (in demoQuestionSets) of
+ * the occasion's own question set; who each one is for comes from demoRecipients. Seeded, and kept
+ * in step on seeded databases by the demo refresh, by `key`.
+ */
+export interface DemoOccasion {
+  key: string
+  label: string
+  audience: 'private' | 'company'
+  decor: Decor
+  set: string
+  active: boolean
+  /** The occasion's own names for its recipients on the order (empty: the site's default). */
+  recipientLabels: RecipientLabels
+}
+
+const occ = (
+  key: string,
+  label: string,
+  decor: Decor,
+  set: string,
+  extra: Partial<DemoOccasion> = {},
+): DemoOccasion => ({
+  key,
+  label,
+  audience: 'private',
+  decor,
+  set,
+  active: true,
+  recipientLabels: {},
+  ...extra,
+})
+
+export const DEMO_OCCASIONS: DemoOccasion[] = [
+  occ('bachelorette', 'רווקות', 'love', 'private'),
+  occ('couple', 'דייט רומנטי', 'love', 'private'),
+  occ('anniversary', 'יום נישואים', 'anniversary', 'anniversaryCouple'),
+  occ('birthday_friend', 'יום הולדת', 'birthday', 'private'),
+  occ('birthday_kid', 'יום הולדת לילד', 'kids', 'kidShe', {
+    recipientLabels: { she: 'לילדה', he: 'לילד' },
+  }),
+  // Folded into "יום הולדת", which offers everything it did. Kept (inactive) for its orders.
+  occ('birthday_parent', 'יום הולדת להורה', 'birthday', 'private', { active: false }),
+  occ('family', 'יום משפחתי', 'family', 'family'),
+  occ('friends', "חבר'ה", 'friends', 'friends'),
+  occ('generic', 'כללי', 'generic', 'generic'),
+  occ('team_day', 'יום צוות', 'company', 'company', { audience: 'company' }),
+  occ('retirement', 'פרישה', 'company', 'company', { audience: 'company' }),
+  occ('new_employee', 'עובד/ת חדש/ה', 'company', 'company', { audience: 'company' }),
+]
+
 /** Doodle set per demo occasion key. */
-export const DEMO_DECOR: Record<string, Decor> = {
-  bachelorette: 'love',
-  couple: 'love',
-  birthday_parent: 'birthday',
-  birthday_friend: 'birthday',
-  family: 'family',
-  friends: 'friends',
-  generic: 'generic',
-  team_day: 'company',
-  retirement: 'company',
-  new_employee: 'company',
+export const DEMO_DECOR: Record<string, Decor> = Object.fromEntries(
+  DEMO_OCCASIONS.map((o) => [o.key, o.decor]),
+)
+
+/** A demo occasion's row values (without the id), given every demo question set's id by key. */
+export function demoOccasionValues(o: DemoOccasion, index: number, setIds: Record<string, number>) {
+  const base = {
+    key: o.key,
+    label: o.label,
+    audience: o.audience,
+    decor: o.decor,
+    questionSetId: setIds[o.set] ?? null,
+    sort: index + 1,
+    active: o.active,
+    recipientLabels: { ...o.recipientLabels },
+  }
+  if (o.audience === 'company')
+    return { ...base, recipients: {}, forms: ['company'] as Form[], playersFeminine: false }
+  const recipients = demoRecipients(setIds as SetIds)[o.key] ?? {}
+  return {
+    ...base,
+    recipients,
+    forms: formsOfRecipients(recipients),
+    playersFeminine: o.key === 'bachelorette',
+  }
 }
 
 /**
@@ -344,7 +472,7 @@ export async function ensureOccasionDecor(db: DB): Promise<number> {
   return n
 }
 
-// ---------- Group games: family, friends (a unit, a class), generic ----------
+// ---------- Group games: family, friends (a group of friends, a class), generic ----------
 // The "group" form addresses a group in the plural, named by {group_name} (asked as the name field).
 // One group template per riddle serves all three sets, so every set defines every group slot: the
 // ones it asks, and the others as "hidden" (never asked, the riddle gets the set's own fallback).
@@ -352,10 +480,11 @@ export async function ensureOccasionDecor(db: DB): Promise<number> {
 const gq = (
   slot: string,
   text: string,
+  example: string,
   fallback: string,
   maxLen = 40,
   extra: Partial<Question> = {},
-): Question => ({ slot, text: { group: text }, required: false, fallback, maxLen, ...extra })
+): Question => ({ ...q(slot, { group: text }, example, fallback, maxLen), ...extra })
 const hidden = (slot: string, fallback: string): Question => ({
   slot,
   text: {},
@@ -366,14 +495,14 @@ const hidden = (slot: string, fallback: string): Question => ({
 })
 
 export const familyQuestions: Question[] = [
-  gq('group_name', 'שם המשפחה?', '', 40, { required: true }),
-  gq('group_food', 'המאכל שתמיד יש בארוחת שישי?', 'ארוחת שישי'),
-  gq('group_saying', 'המשפט הכי מוכר של אבא או אמא?', 'מי רוצה עוד?', 60),
-  gq('group_place', 'הטיול המשפחתי שכולם זוכרים?', 'הטיול ההוא'),
-  gq('family_tradition', 'מסורת משפחתית?', 'הקידוש של שישי בערב', 50),
-  gq('who_late', 'מי הכי מאחר/ת במשפחה?', 'מישהו מהמשפחה', 30),
-  gq('group_wish', 'משאלה למשפחה?', 'עוד הרבה שנים ביחד', 60),
-  gq('photo_where', PHOTO_WHERE, ''),
+  gq('group_name', 'איך קוראים למשפחה?', 'משפחת כהן', '', 40, { required: true }),
+  gq('group_food', 'מה תמיד יש בארוחת שישי?', 'קובה', 'ארוחת שישי'),
+  gq('group_saying', 'משפט שאבא או אמא תמיד אומרים', 'מי רוצה עוד?', 'מי רוצה עוד?', 60),
+  gq('group_place', 'טיול משפחתי שכולם זוכרים', 'הגולן בפסח', 'הטיול ההוא'),
+  gq('family_tradition', 'מסורת משפחתית', 'פיצה במוצאי שבת', 'הקידוש של שישי בערב', 50),
+  gq('who_late', 'מי תמיד מאחר?', 'דוד שמעון', 'מישהו מהמשפחה', 30),
+  gq('group_wish', 'משאלה למשפחה', 'עוד הרבה ארוחות ביחד', 'עוד הרבה שנים ביחד', 60),
+  gq('photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
   hidden('group_moment', 'היום הראשון'),
   hidden('group_legend', 'סבא וסבתא'),
   hidden('group_years', 'כל השנים האלה'),
@@ -384,32 +513,32 @@ export const familyQuestions: Question[] = [
 ]
 
 export const friendsQuestions: Question[] = [
-  gq('group_name', 'איך קוראים לקבוצה או ליחידה?', '', 40, { required: true }),
-  gq('group_saying', 'משפט שכולם אמרו כל הזמן?', 'יאללה, זזים', 60),
-  gq('group_place', 'המקום שבו הכול התחיל (בסיס, שכונה, טיול)?', 'המקום שבו הכול התחיל'),
-  gq('group_food', 'האוכל של הקבוצה?', 'פיצה באמצע הלילה'),
-  gq('group_moment', 'רגע שכולם זוכרים?', 'היום הראשון', 50),
-  gq('group_legend', 'מישהו שכולם זוכרים, ומה הכינוי שלו?', 'מי שכולם זוכרים'),
-  gq('group_years', 'כמה זמן אתם ביחד?', 'כל השנים האלה', 30),
-  gq('group_wish', 'משאלה לקבוצה לשנים הבאות?', 'עוד הרבה שנים ביחד', 60),
-  gq('who_late', 'מי תמיד מגיע/ה אחרון/ה?', "מישהו מהחבר'ה", 30),
-  gq('who_hungry', 'מי הראשון/ה לשאול "מה אוכלים"?', 'הרעבים של החבורה', 30),
-  gq('who_laugh', 'מי צוחק/ת הכי חזק?', 'הצחקנים של החבורה', 30),
-  gq('photo_where', PHOTO_WHERE, ''),
+  gq('group_name', "איך קוראים לחבר'ה?", "החבר'ה מהשכונה", '', 40, { required: true }),
+  gq('group_saying', 'משפט שכולם תמיד אומרים', 'יאללה, זזים', 'יאללה, זזים', 60),
+  gq('group_place', 'איפה הכול התחיל?', 'התיכון בחולון', 'המקום שבו הכול התחיל'),
+  gq('group_food', 'האוכל הקבוע שלכם', 'פיצה באמצע הלילה', 'פיצה באמצע הלילה'),
+  gq('group_moment', 'רגע שכולם זוכרים', 'הטיול לצפון', 'היום הראשון', 50),
+  gq('group_legend', 'מי האגדה של החבורה?', 'דני הגדול', 'מי שכולם זוכרים'),
+  gq('group_years', 'כמה שנים אתם ביחד?', '15 שנה', 'כל השנים האלה', 30),
+  gq('group_wish', 'משאלה לחבורה', 'עוד טיול ביחד', 'עוד הרבה שנים ביחד', 60),
+  gq('who_late', 'מי תמיד מגיע אחרון?', 'רון', "מישהו מהחבר'ה", 30),
+  gq('who_hungry', 'מי תמיד רעב?', 'נועה', 'הרעבים של החבורה', 30),
+  gq('who_laugh', 'מי צוחק הכי חזק?', 'מאיה', 'הצחקנים של החבורה', 30),
+  gq('photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
   hidden('family_tradition', 'הקפה של הבוקר'),
   hidden('who_cheeky', 'החוצפן של החבורה'),
   hidden('who_phone', 'מכורי הטלפון'),
 ]
 
 export const genericQuestions: Question[] = [
-  gq('group_name', 'איך קוראים לקבוצה?', '', 40, { required: true }),
-  gq('group_saying', 'משפט שכולם אומרים כל הזמן?', 'יאללה, זזים', 60),
-  gq('who_late', 'מי הכי מאחר/ת בקבוצה?', 'מישהו', 30),
-  gq('who_cheeky', 'מי הכי חוצפן/ית?', 'החוצפן של החבורה', 30),
-  gq('who_hungry', 'מי תמיד רעב/ה?', 'הרעבים של החבורה', 30),
-  gq('who_phone', 'מי לא מוריד/ה את העיניים מהטלפון?', 'מכורי הטלפון', 30),
-  gq('who_laugh', 'מי צוחק/ת הכי חזק?', 'הצחקנים של החבורה', 30),
-  gq('photo_where', PHOTO_WHERE, ''),
+  gq('group_name', 'איך קוראים לקבוצה?', 'החבורה של יום שישי', '', 40, { required: true }),
+  gq('group_saying', 'משפט שכולם תמיד אומרים', 'יאללה, זזים', 'יאללה, זזים', 60),
+  gq('who_late', 'מי תמיד מאחר?', 'רון', 'מישהו', 30),
+  gq('who_cheeky', 'מי הכי חוצפן?', 'שירה', 'החוצפן של החבורה', 30),
+  gq('who_hungry', 'מי תמיד רעב?', 'נועה', 'הרעבים של החבורה', 30),
+  gq('who_phone', 'מי תמיד בטלפון?', 'עומר', 'מכורי הטלפון', 30),
+  gq('who_laugh', 'מי צוחק הכי חזק?', 'מאיה', 'הצחקנים של החבורה', 30),
+  gq('photo_where', PHOTO_WHERE, PHOTO_EXAMPLE, ''),
   hidden('group_food', 'ארוחת שישי'),
   hidden('group_place', 'המקום שבו הכול התחיל'),
   hidden('family_tradition', 'הקפה של הבוקר'),
@@ -421,8 +550,14 @@ export const genericQuestions: Question[] = [
 
 /** The group occasions with their question sets. */
 export const GROUP_OCCASIONS = [
-  { key: 'family', label: 'משפחתי', setName: 'שאלות למשפחה', questions: familyQuestions },
-  { key: 'friends', label: "חבר'ה", setName: "שאלות לחבר'ה וליחידות", questions: friendsQuestions },
+  { key: 'family', label: 'יום משפחתי', setName: 'שאלות למשפחה', questions: familyQuestions },
+  {
+    key: 'friends',
+    label: "חבר'ה",
+    setName: "שאלות לחבר'ה",
+    formerSetNames: ["שאלות לחבר'ה וליחידות"],
+    questions: friendsQuestions,
+  },
   { key: 'generic', label: 'כללי', setName: 'שאלות כלליות לקבוצה', questions: genericQuestions },
 ]
 
@@ -800,17 +935,31 @@ export const GROUP_TEMPLATES: Record<string, string> = Object.fromEntries(
 )
 
 /** Every demo question set by its key, with its stable name. */
-export function demoQuestionSets(): Record<string, { name: string; questions: readonly Question[] }> {
+export function demoQuestionSets(): Record<
+  string,
+  { name: string; formerNames?: string[]; questions: readonly Question[] }
+> {
   return {
     private: { name: 'שאלות פרטיות', questions: privateQuestions },
     company: { name: 'שאלות לחברות', questions: companyQuestions },
-    ...Object.fromEntries(GROUP_OCCASIONS.map((g) => [g.key, { name: g.setName, questions: g.questions }])),
+    ...Object.fromEntries(
+      GROUP_OCCASIONS.map((g) => [
+        g.key,
+        { name: g.setName, formerNames: g.formerSetNames, questions: g.questions },
+      ]),
+    ),
     ...RECIPIENT_SETS,
   }
 }
 
 /** Demo price of the group occasions (same as the private ones). */
 export const GROUP_PRICE = { base: 0, perPerson: 9900 }
+
+/** Demo prices of every private demo occasion (companies are sold by quote). */
+export const demoPrices = (): Record<string, { base: number; perPerson: number }> =>
+  Object.fromEntries(
+    DEMO_OCCASIONS.filter((o) => o.audience === 'private').map((o) => [o.key, { ...GROUP_PRICE }]),
+  )
 
 type SetIds = Record<keyof typeof RECIPIENT_SETS, number> & {
   private: number
@@ -828,8 +977,10 @@ export function demoRecipients(id: SetIds): Record<string, OccasionRecipients> {
   return {
     bachelorette: { she: id.private },
     couple: { she: id.loveShe, he: id.loveHe, couple: id.couple },
+    anniversary: { she: id.anniversaryShe, he: id.anniversaryHe, couple: id.anniversaryCouple },
     birthday_parent: { she: id.birthdayShe, he: id.birthdayHe },
     birthday_friend: { she: id.birthdayShe, he: id.birthdayHe, group: id.generic },
+    birthday_kid: { she: id.kidShe, he: id.kidHe },
     family: { family: id.family },
     friends: { group: id.friends },
     generic: { she: id.private, he: id.private, couple: id.couple, group: id.generic, family: id.family },
@@ -870,7 +1021,10 @@ export async function ensureRecipientSets(db: DB): Promise<number> {
   const group = (key: string) => GROUP_OCCASIONS.find((g) => g.key === key)
   const priv = rows.find((o) => o.key === 'bachelorette')?.questionSetId
   const fam = byName.get(group('family')?.setName ?? '')
-  const fri = byName.get(group('friends')?.setName ?? '')
+  const friends = group('friends')
+  const fri = [friends?.setName, ...(friends?.formerSetNames ?? [])]
+    .map((n) => byName.get(n ?? ''))
+    .find((x) => x != null)
   const gen = byName.get(group('generic')?.setName ?? '')
   if (!priv || !fam || !fri || !gen) return 0
   const R = demoRecipients({
@@ -900,7 +1054,7 @@ export async function ensureRecipientSets(db: DB): Promise<number> {
         recipients: want,
         forms: formsOfRecipients(want),
         playersFeminine: o.key === 'bachelorette',
-        ...(o.key === 'couple' && o.label === 'זוג' ? { label: 'אהבה וזוגיות' } : {}),
+        ...(o.key === 'couple' && o.label === 'זוג' ? { label: 'דייט רומנטי' } : {}),
         ...(o.key === 'birthday_friend' && o.label === 'יום הולדת לחבר/ה' ? { label: 'יום הולדת' } : {}),
       })
       .where(eq(occasions.id, o.id))
@@ -923,7 +1077,7 @@ export async function ensureMinigameSeed(db: DB): Promise<void> {
       .set({
         questions: [
           ...qs.questions,
-          { slot: 'photo_where', text, required: false, fallback: '', maxLen: 40 },
+          { slot: 'photo_where', text, example: PHOTO_EXAMPLE, required: false, fallback: '', maxLen: 40 },
         ],
       })
       .where(eq(questionSets.id, qs.id))
@@ -1158,66 +1312,20 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     )
   const sets = await insertRecipientSets(db)
   const [family, friends, generic] = groupSets.map((g) => g.id)
-  const R = demoRecipients({ private: qsPrivate.id, family, friends, generic, ...sets })
-  const priv = (key: string, label: string, sort: number, questionSetId: number) => {
-    const recipients = R[key]
-    return {
-      key,
-      label,
-      audience: 'private' as const,
-      decor: DEMO_DECOR[key] ?? 'generic',
-      questionSetId,
-      recipients,
-      forms: formsOfRecipients(recipients),
-      playersFeminine: key === 'bachelorette',
-      sort,
-    }
+  const setIds: Record<string, number> = {
+    private: qsPrivate.id,
+    company: qsCompany.id,
+    family,
+    friends,
+    generic,
+    ...sets,
   }
-  await db.insert(occasions).values([
-    priv('bachelorette', 'רווקות', 1, qsPrivate.id),
-    priv('couple', 'אהבה וזוגיות', 2, qsPrivate.id),
-    priv('birthday_parent', 'יום הולדת להורה', 3, qsPrivate.id),
-    priv('birthday_friend', 'יום הולדת', 4, qsPrivate.id),
-    ...GROUP_OCCASIONS.map((g, i) => priv(g.key, g.label, 5 + i, groupSets[i].id)),
-    {
-      key: 'team_day',
-      decor: DEMO_DECOR.team_day,
-      label: 'יום צוות',
-      audience: 'company',
-      questionSetId: qsCompany.id,
-      forms: ['company'],
-      sort: 8,
-    },
-    {
-      key: 'retirement',
-      decor: DEMO_DECOR.retirement,
-      label: 'פרישה',
-      audience: 'company',
-      questionSetId: qsCompany.id,
-      forms: ['company'],
-      sort: 9,
-    },
-    {
-      key: 'new_employee',
-      decor: DEMO_DECOR.new_employee,
-      label: 'עובד/ת חדש/ה',
-      audience: 'company',
-      questionSetId: qsCompany.id,
-      forms: ['company'],
-      sort: 10,
-    },
-  ])
+  await db.insert(occasions).values(DEMO_OCCASIONS.map((o, i) => demoOccasionValues(o, i, setIds)))
 
   await ensureDemoPalettes(db)
 
   // Demo prices only. The owner sets the real ones in the admin (SPEC "Open").
-  await setSetting(db, 'prices', {
-    bachelorette: { base: 0, perPerson: 9900 },
-    couple: { base: 0, perPerson: 9900 },
-    birthday_parent: { base: 0, perPerson: 9900 },
-    birthday_friend: { base: 0, perPerson: 9900 },
-    ...Object.fromEntries(GROUP_OCCASIONS.map((g) => [g.key, GROUP_PRICE])),
-  })
+  await setSetting(db, 'prices', demoPrices())
   await setSetting(db, 'minigames', DEFAULT_MINIGAMES)
   await markDemoSeeded(db)
   await setSetting(db, 'odd_rules', { profanity: ['זונה', 'מניאק', 'קוקסינל'], maxRepeatedChars: 4 })

@@ -1,7 +1,7 @@
 // Versioned refresh of the demo content on a database seeded earlier (staging, local dev, e2e).
 // Runs at boot only with SEED_DEMO or E2E_SEED outside production (see index.ts): never in
 // production. When the stored `demo_seed_version` is below DEMO_SEED_VERSION it upserts the demo
-// riddles, question sets, occasion recipients, game styles and the `minigames` setting by their
+// riddles, question sets, occasions (names, recipients, new ones), game styles and the `minigames` setting by their
 // stable demo keys, then rebuilds the games that have not started so they pick the new content up.
 //
 // Rows the admin edited after the last refresh are left alone: every catalog row has an
@@ -23,16 +23,17 @@ import {
   themes,
 } from '../db/schema.ts'
 import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
-import { formsOfRecipients } from '../domain/recipient.ts'
 import type { Question } from '../domain/types.ts'
 import { BuildError, buildOrderGame } from './orders.ts'
 import {
   DEMO_MAHANE,
   DEMO_MARKET,
+  DEMO_OCCASIONS,
   DEMO_PALETTES,
   DEMO_RIDDLE_ROWS,
+  demoOccasionValues,
+  demoPrices,
   demoQuestionSets,
-  demoRecipients,
   demoRiddleValues,
   demoThemeValues,
   ensureDemoPalettes,
@@ -48,14 +49,16 @@ export function demoSeedingEnabled(env: Record<string, string | undefined>, appE
 }
 
 /** Bump when the demo content changes, so seeded databases pick it up at their next boot. */
-export const DEMO_SEED_VERSION = 2
+export const DEMO_SEED_VERSION = 3
 
 export interface RefreshReport {
   ran: boolean
   from: number
   riddles: { updated: number; inserted: number; kept: number }
   questionSets: { updated: number; inserted: number; kept: number }
-  occasions: { updated: number; kept: number }
+  occasions: { updated: number; inserted: number; kept: number }
+  /** Demo prices added for occasions that had none (existing prices are never changed). */
+  prices: string[]
   themes: { updated: number; inserted: number; kept: number }
   minigames: 'written' | 'kept'
   rebuilt: string[]
@@ -139,7 +142,8 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     from,
     riddles: { updated: 0, inserted: 0, kept: 0 },
     questionSets: { updated: 0, inserted: 0, kept: 0 },
-    occasions: { updated: 0, kept: 0 },
+    occasions: { updated: 0, inserted: 0, kept: 0 },
+    prices: [],
     themes: { updated: 0, inserted: 0, kept: 0 },
     minigames: 'kept',
     rebuilt: [],
@@ -190,7 +194,8 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
   const sets = await db.select().from(questionSets)
   const setIds: Record<string, number> = {}
   for (const [key, def] of Object.entries(demoQuestionSets())) {
-    const row = sets.find((q) => q.name === def.name)
+    const row =
+      sets.find((q) => q.name === def.name) ?? sets.find((q) => (def.formerNames ?? []).includes(q.name))
     if (row && edited(row)) {
       report.questionSets.kept++
       setIds[key] = row.id
@@ -198,7 +203,10 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     }
     const questions = def.questions.map((q) => ({ ...q })) as Question[]
     if (row) {
-      await db.update(questionSets).set({ questions, updatedAt: now }).where(eq(questionSets.id, row.id))
+      await db
+        .update(questionSets)
+        .set({ name: def.name, questions, updatedAt: now })
+        .where(eq(questionSets.id, row.id))
       report.questionSets.updated++
       setIds[key] = row.id
     } else {
@@ -211,29 +219,36 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     }
   }
 
-  // Occasion recipients, keyed by the occasion's key (the demo occasions only; none is created).
-  const recipients = demoRecipients(setIds as Parameters<typeof demoRecipients>[0])
-  const occs = await db
-    .select()
-    .from(occasions)
-    .where(inArray(occasions.key, Object.keys(recipients)))
-  for (const o of occs) {
-    if (o.audience !== 'private') continue
-    if (edited(o)) {
+  // Occasions, keyed by `key`: names, order, doodles, who each is for (with its question set) and
+  // whether it is offered. A missing demo occasion is added; an edited one is kept.
+  const occs = await db.select().from(occasions)
+  for (const [i, d] of DEMO_OCCASIONS.entries()) {
+    const row = occs.find((o) => o.key === d.key)
+    if (row && edited(row)) {
       report.occasions.kept++
       continue
     }
-    const want = recipients[o.key]
+    const values = { ...demoOccasionValues(d, i, setIds), updatedAt: now }
+    if (row) {
+      const { key: _k, ...rest } = values
+      await db.update(occasions).set(rest).where(eq(occasions.id, row.id))
+      report.occasions.updated++
+    } else {
+      await db.insert(occasions).values(values)
+      report.occasions.inserted++
+    }
+  }
+  // A demo occasion with no price cannot be sold: give it the demo price (others stay).
+  const [pr] = await db.select().from(settings).where(eq(settings.key, 'prices'))
+  const prices = (pr?.value ?? {}) as Record<string, unknown>
+  const missing = Object.entries(demoPrices()).filter(([k]) => !(k in prices))
+  if (missing.length) {
+    const value = { ...prices, ...Object.fromEntries(missing) }
     await db
-      .update(occasions)
-      .set({
-        recipients: want,
-        forms: formsOfRecipients(want),
-        playersFeminine: o.key === 'bachelorette',
-        updatedAt: now,
-      })
-      .where(eq(occasions.id, o.id))
-    report.occasions.updated++
+      .insert(settings)
+      .values({ key: 'prices', value, updatedAt: now })
+      .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: now } })
+    report.prices = missing.map(([k]) => k)
   }
 
   // Game styles, keyed by `key` (a row from an earlier seed is found by its name and gets the key).

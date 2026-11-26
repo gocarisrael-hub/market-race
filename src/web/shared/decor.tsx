@@ -1,4 +1,5 @@
-// Hand-drawn doodles per occasion (birthday, love, family, friends, company, generic), shared by
+// Hand-drawn doodles per occasion (birthday, kids, love, anniversary, family, friends, company,
+// generic), shared by
 // the site and the player. Inline SVG strokes in two colors taken from CSS variables:
 // --decor-ink (lines) and --decor-accent (color and light fills). A shared turbulence filter
 // makes the strokes slightly wobbly, like a pen on paper.
@@ -42,6 +43,19 @@ export const DECOR_SETS: Record<Decor, DoodleName[]> = {
     'crown',
     'sparkle',
   ],
+  kids: [
+    'balloons',
+    'cake',
+    'crown',
+    'star',
+    'partyHat',
+    'gift',
+    'cupcake',
+    'kite',
+    'confetti',
+    'dice',
+    'sparkle',
+  ],
   love: [
     'heart',
     'ring',
@@ -51,6 +65,18 @@ export const DECOR_SETS: Record<Decor, DoodleName[]> = {
     'twoHearts',
     'toast',
     'heartArrow',
+    'moon',
+    'sparkle',
+  ],
+  anniversary: [
+    'ring',
+    'twoHearts',
+    'toast',
+    'heart',
+    'loveLetter',
+    'flower',
+    'heartArrow',
+    'frame',
     'moon',
     'sparkle',
   ],

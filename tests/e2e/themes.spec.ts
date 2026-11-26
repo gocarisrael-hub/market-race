@@ -48,7 +48,7 @@ const ORDERS = [
   },
   {
     key: 'gold',
-    occasion: 'אהבה וזוגיות',
+    occasion: 'דייט רומנטי',
     recipient: 'למישהי',
     name: 'נועה',
     theme: 'זהב על שמנת',
@@ -124,10 +124,17 @@ test('the look stage offers each occasion its own styles', async ({ page }) => {
     quality: 75,
   })
 
-  await buildToLook(page, 'משפחתי', 'משפחת לוי')
+  await buildToLook(page, 'יום משפחתי', 'משפחת לוי')
   expect(await names()).toEqual(['כרמל בצבעי מים', 'כחול קרמיקה'])
   // The style chosen for the bachelorette is not offered here: the first one is picked.
   await expect(page.getByRole('button', { name: 'כרמל בצבעי מים' })).toHaveAttribute('aria-pressed', 'true')
+
+  // A kid's birthday: only the light, friendly styles (no neon, gold or ink).
+  await buildToLook(page, 'יום הולדת לילד', 'נועה')
+  expect(await names()).toEqual(['כרמל בצבעי מים', 'כרמל כחול־ורוד', 'כחול קרמיקה'])
+  // An anniversary: gold on cream, with the watercolor and cobalt.
+  await buildToLook(page, 'יום נישואים', 'נועה')
+  expect(await names()).toEqual(['כרמל בצבעי מים', 'זהב על שמנת', 'כחול קרמיקה'])
 })
 
 async function buildToLook(page: Page, occasion: string, name: string) {

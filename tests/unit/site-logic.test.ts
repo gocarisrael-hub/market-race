@@ -203,12 +203,12 @@ describe('site logic', () => {
 
   it('asks a group its name in the name field, labelled by the group_name question', () => {
     const qs: Question[] = [
-      { slot: 'group_name', text: 'שם המשפחה?', required: true, maxLen: 40 },
+      { slot: 'group_name', text: 'איך קוראים למשפחה?', required: true, maxLen: 40 },
       { slot: 'group_food', text: 'המאכל?', required: false, maxLen: 40 },
     ]
     const d = { ...chooseOccasion(emptyDraft(), shop.occasions[2]), themeId: 10 }
-    expect(nameLabel(qs, 'group')).toBe('שם המשפחה?')
-    expect(nameLabel([], 'group')).toBe('שם הקבוצה / המשפחה')
+    expect(nameLabel(qs, 'group')).toBe('איך קוראים למשפחה?')
+    expect(nameLabel([], 'group')).toBe('איך קוראים לקבוצה?')
     expect(nameLabel(qs, 'she')).toBe('איך קוראים לה?')
     expect(askedQuestions(qs, 'group').map((q) => q.slot)).toEqual(['group_food'])
     expect(askedQuestions(qs, 'she')).toHaveLength(2)

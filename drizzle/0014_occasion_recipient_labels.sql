@@ -1,0 +1,1 @@
+ALTER TABLE "occasions" ADD COLUMN "recipient_labels" jsonb DEFAULT '{}'::jsonb NOT NULL;

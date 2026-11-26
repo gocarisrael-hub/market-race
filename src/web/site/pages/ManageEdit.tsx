@@ -138,6 +138,7 @@ export function ManageEdit(props: {
                 key={q.slot}
                 name={q.slot}
                 label={q.text}
+                placeholder={copy.questions.example(q.example)}
                 value={answers[q.slot] ?? ''}
                 maxLen={q.maxLen || undefined}
                 required={q.required}

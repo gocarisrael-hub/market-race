@@ -170,6 +170,7 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
     riddles: marketRiddles,
     questions,
     minigames: await minigameContent(db),
+    occasionKey: order.occasionKey,
     seed: order.orderNo,
     order: {
       form: order.form,
@@ -298,6 +299,7 @@ export async function regenerateOrderMinigame(db: DB, orderId: number, index: nu
       photos: game.letter.photos,
       letterNotes: order.letterNotes,
       content: await minigameContent(db),
+      occasionKey: order.occasionKey,
       stopCount: game.stops.length,
       riddleSlots: game.stops.map((s) => s.riddle.parts.flatMap((p) => (p.t === 'slot' ? [p.slot] : []))),
       seed,
