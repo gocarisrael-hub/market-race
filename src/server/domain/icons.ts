@@ -81,7 +81,7 @@ export const isClassicIcon = (key: string) => classic.has(key)
  */
 export const DECOR_ICONS: Record<Decor, IconKey[]> = {
   birthday: ['game/balloon', 'game/gift', 'game/party-popper', 'sweets/cupcake', 'reactions/fireworks'],
-  kids: ['game/balloon', 'snacks/cotton-candy', 'animals/hedgehog', 'game/kite', 'snacks/lollipop'],
+  kids: ['animals/hedgehog', 'snacks/cotton-candy', 'game/balloon', 'game/kite', 'snacks/lollipop'],
   love: ['game/heart', 'nature/rose', 'drinks/white-wine', 'nature/moon', 'reactions/sparkles'],
   anniversary: ['nature/bouquet', 'holidays/kiddush-cup', 'fun/vinyl', 'game/heart', 'reactions/fireworks'],
   family: ['pantry/challah', 'animals/dog', 'fun/backgammon', 'nature/sun', 'nature/olive-tree'],

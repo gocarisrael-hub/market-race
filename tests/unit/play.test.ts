@@ -72,6 +72,28 @@ describe('playing a game', () => {
     expect(row.status).toBe('done')
   })
 
+  it("shows a stop's tasting icon only once it is solved, and the occasion's icons", async () => {
+    const o = await newGame()
+    await startGame(t.db, o.gameToken)
+    let view = await getView(t.db, o.gameToken)
+    if (typeof view === 'string') throw new Error(view)
+    // Before solving: no stop carries an icon (it would hint the answer), nor the reveal.
+    expect(view.stages.some((s) => s.icon)).toBe(false)
+    expect(JSON.stringify(view)).not.toContain('drinks/orange-juice')
+    expect(view.decorIcons).toEqual(['game/crown', 'drinks/cocktail', 'nature/rose', 'reactions/sparkles'])
+    const r = await act(t.db, o.gameToken, { type: 'answer', stopIndex: 0, answer: 'תקוה' })
+    if (!r.ok) throw new Error(r.error)
+    expect(r.view.current?.reveal?.tasting.icon).toBe('drinks/orange-juice')
+    await act(t.db, o.gameToken, { type: 'arrived', stopIndex: 0 })
+    await act(t.db, o.gameToken, { type: 'redeemed', stopIndex: 0 })
+    view = await getView(t.db, o.gameToken)
+    if (typeof view === 'string') throw new Error(view)
+    const stops = view.stages.filter((s) => s.kind === 'stop')
+    expect(stops[0].icon).toBe('drinks/orange-juice')
+    expect(stops.slice(1).every((s) => !s.icon)).toBe(true)
+    expect(view.completed[0].icon).toBe('drinks/orange-juice')
+  })
+
   it('never sends a later stop to the client', async () => {
     const o = await newGame()
     await startGame(t.db, o.gameToken)

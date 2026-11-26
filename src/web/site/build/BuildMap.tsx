@@ -4,7 +4,9 @@
 // Two sizes: a strip at the top of the stage on phones and tablets, a large panel beside the form
 // on computers (with the occasion's doodles and the price).
 import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { iconUrl } from '../../../server/domain/icons.ts'
 import { type DoodleName, Doodles, Icon } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import { loadThemeFont, lookVars } from '../../shared/look.ts'
 import type { Photo, Shop } from '../api.ts'
 import { copy } from '../copy.ts'
@@ -19,6 +21,7 @@ import {
 } from '../logic.ts'
 import { type Stage, type StageKey, stopFractions } from '../stages.ts'
 import { Ring, Underline } from '../ui.tsx'
+import { STAGE_ICONS } from './art.ts'
 
 /** A winding walk through the market: right to left (Hebrew reading order), three rows on the
  * panel, one wave on the strip. */
@@ -35,26 +38,19 @@ const ROUTES = {
   },
 }
 
-/** Each stage's own doodle, shown at the stop where the build stands. */
-const STAGE_ICON: Record<StageKey, DoodleName> = {
-  occasion: 'gift',
-  for: 'heart',
-  name: 'pencil',
-  look: 'palette',
-  questions: 'question',
-  photos: 'camera',
-  notes: 'loveLetter',
-  hints: 'key',
-  people: 'people',
-  diet: 'plate',
-  details: 'ticket',
-  pay: 'flag',
-}
+/** The doodle of a stage with no library icon (the palette of the look). */
+const STAGE_DOODLE: Partial<Record<StageKey, DoodleName>> = { look: 'palette' }
 
-/** Food illustrations for the stops passed, when the route has none of its own. */
-const FOOD = ['fruit', 'hummus', 'falafel', 'coffee', 'spices', 'tomatoes', 'flowers'].map(
-  (n) => `/static/icons/${n}.png`,
-)
+/** Food for the stops passed, when the route's tastings have no icons of their own. */
+const FOOD = [
+  'drinks/orange-juice',
+  'food/falafel-cone',
+  'food/burekas',
+  'food/sabich',
+  'sweets/knafeh',
+  'drinks/turkish-coffee',
+  'produce/watermelon',
+].map((k) => iconUrl(k))
 
 const SIDE_SPOTS = [
   { top: -22, right: '6%', size: 56, rot: 12 },
@@ -158,11 +154,20 @@ export function BuildMap(props: {
               aria-hidden="true"
             >
               {state === 'done' && (
-                <img key="food" className="bm-food" src={icons[i % icons.length]} alt="" />
+                <img key="food" className="bm-food" src={icons[i % icons.length]} alt="" decoding="async" />
               )}
               {state === 'now' && (
                 <>
-                  <Icon name={STAGE_ICON[stages[i].key]} size={variant === 'side' ? 30 : 20} />
+                  {STAGE_ICONS[stages[i].key] ? (
+                    <LibIcon
+                      icon={STAGE_ICONS[stages[i].key]!}
+                      size={variant === 'side' ? 40 : 28}
+                      className="bm-art"
+                      eager
+                    />
+                  ) : (
+                    <Icon name={STAGE_DOODLE[stages[i].key] ?? 'star'} size={variant === 'side' ? 30 : 20} />
+                  )}
                   <Ring />
                 </>
               )}

@@ -2,13 +2,15 @@
 // and around the notes, the occasion's doodles, falling food, and the route.
 import type { ReactNode } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import { Paper } from '../draw.tsx'
-import { iconUrl, stopIcon } from '../logic.ts'
+import { iconUrl, stopIconKey } from '../logic.ts'
 import { TapedPhoto, useLightbox } from '../photo.tsx'
 import type { ScreenProps } from './types.ts'
 
 const PHOTO_TILTS = [5, -6, 4, -4, 6]
 
+// Falling food: what the group tasted on the route (the map's originals stand in for the rest).
 const FALLING = [
   { icon: 'tomatoes', left: '6%', size: 54, delay: '0s', dur: '7s' },
   { icon: 'fruit', left: '34%', size: 60, delay: '-2.4s', dur: '7.5s' },
@@ -17,10 +19,15 @@ const FALLING = [
   { icon: 'spices', left: '18%', size: 50, delay: '-5.8s', dur: '9s' },
 ]
 
+/** The finale's prize by the title. */
+const FINALE_ICONS = ['game/trophy', 'reactions/fireworks'] as const
+
 export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
   const letter = view.letter ?? { notes: [], photos: [] }
   const n = view.totalStops
   const lightbox = useLightbox(t, t('letter.photoAlt'))
+  const tasted = [...new Set(view.completed.map((c) => c.icon).filter((x): x is string => !!x))]
+  const falling = FALLING.map((f, i) => ({ ...f, icon: tasted[i] ?? f.icon }))
 
   // The collage: photo, note, photo, note... photos alternate sides and overlap the notes' edges.
   const pieces: ReactNode[] = []
@@ -57,12 +64,17 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
   return (
     <main className="scr letter" data-decor={view.decor}>
       <div className="falling" aria-hidden="true">
-        {FALLING.map((f) => (
-          <img
+        {falling.map((f) => (
+          <LibIcon
             key={f.icon}
-            src={iconUrl(f.icon)}
-            alt=""
-            style={{ left: f.left, width: f.size, animationDelay: f.delay, animationDuration: f.dur }}
+            icon={f.icon}
+            style={{
+              left: f.left,
+              width: f.size,
+              height: 'auto',
+              animationDelay: f.delay,
+              animationDuration: f.dur,
+            }}
           />
         ))}
       </div>
@@ -79,6 +91,11 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
             { top: 6, left: '24%', size: 24, rot: -6 },
           ]}
         />
+        <div className="finale-prize" aria-hidden="true">
+          {FINALE_ICONS.map((k, i) => (
+            <LibIcon key={k} icon={k} size={i ? 50 : 64} tilt={i ? 14 : -6} className="pop" eager />
+          ))}
+        </div>
         <div className="muted-label">{t('letter.kicker')}</div>
         <h1 className="letter-title pop">{t('letter.title', { name: view.honoree })}</h1>
         {view.company?.logo && (
@@ -115,7 +132,11 @@ export function Letter({ view, t }: Omit<ScreenProps, 'act'>) {
           <ol>
             {view.completed.map((c) => (
               <li key={c.index}>
-                <img src={stopIcon(c.index)} alt="" />
+                <LibIcon
+                  icon={stopIconKey(c.index, c.icon)}
+                  size={46}
+                  style={{ width: undefined, height: undefined }}
+                />
                 <span className="route-stall">{c.stall}</span>
                 <span className="route-tasting">{c.tasting}</span>
               </li>

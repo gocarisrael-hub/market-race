@@ -419,7 +419,7 @@ export const DEMO_OCCASION_ICONS: Record<string, string[]> = {
   couple: ['game/heart', 'nature/rose', 'drinks/white-wine', 'nature/moon'],
   anniversary: ['nature/bouquet', 'holidays/kiddush-cup', 'fun/vinyl', 'reactions/fireworks'],
   birthday_friend: ['game/balloon', 'game/gift', 'game/party-popper', 'sweets/cupcake'],
-  birthday_kid: ['game/balloon', 'snacks/cotton-candy', 'animals/hedgehog', 'game/kite'],
+  birthday_kid: ['animals/hedgehog', 'snacks/cotton-candy', 'game/balloon', 'game/kite'],
   birthday_parent: ['game/gift', 'sweets/chocolate-cake', 'nature/bouquet', 'game/party-popper'],
   family: ['pantry/challah', 'animals/dog', 'fun/backgammon', 'nature/sun'],
   friends: ['drinks/beer', 'reactions/high-five', 'fun/darbuka', 'nature/matkot'],

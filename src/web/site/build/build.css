@@ -582,3 +582,28 @@ h1.stage-title {
     display: none;
   }
 }
+
+/* ---------- Library icons in the build ---------- */
+
+h1.stage-title .stage-art {
+  margin-inline-start: 10px;
+  margin-top: -10px;
+}
+.opt.with-art {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.q .q-art {
+  margin-inline-end: 6px;
+  margin-top: -6px;
+}
+.bm-stop .bm-art {
+  position: relative;
+}
+@media (min-width: 1024px) {
+  h1.stage-title .stage-art {
+    width: 76px !important;
+    height: 76px !important;
+  }
+}

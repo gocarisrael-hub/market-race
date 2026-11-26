@@ -3,6 +3,7 @@
 // The component is keyed by stop, so a poll for the same step never clears what is being typed.
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import { useWide } from '../../shared/useWide.ts'
 import { riddleTitle } from '../copy.ts'
 import { Arrow, BrushButton, HandCircle, Paper, SketchButton } from '../draw.tsx'
@@ -86,7 +87,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
       <div className="riddle-main">
         <Paper className={`note rise ${cur.photo ? 'with-photo' : ''}`} tilt={cur.index % 2 ? -1.2 : 1.2}>
           <h1 className="note-kicker">
-            <Icon name={cur.finale ? 'trophy' : 'magnifier'} size={30} tilt={-8} />
+            <LibIcon icon={cur.finale ? 'game/trophy' : 'game/magnifier'} size={36} tilt={-8} eager />
             {riddleTitle(t, cur.index, cur.finale)}
           </h1>
           {cur.photo && (
@@ -120,7 +121,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
           <form className="hintq-form" onSubmit={answerHint} noValidate>
             <Paper className="hintq rise" tilt={-1}>
               <p className="hintq-kicker">
-                <Icon name="key" size={30} tilt={-8} />
+                <LibIcon icon="game/key" size={34} tilt={-8} />
                 <span>{t('hintq.title')}</span>
               </p>
               <p className="hintq-question" id="hintq-question">
@@ -178,7 +179,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
           <div className="answer-block">
             {cur.riddle.hint && (
               <div className="hint-line rise" role="note">
-                <Icon name="bulb" size={30} tilt={8} />
+                <LibIcon icon="game/idea-bulb" size={34} tilt={8} />
                 <Arrow />
                 <span>
                   {t('riddle.hintPrefix')} {cur.riddle.hint}

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import type { Palette, ThemeStyle } from '../../server/domain/types.ts'
 import { DecorDefs } from '../shared/decor.tsx'
 import { Desk } from '../shared/desk.tsx'
+import { DecorIconsProvider, IconTreatDefs } from '../shared/icon.tsx'
 import { loadThemeFont } from '../shared/look.ts'
 import { tokenFromPath } from './api.ts'
 import { makeT } from './copy.ts'
@@ -36,6 +37,7 @@ function useTheme(palette: Palette, style: ThemeStyle, map: string | null | unde
     root.dataset.font = style.font ?? 'amatic'
     root.dataset.riddleTop = style.riddleTop ?? 'trail'
     root.dataset.sheetLine = style.sheetLine === false ? 'no' : 'yes'
+    root.dataset.icons = style.icons ?? ''
     root.style.colorScheme = style.mode === 'dark' ? 'dark' : 'light'
     if (map) root.style.setProperty('--map', `url("${map}")`)
     else root.style.removeProperty('--map')
@@ -84,8 +86,9 @@ export function App() {
   }
 
   return (
-    <>
+    <DecorIconsProvider value={view?.decorIcons ?? null}>
       <DecorDefs />
+      <IconTreatDefs />
       <Desk map={view?.theme?.map} decor={view?.decor} />
       {offline && state.phase === 'view' && (
         <div className="offline" role="status">
@@ -96,6 +99,6 @@ export function App() {
       {view && view.status !== 'expired' && (
         <Help view={view} t={t} act={act} support={support} captain={captain} pause={pause} />
       )}
-    </>
+    </DecorIconsProvider>
   )
 }

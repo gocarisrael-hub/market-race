@@ -1,23 +1,24 @@
 // The route as stages, on the trail across the top (phones and desktop) and in the side list
 // (desktop): stops show their food icon, mini-games their doodle. Progress counts both.
 
-import type { DoodleName } from '../../shared/decor.tsx'
-import { Icon } from '../../shared/decor.tsx'
+import type { IconKey } from '../../../server/domain/icons.ts'
+import { LibIcon } from '../../shared/icon.tsx'
 import type { T } from '../copy.ts'
 import { Tick, Trail } from '../draw.tsx'
-import { stopIcon } from '../logic.ts'
+import { stopIconKey } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
 
-export const GAME_ICONS: Record<string, DoodleName> = {
-  who_said: 'chat',
-  true_false: 'check',
-  photo: 'camera',
-  cipher: 'key',
+/** Each mini-game's icon, from the library's game set. */
+export const GAME_ICONS: Record<string, IconKey> = {
+  who_said: 'game/speech-bubble',
+  true_false: 'game/magnifier',
+  photo: 'game/camera',
+  cipher: 'game/padlock',
 }
 
 type Stage = ScreenProps['view']['stages'][number]
 
-/** A stage's picture: the stop's food icon, or the mini-game's doodle. */
+/** A stage's picture: the stop's food icon (its tasting's once solved), or the mini-game's icon. */
 export function StageIcon({
   stage,
   size,
@@ -30,10 +31,18 @@ export function StageIcon({
   if (stage.kind === 'game')
     return (
       <span className={`stage-game ${className}`} style={{ width: size, height: size }}>
-        <Icon name={GAME_ICONS[stage.type ?? ''] ?? 'question'} size={size} tilt={-6} />
+        <LibIcon icon={GAME_ICONS[stage.type ?? ''] ?? 'game/question-bubble'} size={size} tilt={-6} eager />
       </span>
     )
-  return <img className={className} src={stopIcon(stage.index)} alt="" />
+  return (
+    <LibIcon
+      className={`stage-stop ${className}`}
+      icon={stopIconKey(stage.index, stage.icon)}
+      size={size}
+      eager
+      style={{ width: undefined, height: undefined }}
+    />
+  )
 }
 
 export function StageTrail({ view, t }: { view: ScreenProps['view']; t: T }) {

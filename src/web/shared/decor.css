@@ -247,3 +247,30 @@
     transform: none;
   }
 }
+
+/* Library icons: the themed games draw them through the theme's filter (see shared/icon.tsx).
+   The originals have recolored copies of their own (.recolored). */
+.lib-icon {
+  object-fit: contain;
+}
+:root[data-icons="blush"] .lib-icon:not(.recolored) {
+  filter: url(#icons-blush);
+}
+:root[data-icons="ink"] .lib-icon:not(.recolored) {
+  filter: url(#icons-ink);
+}
+:root[data-icons="cobalt"] .lib-icon:not(.recolored) {
+  filter: url(#icons-cobalt);
+}
+:root[data-icons="gold"] .lib-icon:not(.recolored) {
+  filter: url(#icons-gold);
+}
+:root[data-icons="neon"] .lib-icon:not(.recolored) {
+  filter: url(#icons-neon);
+}
+/* Inline, like a doodle icon: next to a heading or a line of text. */
+.lib-icon {
+  flex: none;
+  vertical-align: middle;
+  transform: rotate(var(--r, 0deg));
+}

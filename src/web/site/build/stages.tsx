@@ -1,6 +1,7 @@
 // The screens of the order build, one decision (or a small group) each. The shell (Build.tsx)
 // draws the progress map, the transitions and the back/next buttons; these draw the question.
 import { type ReactNode, useEffect } from 'react'
+import { LibIcon } from '../../shared/icon.tsx'
 import type { Photo, Question, Shop } from '../api.ts'
 import { copy, type SiteForm, type SiteRecipient } from '../copy.ts'
 import { HintQuestions } from '../hintQuestions.tsx'
@@ -29,6 +30,7 @@ import {
 } from '../logic.ts'
 import { BuyerFields } from '../pages/Checkout.tsx'
 import { PhotosPanel } from '../photos-panel.tsx'
+import type { StageKey } from '../stages.ts'
 import { RouteTastings } from '../tastings.tsx'
 import {
   Daub,
@@ -43,6 +45,7 @@ import {
   TornPaper,
   Underline,
 } from '../ui.tsx'
+import { occasionIcon, questionIcon, recipientIcon, STAGE_ICONS } from './art.ts'
 
 export type StageProps = {
   shop: Shop
@@ -65,13 +68,22 @@ export type StageProps = {
 export const TITLE_ID = 'stage-title'
 
 /** The top of a stage: a short encouraging line, the question, and an optional lead. */
-export function StageHead(props: { cheer?: ReactNode; title: ReactNode; lead?: ReactNode; count?: string }) {
+export function StageHead(props: {
+  /** The stage, for its icon by the title. */
+  stage?: StageKey
+  cheer?: ReactNode
+  title: ReactNode
+  lead?: ReactNode
+  count?: string
+}) {
+  const icon = props.stage ? STAGE_ICONS[props.stage] : undefined
   return (
     <header className="stage-head">
       {props.count && <p className="stage-count">{props.count}</p>}
       {props.cheer && <p className="stage-cheer">{props.cheer}</p>}
       <h1 className="title stage-title" id={TITLE_ID} tabIndex={-1}>
         {props.title}
+        {icon && <LibIcon key={icon} icon={icon} size={48} tilt={-8} className="stage-art pop" eager />}
       </h1>
       {props.lead && <p className="lead">{props.lead}</p>}
     </header>
@@ -88,6 +100,7 @@ export function OccasionStage({ shop, d, set }: StageProps) {
   return (
     <>
       <StageHead
+        stage="occasion"
         cheer={copy.build.cheer.occasion(market)}
         title={copy.build.title.occasion}
         lead={copy.home.intro}
@@ -100,6 +113,7 @@ export function OccasionStage({ shop, d, set }: StageProps) {
             <Opt
               key={o.key}
               role="radio"
+              icon={occasionIcon(o)}
               pressed={d.occasionKey === o.key}
               onClick={() => set(chooseOccasion(d, o))}
             >
@@ -122,7 +136,7 @@ export function ForStage({ shop, d, set, recipient }: StageProps) {
   const recipients = recipientsFor(occ)
   return (
     <>
-      <StageHead cheer={copy.build.cheer.for} title={copy.build.title.for} />
+      <StageHead stage="for" cheer={copy.build.cheer.for} title={copy.build.title.for} />
       <div className="row recipients stage-options" role="radiogroup" aria-labelledby={TITLE_ID}>
         {recipients.map((r) => (
           <Opt
@@ -130,6 +144,7 @@ export function ForStage({ shop, d, set, recipient }: StageProps) {
             role="radio"
             // One person (her or him) is the usual gift: drawn larger.
             small={r !== 'she' && r !== 'he'}
+            icon={recipientIcon(r, occ?.decor) ?? undefined}
             pressed={recipient === r}
             onClick={() => set(withRecipient(d, r))}
           >
@@ -150,7 +165,7 @@ export function NameStage({ shop, d, set, questions, form, recipient }: StagePro
   const n = [...d.honoreeName].length
   return (
     <>
-      <StageHead cheer={copy.build.cheer.name} title={label} />
+      <StageHead stage="name" cheer={copy.build.cheer.name} title={label} />
       {forms.length > 0 && (
         <div className="row form-choice" role="radiogroup" aria-label={copy.questions.formLabel}>
           {forms.map((f) => (
@@ -197,7 +212,7 @@ export function LookStage({ shop, d, set, wide }: StageProps) {
   }, [shop, d, set])
   return (
     <>
-      <StageHead cheer={copy.build.cheer.look} title={copy.build.title.look} />
+      <StageHead stage="look" cheer={copy.build.cheer.look} title={copy.build.title.look} />
       <fieldset className="themes plain-set" aria-labelledby={TITLE_ID}>
         {themes.map((t) => {
           const on = d.themeId === t.id
@@ -280,6 +295,7 @@ export function QuestionsStage({ d, set, asked, part, parts, form }: StageProps)
   return (
     <>
       <StageHead
+        stage="questions"
         count={parts > 1 ? copy.build.questionsPart(part, parts) : undefined}
         cheer={part === 1 ? copy.build.cheer.questions(form) : copy.build.cheer.questionsMore}
         title={copy.questions.title(form).join(' ')}
@@ -292,6 +308,7 @@ export function QuestionsStage({ d, set, asked, part, parts, form }: StageProps)
               paper={i % 2 ? -0.9 : 1.1}
               key={q.slot}
               name={q.slot}
+              icon={questionIcon(q.slot) ?? undefined}
               label={q.text}
               placeholder={copy.questions.example(q.example)}
               value={d.answers[q.slot] ?? ''}
@@ -322,7 +339,12 @@ export function QuestionsStage({ d, set, asked, part, parts, form }: StageProps)
 export function PhotosStage({ form, token, onPhotos }: StageProps) {
   return (
     <>
-      <StageHead cheer={copy.build.cheer.photos} title={copy.photos.title(form)} lead={copy.photos.intro} />
+      <StageHead
+        stage="photos"
+        cheer={copy.build.cheer.photos}
+        title={copy.photos.title(form)}
+        lead={copy.photos.intro}
+      />
       <p className="hint">{copy.photos.bgHint}</p>
       <p className="photos-where">
         {copy.photos.where}
@@ -340,6 +362,7 @@ export function NotesStage({ d, set }: StageProps) {
   return (
     <>
       <StageHead
+        stage="notes"
         cheer={copy.build.cheer.notes}
         title={copy.questions.notes}
         lead={`${copy.questions.notesHint} (${copy.optional})`}
@@ -389,6 +412,7 @@ export function HintsStage({ d, set, form }: StageProps) {
   return (
     <>
       <StageHead
+        stage="hints"
         cheer={copy.build.cheer.hints}
         title={copy.hintQuestions.title}
         lead={`${copy.hintQuestions.intro(form)} (${copy.optional})`}
@@ -408,7 +432,7 @@ export function PeopleStage({ shop, d, set, wide }: StageProps) {
   const per = d.occasionKey ? shop.prices[d.occasionKey] : undefined
   return (
     <>
-      <StageHead cheer={copy.build.cheer.people} title={copy.home.people} />
+      <StageHead stage="people" cheer={copy.build.cheer.people} title={copy.home.people} />
       <div className="stepper stage-stepper">
         <button
           type="button"
@@ -451,7 +475,12 @@ export function PeopleStage({ shop, d, set, wide }: StageProps) {
 export function DietStage({ shop, d, set }: StageProps) {
   return (
     <>
-      <StageHead cheer={copy.build.cheer.diet} title={copy.home.allergens} lead={copy.home.allergensHint} />
+      <StageHead
+        stage="diet"
+        cheer={copy.build.cheer.diet}
+        title={copy.home.allergens}
+        lead={copy.home.allergensHint}
+      />
       <fieldset className="row plain-set" aria-labelledby={TITLE_ID} style={{ gap: '2px 10px' }}>
         {shop.allergens.map((a) => (
           <Opt
@@ -496,6 +525,7 @@ export function DetailsStage({ d, set, buyerErrors }: StageProps) {
   return (
     <>
       <StageHead
+        stage="details"
         cheer={copy.build.cheer.details}
         title={copy.build.title.details}
         lead={copy.build.detailsLead}
