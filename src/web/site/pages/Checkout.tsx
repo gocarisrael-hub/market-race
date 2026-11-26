@@ -134,7 +134,7 @@ export function Checkout(props: { token: string; shop: Shop; draft: Draft; setDr
           <dt>{copy.checkout.honoree}</dt>
           <dd>{order.honoree}</dd>
           <dt>{copy.checkout.people}</dt>
-          <dd>{order.people}</dd>
+          <dd>{copy.peopleCount(order.people)}</dd>
           {theme && (
             <>
               <dt>{copy.checkout.theme}</dt>

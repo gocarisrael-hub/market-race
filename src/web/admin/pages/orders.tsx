@@ -379,7 +379,8 @@ export function GameView({ game }: { game: GameSnapshot }) {
   return (
     <div className="game">
       <p className="muted">
-        {game.market.name} · {game.theme.name} · {FORM_LABELS[game.form]} · {game.people} אנשים
+        {game.market.name} · {game.theme.name} · {FORM_LABELS[game.form]} ·{' '}
+        {game.people === 1 ? 'משתתף אחד' : `${game.people} אנשים`}
         {game.allergens.length > 0 && ` · אלרגנים: ${game.allergens.join(', ')}`}
         {game.diets.length > 0 && ` · ${game.diets.map((d) => DIET_LABELS[d] ?? d).join(', ')}`} · נבנה{' '}
         {when(game.builtAt)}

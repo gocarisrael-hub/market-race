@@ -239,7 +239,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     honoreeName: z.string().trim().min(1).max(40),
     themeId: z.number().int(),
     paletteId: z.number().int().nullable().default(null),
-    people: z.number().int(),
+    people: z.number().int().min(1),
     allergens: z.array(z.enum(ALLERGENS)).default([]),
     diets: z.array(z.enum(DIETS)).default([]),
     answers: z.record(z.string(), z.string().max(300)).default({}),
@@ -262,7 +262,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const choice = resolveRecipient(occ, recipient)
     if (!choice) return { error: 'bad_form' } as const
     const [min, max] = [await getSetting(db, 'min_people'), await getSetting(db, 'max_people')]
-    if (b.people < min || b.people > max) return { error: 'bad_people' } as const
+    // Never below one participant, whatever the saved setting says.
+    if (b.people < Math.max(1, min) || b.people > max) return { error: 'bad_people' } as const
     const { theme, route } = await routeForTheme(b.themeId)
     if (!theme) return { error: 'bad_theme' } as const
     if (!route) return { error: 'no_route' } as const

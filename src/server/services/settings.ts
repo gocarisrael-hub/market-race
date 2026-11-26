@@ -46,7 +46,7 @@ export type MessageKey =
 export const SETTING_DEFAULTS: SettingsShape = {
   odd_rules: DEFAULT_ODD_RULES,
   prices: {},
-  min_people: 2,
+  min_people: 1,
   max_people: 20,
   valid_years: 1,
   hint_after_seconds: 0,

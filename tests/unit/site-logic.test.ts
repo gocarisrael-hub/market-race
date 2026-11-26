@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Occasion, Question, Shop } from '../../src/web/site/api.ts'
+import { copy, peopleCount } from '../../src/web/site/copy.ts'
 import {
   answersError,
   askedQuestions,
@@ -142,6 +143,25 @@ describe('site logic', () => {
     const ok = { ...chooseOccasion(d, shop.occasions[0]), themeId: 10 }
     expect(step1Error(ok, shop)).toBeNull()
     expect(step1Error({ ...ok, people: 21 }, shop)).toMatch(/טווח/)
+    expect(step1Error({ ...ok, people: 1 }, shop)).toMatch(/טווח/)
+    const solo = { ...shop, minPeople: 1 }
+    expect(step1Error({ ...ok, people: 1 }, solo)).toBeNull()
+    expect(step1Error({ ...ok, people: 0 }, { ...shop, minPeople: 0 })).toMatch(/טווח/)
+    expect(priceAgorot(solo, 'bachelorette', 1)).toBe(5000 + 9900)
+    expect(emptyDraft().people).toBe(4)
+    expect(emptyDraft(1).people).toBe(4)
+  })
+
+  it('counts participants grammatically, one included', () => {
+    expect(peopleCount(1)).toBe('משתתף אחד')
+    expect(peopleCount(4)).toBe('4 משתתפים')
+    expect(copy.home.peopleUnit(1)).toBe('משתתף אחד')
+    expect(copy.manage.start.playersUnit(1, 1)).toBe('משתתף אחד מתוך 1')
+    expect(copy.manage.start.playersUnit(3, 5)).toBe('3 משתתפים מתוך 5')
+    expect(copy.manage.start.confirmBody(1)).toContain('עם משתתף אחד.')
+    expect(copy.manage.share.players(1)).toBe('משחקים עם משתתף אחד.')
+    expect(copy.manage.paused.players(1)).toBe('משתתף אחד, כמו בהתחלה.')
+    expect(copy.manage.paused.players(3)).toBe('3 משתתפים, כמו בהתחלה.')
   })
 
   it('picks the recipient by the occasion, offers the she/he switch only for one person', () => {

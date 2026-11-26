@@ -14,7 +14,11 @@ export const byForm = (
   group = couple,
 ) => (form === 'he' ? he : form === 'couple' ? couple : form === 'group' ? group : she)
 
+/** A count of participants, grammatical for one: "משתתף אחד", "4 משתתפים". */
+export const peopleCount = (n: number) => (n === 1 ? 'משתתף אחד' : `${n} משתתפים`)
+
 export const copy = {
+  peopleCount,
   back: '→ חזרה',
   stepOf: (n: number, total: number) => `שלב ${n} מתוך ${total}`,
   /** The drawn progress trail of the order flow, one word per step. */
@@ -56,7 +60,7 @@ export const copy = {
     previewButton: 'יוצאים לדרך!',
     previewAlt: (name: string) => `ככה זה ייראה: ${name}`,
     people: 'כמה אתם?',
-    peopleUnit: (n: number) => (n === 1 ? 'משתתף אחד' : `${n} משתתפים`),
+    peopleUnit: (n: number) => peopleCount(n),
     less: 'פחות משתתפים',
     more: 'עוד משתתף',
     allergens: 'מישהו לא אוכל משהו?',
@@ -175,7 +179,7 @@ export const copy = {
     summary: 'ההזמנה',
     occasion: 'אירוע',
     honoree: 'על',
-    people: 'משתתפים',
+    people: 'כמה',
     theme: 'עיצוב',
     palette: 'צבעים',
     allergens: 'בלי',
@@ -243,15 +247,14 @@ export const copy = {
       title: 'מתחילים לשחק',
       intro: 'כשכולם בשוק, מתחילים מכאן. עד אז, מי שפותח את קישור המשחק רואה מסך המתנה.',
       players: 'כמה הגיעו?',
-      playersUnit: (n: number, max: number) =>
-        n === 1 ? `משתתף אחד מתוך ${max}` : `${n} משתתפים מתוך ${max}`,
+      playersUnit: (n: number, max: number) => `${peopleCount(n)} מתוך ${max}`,
       less: 'פחות משתתפים',
       more: 'עוד משתתף',
       playersHint: 'כל דוכן יגיש מנות לפי המספר הזה. מנות שלא נוצלו לא מוחזרות.',
       button: 'מתחילים את המשחק',
       confirmTitle: 'בטוחים?',
       confirmBody: (n: number) =>
-        `ברגע שמתחילים, הולכים לתחנה הראשונה עם ${n === 1 ? 'משתתף אחד' : `${n} משתתפים`}. אחרי זה כבר אי אפשר לשנות את ההזמנה.`,
+        `ברגע שמתחילים, הולכים לתחנה הראשונה עם ${peopleCount(n)}. אחרי זה כבר אי אפשר לשנות את ההזמנה.`,
       confirm: 'כן, מתחילים!',
       back: 'עוד לא',
       expired: 'תוקף המשחק עבר, ואי אפשר להתחיל אותו. דברו איתנו.',
@@ -260,7 +263,7 @@ export const copy = {
     /** Right after the start: share the players' link, then into the game. */
     share: {
       title: 'המשחק התחיל!',
-      players: (n: number) => (n === 1 ? 'משחקים עם משתתף אחד.' : `משחקים עם ${n} משתתפים.`),
+      players: (n: number) => `משחקים עם ${peopleCount(n)}.`,
       intro: 'שלחו לכולם את הקישור. מי שפותח אותו מצטרף למשחק, באותה התקדמות.',
       button: 'שולחים בוואטסאפ',
       continue: 'ממשיכים למשחק',
@@ -272,7 +275,7 @@ export const copy = {
       title: 'המשחק בהפסקה',
       where: (stop: number, total: number) => `עצרתם בתחנה ${stop} מתוך ${total}`,
       intro: 'ממשיכים בכל יום עד שהתוקף נגמר, כמה פעמים שרוצים. כולם ממשיכים מאותה תחנה, באותו קישור.',
-      players: (n: number) => (n === 1 ? 'משתתף אחד, כמו בהתחלה.' : `${n} משתתפים, כמו בהתחלה.`),
+      players: (n: number) => `${peopleCount(n)}, כמו בהתחלה.`,
       button: 'ממשיכים',
       expired: 'תוקף המשחק עבר, ואי אפשר להמשיך אותו. דברו איתנו.',
     },
