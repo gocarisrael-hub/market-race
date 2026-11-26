@@ -10,6 +10,7 @@ import {
   clearDraft,
   currentPalette,
   decorFor,
+  draftRecipient,
   emptyDraft,
   errorText,
   formatShekels,
@@ -26,6 +27,7 @@ import {
   parseRoute,
   payloadKey,
   priceAgorot,
+  recipientsFor,
   routeForTheme,
   saveAction,
   saveDraft,
@@ -33,21 +35,28 @@ import {
   step2Error,
   toggle,
   whatsappShare,
+  withRecipient,
 } from '../../src/web/site/logic.ts'
 
 const PAL = { background: '#EADBC8', accent: '#B4161B', ink: '#2B2420', paper: '#FFFBF4' }
-const occ = (key: string, forms: string[], audience: 'private' | 'company' = 'private'): Occasion => ({
+const occ = (
+  key: string,
+  forms: string[],
+  audience: 'private' | 'company' = 'private',
+  extra: Partial<Occasion> = {},
+): Occasion => ({
   key,
   label: key,
   audience,
   forms,
+  ...extra,
 })
 const shop: Shop = {
   brand: '[שם המותג]',
   occasions: [
     occ('bachelorette', ['she']),
     occ('birthday', ['she', 'he']),
-    occ('family', ['group']),
+    occ('family', ['group'], 'private', { decor: 'family' }),
     occ('couple', ['couple']),
     occ('team', ['company'], 'company'),
   ],
@@ -108,10 +117,11 @@ describe('site logic', () => {
     expect(formsFor(occ('x', ['she', 'he', 'company']))).toEqual(['she', 'he'])
     let d = chooseOccasion(emptyDraft(), shop.occasions[0])
     expect(d.form).toBe('she')
-    d = chooseOccasion({ ...d, form: 'he' }, shop.occasions[1])
+    d = chooseOccasion({ ...d, recipient: 'he', form: 'he' }, shop.occasions[1])
     expect(d.form).toBe('he')
-    d = chooseOccasion({ ...d, form: 'couple' }, shop.occasions[1])
-    expect(d.form).toBeNull()
+    // A recipient the new occasion does not offer: its first one (one person first).
+    d = chooseOccasion({ ...d, recipient: 'couple', form: 'couple' }, shop.occasions[1])
+    expect(d.recipient).toBe('she')
     expect(orderableThemes(shop).map((t) => t.id)).toEqual([10])
     expect(clampPeople(1, 2, 20)).toBe(2)
     expect(clampPeople(30, 2, 20)).toBe(20)
@@ -120,11 +130,12 @@ describe('site logic', () => {
     expect(toggle(['a', 'b'], 'a')).toEqual(['b'])
   })
 
-  it('validates step 1: the game only, she or he is asked on step 2', () => {
+  it('validates step 1: the game and who it is for (one person picked first)', () => {
     const d = emptyDraft()
     expect(step1Error(d, shop)).toMatch(/איזה משחק/)
     const b = chooseOccasion(d, shop.occasions[1])
-    expect(b.form).toBeNull()
+    expect(b.recipient).toBe('she')
+    expect(step1Error({ ...b, recipient: null, form: null, themeId: 10 }, shop)).toMatch(/למי המשחק/)
     expect(step1Error({ ...b, themeId: 10 }, shop)).toMatch(/אין עדיין מחיר/)
     expect(step1Error({ ...b, form: 'she', themeId: 20 }, shop)).toMatch(/איך זה ייראה/)
     expect(step1Error({ ...b, form: 'she', themeId: 10 }, shop)).toMatch(/אין עדיין מחיר/)
@@ -133,19 +144,38 @@ describe('site logic', () => {
     expect(step1Error({ ...ok, people: 21 }, shop)).toMatch(/טווח/)
   })
 
-  it('picks the form by the occasion, asks she/he only when both are allowed', () => {
+  it('picks the recipient by the occasion, offers the she/he switch only for one person', () => {
     const pick = (key: string) => chooseOccasion(emptyDraft(), shop.occasions.find((o) => o.key === key)!)
     expect(pick('bachelorette').form).toBe('she')
     expect(pick('couple').form).toBe('couple')
+    expect(pick('family').recipient).toBe('family')
     expect(pick('family').form).toBe('group')
-    expect(pick('birthday').form).toBeNull()
+    expect(pick('birthday').recipient).toBe('she')
     expect(formChoice(shop, pick('birthday'))).toEqual(['she', 'he'])
     expect(formChoice(shop, pick('family'))).toEqual([])
     // Switching from a birthday (she chosen) to a family game drops the she.
-    expect(chooseOccasion({ ...pick('birthday'), form: 'she' }, shop.occasions[2]).form).toBe('group')
+    expect(chooseOccasion(pick('birthday'), shop.occasions[2]).form).toBe('group')
     const b = { ...pick('birthday'), themeId: 10, honoreeName: 'דנה' }
-    expect(step2Error(b, [], ['she', 'he'])).toMatch(/עליה או עליו/)
-    expect(step2Error({ ...b, form: 'he' }, [], ['she', 'he'])).toBeNull()
+    expect(step2Error({ ...b, recipient: null, form: null }, [], ['she', 'he'])).toMatch(/עליה או עליו/)
+    expect(step2Error(withRecipient(b, 'he'), [], ['she', 'he'])).toBeNull()
+  })
+
+  it('reads recipients from the shop, or from the forms of an older server', () => {
+    const o = (forms: string[], extra: Partial<Occasion> = {}) => occ('k', forms, 'private', extra)
+    expect(recipientsFor(o(['group'], { decor: 'family' }))).toEqual(['family'])
+    expect(recipientsFor(o(['couple', 'he', 'she']))).toEqual(['she', 'he', 'couple'])
+    expect(recipientsFor(o([], { recipients: ['family', 'couple', 'he', 'she'] }))).toEqual([
+      'she',
+      'he',
+      'couple',
+      'family',
+    ])
+    // A draft saved before recipients existed (form only) maps to its recipient.
+    const old = { ...emptyDraft(), occasionKey: 'birthday', form: 'he' as const }
+    expect(draftRecipient(shop, old)).toBe('he')
+    const p = orderPayload(withRecipient({ ...old, honoreeName: 'רון' }, 'family'), [])
+    expect(p.recipient).toBe('family')
+    expect(p.form).toBe('group')
   })
 
   it('asks a group its name in the name field, labelled by the group_name question', () => {

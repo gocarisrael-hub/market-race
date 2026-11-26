@@ -474,6 +474,10 @@ export async function ensureRecipientSets(db: DB): Promise<number> {
   for (const o of rows) {
     const want = R[o.key]
     if (!want || o.audience !== 'private') continue
+    if (
+      JSON.stringify(occasionRecipients(o)) === JSON.stringify(occasionRecipients({ ...o, recipients: want }))
+    )
+      continue
     const derived = occasionRecipients({ ...o, recipients: {} })
     const current = occasionRecipients(o)
     const untouched =
