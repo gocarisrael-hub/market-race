@@ -96,7 +96,9 @@ test('game at 1440: help and the main button sit inside the sheet, the button un
   expect(button.y + button.height).toBeLessThan(900 - 60)
 })
 
-test('site at 1440: the map being built beside the stage, back and next inside the sheet', async ({ page }) => {
+test('site at 1440: the map being built beside the stage, back and next inside the sheet', async ({
+  page,
+}) => {
   await page.goto('/order')
   const sheet = page.locator('main.page')
   await expect(page.getByTestId('desk')).toBeVisible()

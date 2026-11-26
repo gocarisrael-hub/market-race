@@ -34,7 +34,11 @@ test('a birthday for her: she is picked first, her questions, her grammar in the
   await expect(who.getByRole('radio')).toHaveText(['למישהי', 'למישהו', 'לקבוצה'])
   await expect(who.getByRole('radio', { name: 'למישהי' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByText('רוב המשחקים הם מתנה לאדם אחד')).toBeVisible()
-  await page.screenshot({ path: 'docs/screens/site/build-for-birthday.png', fullPage: true, animations: 'disabled' })
+  await page.screenshot({
+    path: 'docs/screens/site/build-for-birthday.png',
+    fullPage: true,
+    animations: 'disabled',
+  })
   await next(page, /\/order\/name$/)
   await page.getByLabel(/איך קוראים לה\?/).fill('מיכל')
   await next(page, /\/order\/look$/)
@@ -52,7 +56,9 @@ test('a birthday for her: she is picked first, her questions, her grammar in the
     fullPage: true,
     animations: 'disabled',
   })
-  const created = page.waitForResponse((r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST')
+  const created = page.waitForResponse(
+    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
+  )
   await answerQuestions(page, {})
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'birthday_friend',
@@ -119,7 +125,9 @@ test('a love game for him: his questions from the giver, his grammar in the game
     'הדייט הראשון ביפו',
   )
 
-  const created = page.waitForResponse((r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST')
+  const created = page.waitForResponse(
+    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
+  )
   await answerQuestions(page, {})
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'couple',

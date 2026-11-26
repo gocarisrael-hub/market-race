@@ -72,7 +72,9 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await page.reload()
   await expect(page.getByLabel('משפט שהיא תמיד אומרת')).toHaveValue('יאללה')
   await expect(mainButton(page)).toHaveText('ממשיכים לתמונות')
-  const created = page.waitForResponse((r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST')
+  const created = page.waitForResponse(
+    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
+  )
   await mainButton(page).click()
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'bachelorette',
@@ -119,7 +121,9 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await shot(page, 'build-06-notes')
   const notes = page.waitForResponse((r) => r.request().method() === 'PUT')
   await next(page, /\/order\/hints$/)
-  expect((await notes).request().postDataJSON().letterNotes).toEqual([{ text: 'מזל טוב, אהובה', signature: 'נועה' }])
+  expect((await notes).request().postDataJSON().letterNotes).toEqual([
+    { text: 'מזל טוב, אהובה', signature: 'נועה' },
+  ])
   // Optional hint questions: an incomplete one is caught.
   await page.getByRole('button', { name: '+ להוסיף שאלה' }).click()
   await page.getByLabel('השאלה 1').fill('איך קוראים לכלב שלה?')
@@ -139,7 +143,11 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(page.getByTestId('tastings')).toBeVisible()
   const diet = page.waitForResponse((r) => r.request().method() === 'PUT')
   await next(page, new RegExp(`/order/${token}/details$`))
-  expect((await diet).request().postDataJSON()).toMatchObject({ people: 5, allergens: ['בוטנים'], diets: ['vegan'] })
+  expect((await diet).request().postDataJSON()).toMatchObject({
+    people: 5,
+    allergens: ['בוטנים'],
+    diets: ['vegan'],
+  })
 
   await expect(page.getByRole('heading', { name: 'לאן לשלוח את המשחק?' })).toBeVisible()
   await mainButton(page).click()
@@ -161,7 +169,9 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(page.getByText('תמונה אחת')).toBeVisible()
   await shot(page, 'build-09-pay')
   // e2e runs with the mock provider; simulate card payment being off to check the message.
-  await page.route('**/api/orders/*/pay', (route) => route.fulfill({ status: 400, json: { error: 'card_disabled' } }))
+  await page.route('**/api/orders/*/pay', (route) =>
+    route.fulfill({ status: 400, json: { error: 'card_disabled' } }),
+  )
   await page.getByRole('button', { name: 'לתשלום 495 ₪' }).click()
   // Card payment off: a clear message, the order is kept.
   await expect(page.getByText('התשלום באשראי עוד לא פתוח באתר')).toBeVisible()
@@ -183,7 +193,10 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await page.goto(`/m/${token}`)
   await expect(page.getByTestId('status')).toHaveText('ממתינה לתשלום.')
   await expect(page.getByRole('link', { name: 'להשלמת התשלום' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'להשלמת התשלום' })).toHaveAttribute('href', `/order/${token}/pay`)
+  await expect(page.getByRole('link', { name: 'להשלמת התשלום' })).toHaveAttribute(
+    'href',
+    `/order/${token}/pay`,
+  )
   await page.evaluate(() => localStorage.clear())
   await page.goto(`/order/${token}/pay`)
   await expect(page.getByLabel('השם שלכם')).toBeVisible()
@@ -410,7 +423,9 @@ test('a family game: no who-for or she/he, the name field is the family name, fa
   await page.getByLabel(/מי הכי מאחר\/ת במשפחה/).fill('דוד שמעון')
   // Hidden questions of the set are never asked.
   await expect(page.getByLabel(/כינוי/)).toHaveCount(0)
-  const created = page.waitForResponse((r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST')
+  const created = page.waitForResponse(
+    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
+  )
   await mainButton(page).click()
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'family',

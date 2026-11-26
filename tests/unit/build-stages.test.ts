@@ -97,9 +97,22 @@ describe('order build stages', () => {
     const bachelorette = chooseOccasion(emptyDraft(), shop.occasions[0])
     expect(keys(buildStages(shop, bachelorette, parts))).not.toContain('for')
     const later = keys(buildStages(shop, ready({ answersLater: true }), questionParts(seven, true)))
-    expect(later).toEqual(['occasion', 'for', 'name', 'look', 'questions1', 'photos', 'people', 'diet', 'details', 'pay'])
+    expect(later).toEqual([
+      'occasion',
+      'for',
+      'name',
+      'look',
+      'questions1',
+      'photos',
+      'people',
+      'diet',
+      'details',
+      'pay',
+    ])
     // Before the questions are known they count as one part.
-    expect(keys(buildStages(shop, ready(), null)).filter((k) => k.startsWith('questions'))).toEqual(['questions1'])
+    expect(keys(buildStages(shop, ready(), null)).filter((k) => k.startsWith('questions'))).toEqual([
+      'questions1',
+    ])
   })
 
   it('gives every stage a path; the photos, details and pay carry the order token', () => {
@@ -134,7 +147,9 @@ describe('order build stages', () => {
     expect(err('hints', ready({ hintQuestions: [{ question: 'q', answer: '' }] }))).toMatch(/תשובה/)
     expect(err('people', ready({ people: 21 }))).toBeTruthy()
     expect(err('details', ready())).toBeTruthy()
-    expect(err('details', ready({ buyer: { name: 'נועה', phone: '050-1234567', email: 'n@x.co' } }))).toBeNull()
+    expect(
+      err('details', ready({ buyer: { name: 'נועה', phone: '050-1234567', email: 'n@x.co' } })),
+    ).toBeNull()
     expect(err('photos', ready())).toBeNull()
   })
 
@@ -165,7 +180,11 @@ describe('order build stages', () => {
   })
 
   it('finds the asked stage, or the next one when this draft skips it', () => {
-    const stages = buildStages(shop, chooseOccasion(emptyDraft(), shop.occasions[0]), questionParts(seven, false))
+    const stages = buildStages(
+      shop,
+      chooseOccasion(emptyDraft(), shop.occasions[0]),
+      questionParts(seven, false),
+    )
     expect(findStage(stages, { key: 'name', part: 1 })).toBe(1)
     // No who-for for a bachelorette: the name comes next.
     expect(findStage(stages, { key: 'for', part: 1 })).toBe(1)
