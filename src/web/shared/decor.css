@@ -165,9 +165,9 @@
   border: 0;
   background: none;
   color: var(--sketch-ink, currentColor);
-  font-family: "Amatic SC", Heebo, sans-serif;
-  font-weight: 700;
-  font-size: 28px;
+  font-family: var(--hand, "Amatic SC", Heebo, sans-serif);
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(28px * var(--hs, 1));
   line-height: 1;
   text-decoration: none;
   cursor: pointer;

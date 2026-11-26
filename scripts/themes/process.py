@@ -128,8 +128,8 @@ def T_cobalt(c,a=None):
 THEMES={'neon':T_neon,'blush':T_blush,'ink':T_ink,'gold':T_gold,'cobalt':T_cobalt}
 
 
-# The icons the player draws (STOP_ICONS in src/web/player/logic.ts).
-APP_ICONS=['fruit','tomatoes','falafel','hummus','coffee','spices','flowers']
+# The icons the player draws (STOP_ICONS in src/web/player/logic.ts, and the loading awning).
+APP_ICONS=['fruit','tomatoes','falafel','hummus','coffee','spices','flowers','awning']
 
 def save_map(rgb,name,q=80):
     Image.fromarray((np.clip(rgb,0,1)*255).astype(np.uint8)).save(os.path.join(O,'maps',name),'WEBP',quality=q,method=6)

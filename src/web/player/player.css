@@ -117,8 +117,8 @@ h2 {
   background: none;
   color: var(--on-accent);
   font-family: var(--hand);
-  font-weight: 700;
-  font-size: 38px;
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(38px * var(--hs, 1));
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
@@ -134,8 +134,8 @@ h2 {
   overflow: visible;
 }
 .brush path {
-  fill: var(--accent);
-  stroke: var(--ink);
+  fill: var(--button);
+  stroke: var(--button-line);
   stroke-width: 2;
 }
 .brush span {
@@ -170,7 +170,7 @@ h2 {
 }
 .paper > svg path {
   fill: var(--paper);
-  stroke: var(--ink);
+  stroke: var(--paper-line);
   stroke-width: 1.6;
 }
 .paper-body {
@@ -197,12 +197,12 @@ h2 {
 }
 .ribbon-main {
   fill: var(--ribbon);
-  stroke: var(--ink);
+  stroke: var(--ribbon-line);
   stroke-width: 2;
 }
 .ribbon-tail {
   fill: var(--ribbon-tail);
-  stroke: var(--ink);
+  stroke: var(--ribbon-line);
   stroke-width: 2;
 }
 .ribbon span {
@@ -212,7 +212,7 @@ h2 {
   overflow: hidden;
   color: var(--on-ribbon);
   font-family: var(--hand);
-  font-weight: 700;
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -318,15 +318,15 @@ h2 {
 }
 .brand,
 .company-logo {
-  background: var(--paper);
+  background: var(--brand);
   clip-path: polygon(2% 10%, 30% 0, 62% 6%, 98% 0, 100% 52%, 97% 100%, 60% 94%, 28% 100%, 0 92%, 3% 48%);
 }
 .brand {
   padding: 4px 16px 6px;
-  color: var(--ink);
+  color: var(--on-brand);
   font-family: var(--hand);
-  font-size: 26px;
-  font-weight: 700;
+  font-size: calc(26px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
   transform: rotate(-3deg);
 }
@@ -387,10 +387,11 @@ h2 {
 }
 .torn-line {
   fill: none;
-  stroke: var(--ink);
+  stroke: var(--sheet-line);
   stroke-width: 2;
 }
-[data-dark="yes"] .torn-line {
+[data-dark="yes"]:not([data-treat="neon"]) .torn-line,
+[data-sheet-line="no"] .torn-line {
   display: none;
 }
 .opening-summary {
@@ -434,8 +435,8 @@ h2 {
   gap: 8px;
   margin: 0;
   font-family: var(--hand);
-  font-weight: 700;
-  font-size: 40px;
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(40px * var(--hs, 1));
   line-height: 1.05;
   color: var(--ink);
 }
@@ -551,28 +552,29 @@ h2 {
 }
 .note-kicker {
   margin: 0;
-  color: var(--ink-soft);
+  color: var(--kicker);
   font-family: var(--hand);
-  font-size: 30px;
+  font-size: calc(30px * var(--hs, 1));
   line-height: 1;
 }
 .riddle-text {
   margin: 14px 0 0;
+  font-family: var(--riddle-font, var(--sans));
   font-size: clamp(18px, 5.5vw, 22px);
   line-height: 1.62;
 }
 .slot {
   color: var(--slot);
   font-family: var(--hand);
-  font-weight: 700;
-  font-size: 1.5em;
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(1.5em * var(--hs, 1));
   line-height: 1;
 }
 .riddle-q {
   margin: 12px 0 0;
   font-family: var(--hand);
-  font-weight: 700;
-  font-size: clamp(44px, 14vw, 56px);
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(clamp(44px, 14vw, 56px) * var(--hs, 1));
   line-height: 1;
 }
 .riddle-photo {
@@ -680,8 +682,8 @@ h2 {
   background: none;
   color: var(--on-bg);
   font-family: var(--hand);
-  font-size: 34px;
-  font-weight: 700;
+  font-size: calc(34px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   cursor: pointer;
 }
 .lightbox-close svg {
@@ -725,9 +727,10 @@ h2 {
   gap: 8px;
   margin: 0 8px 6px;
   font-family: var(--hand);
-  font-size: 28px;
-  font-weight: 700;
+  font-size: calc(28px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.05;
+  color: var(--hint);
   --r: -2deg;
   transform: rotate(-2deg);
 }
@@ -743,7 +746,7 @@ h2 {
   flex-direction: column;
   min-width: 0;
   font-size: 15px;
-  color: var(--muted);
+  color: var(--label);
 }
 .answer input {
   width: 100%;
@@ -756,8 +759,8 @@ h2 {
   background: transparent;
   color: var(--on-bg);
   font-family: var(--hand);
-  font-weight: 700;
-  font-size: 40px;
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(40px * var(--hs, 1));
   line-height: 1.2;
 }
 .answer input:focus {
@@ -774,8 +777,8 @@ h2 {
   background: none;
   color: var(--mark);
   font-family: var(--hand);
-  font-size: 50px;
-  font-weight: 700;
+  font-size: calc(50px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
@@ -790,8 +793,8 @@ h2 {
   min-height: 36px;
   margin: 8px 10px 0;
   font-family: var(--hand);
-  font-size: 30px;
-  font-weight: 700;
+  font-size: calc(30px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
 }
 .feedback-text {
@@ -814,7 +817,7 @@ h2 {
   margin: 0;
   color: var(--ink-soft);
   font-family: var(--hand);
-  font-size: 24px;
+  font-size: calc(24px * var(--hs, 1));
   line-height: 1;
 }
 .hintq-question {
@@ -845,8 +848,8 @@ h2 {
   min-height: 26px;
   margin: 6px 0 0;
   font-family: var(--hand);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: calc(24px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
 }
 
@@ -880,7 +883,7 @@ h2 {
   margin: 0;
   color: var(--mark);
   font-family: var(--hand);
-  font-size: clamp(76px, 25vw, 100px);
+  font-size: calc(clamp(76px, 25vw, 100px) * var(--hs, 1));
   line-height: 0.9;
 }
 .answer-was {
@@ -1004,8 +1007,8 @@ h2 {
 .closed-note {
   margin: 0 8px 10px;
   font-family: var(--hand);
-  font-size: 27px;
-  font-weight: 700;
+  font-size: calc(27px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
   transform: rotate(-1.5deg);
 }
@@ -1020,7 +1023,7 @@ h2 {
 .stall-name {
   margin: 4px 0 0;
   font-family: var(--hand);
-  font-size: clamp(40px, 12.5vw, 54px);
+  font-size: calc(clamp(40px, 12.5vw, 54px) * var(--hs, 1));
   line-height: 1;
 }
 .location {
@@ -1060,7 +1063,7 @@ h2 {
 .redeem-title {
   margin: 2px 0 0;
   font-family: var(--hand);
-  font-size: clamp(40px, 12.5vw, 50px);
+  font-size: calc(clamp(40px, 12.5vw, 50px) * var(--hs, 1));
   line-height: 1;
 }
 .redeem-stall {
@@ -1085,8 +1088,8 @@ h2 {
   display: inline-block;
   color: var(--on-bg);
   font-family: var(--hand);
-  font-weight: 700;
-  font-size: clamp(104px, 36vw, 150px);
+  font-weight: var(--hand-weight, 700);
+  font-size: calc(clamp(104px, 36vw, 150px) * var(--hs, 1));
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
   transform: rotate(var(--r, 0deg));
@@ -1104,8 +1107,8 @@ h2 {
 }
 .portions {
   font-family: var(--hand);
-  font-size: clamp(30px, 9.5vw, 38px);
-  font-weight: 700;
+  font-size: calc(clamp(30px, 9.5vw, 38px) * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
 }
 .for {
@@ -1154,7 +1157,7 @@ h2 {
   margin: 0;
   color: var(--mark);
   font-family: var(--hand);
-  font-size: clamp(60px, 21vw, 84px);
+  font-size: calc(clamp(60px, 21vw, 84px) * var(--hs, 1));
   line-height: 0.95;
 }
 .letter-logo {
@@ -1212,8 +1215,8 @@ h2 {
   margin-top: 6px;
   color: var(--slot);
   font-family: var(--hand);
-  font-size: 32px;
-  font-weight: 700;
+  font-size: calc(32px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
 }
 .letter-summary {
@@ -1251,8 +1254,8 @@ h2 {
 .summary-lines {
   margin: 0;
   font-family: var(--hand);
-  font-size: 30px;
-  font-weight: 700;
+  font-size: calc(30px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.15;
   text-align: right;
   transform: rotate(-3deg);
@@ -1263,7 +1266,7 @@ h2 {
 .route h2 {
   margin: 0;
   font-family: var(--hand);
-  font-size: 36px;
+  font-size: calc(36px * var(--hs, 1));
   line-height: 1;
 }
 .route ol {
@@ -1322,7 +1325,7 @@ h2 {
 .message-note h1 {
   margin: 0;
   font-family: var(--hand);
-  font-size: 46px;
+  font-size: calc(46px * var(--hs, 1));
   line-height: 1;
 }
 .message-note p {
@@ -1338,8 +1341,8 @@ h2 {
 .loading-text {
   margin: 4px 0 0;
   font-family: var(--hand);
-  font-size: 34px;
-  font-weight: 700;
+  font-size: calc(34px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
 }
 
 .offline {
@@ -1351,8 +1354,8 @@ h2 {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--hand);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: calc(24px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   white-space: nowrap;
   transform: translateX(-50%) rotate(-2deg);
   clip-path: polygon(2% 10%, 30% 0, 62% 6%, 98% 0, 100% 52%, 97% 100%, 60% 94%, 28% 100%, 0 92%, 3% 48%);
@@ -1370,8 +1373,8 @@ h2 {
   background: none;
   color: var(--on-bg);
   font-family: var(--hand);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: calc(24px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
@@ -1422,7 +1425,7 @@ h2 {
 .help-title {
   margin: 0 0 10px;
   font-family: var(--hand);
-  font-size: 38px;
+  font-size: calc(38px * var(--hs, 1));
   line-height: 1.05;
 }
 .help-list {
@@ -1441,8 +1444,8 @@ h2 {
   background: none;
   color: var(--ink);
   font-family: var(--hand);
-  font-size: 32px;
-  font-weight: 700;
+  font-size: calc(32px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
   text-decoration: none;
   cursor: pointer;
@@ -1484,7 +1487,7 @@ h2 {
     line-height: 1.55;
   }
   .riddle-q {
-    font-size: 44px;
+    font-size: calc(44px * var(--hs, 1));
   }
   .answer-form {
     margin-top: 12px;
@@ -1738,8 +1741,8 @@ h2 {
 .opening.paused .paused-stop {
   margin: 2px 0 0;
   font-family: var(--hand);
-  font-size: 32px;
-  font-weight: 700;
+  font-size: calc(32px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.1;
 }
 
@@ -1832,14 +1835,14 @@ h2 {
     padding: 36px 40px 34px;
   }
   .note-kicker {
-    font-size: 38px;
+    font-size: calc(38px * var(--hs, 1));
   }
   .riddle-text {
     font-size: clamp(21px, 1.7vw, 25px);
     line-height: 1.55;
   }
   .riddle-q {
-    font-size: clamp(60px, 5vw, 76px);
+    font-size: calc(clamp(60px, 5vw, 76px) * var(--hs, 1));
   }
   .riddle-photo {
     width: min(40%, 220px);
@@ -1848,7 +1851,7 @@ h2 {
     padding-top: 22px;
   }
   .answer input {
-    font-size: 22px;
+    font-size: calc(22px * var(--hs, 1));
   }
   .riddle .foot {
     max-width: 480px;
@@ -1912,8 +1915,8 @@ h2 {
     position: relative;
     align-self: flex-start;
     font-family: var(--hand);
-    font-size: 28px;
-    font-weight: 700;
+    font-size: calc(28px * var(--hs, 1));
+    font-weight: var(--hand-weight, 700);
     line-height: 1.05;
   }
   .side-route .later .side-stop-title {
@@ -2027,8 +2030,8 @@ h2 {
   margin: 0 0 2px;
   color: var(--slot);
   font-family: var(--hand);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: calc(24px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
   transform: rotate(-2deg);
 }
@@ -2072,8 +2075,8 @@ h2 {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--hand);
-  font-size: 32px;
-  font-weight: 700;
+  font-size: calc(32px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1.05;
   text-align: right;
   clip-path: polygon(
@@ -2170,8 +2173,8 @@ h2 {
   content: counter(tf) ". ";
   color: var(--muted);
   font-family: var(--hand);
-  font-size: 26px;
-  font-weight: 700;
+  font-size: calc(26px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
 }
 .tf-choice {
   display: flex;
@@ -2189,8 +2192,8 @@ h2 {
   background: none;
   color: var(--on-bg);
   font-family: var(--hand);
-  font-size: 30px;
-  font-weight: 700;
+  font-size: calc(30px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
@@ -2270,8 +2273,8 @@ h2 {
   min-width: 34px;
   color: var(--slot);
   font-family: var(--hand);
-  font-size: 58px;
-  font-weight: 700;
+  font-size: calc(58px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
   transform: rotate(var(--r, 0deg));
   border-bottom: 2px solid var(--ink);
@@ -2356,8 +2359,8 @@ h2 {
   margin: 0 0 8px;
   color: var(--ink-soft);
   font-family: var(--hand);
-  font-size: 28px;
-  font-weight: 700;
+  font-size: calc(28px * var(--hs, 1));
+  font-weight: var(--hand-weight, 700);
   line-height: 1;
 }
 .reward-text {
@@ -2388,7 +2391,7 @@ h2 {
     max-width: 480px;
   }
   .cipher-letter {
-    font-size: 68px;
+    font-size: calc(68px * var(--hs, 1));
   }
 }
 
@@ -2400,4 +2403,125 @@ h2 {
 .cipher-hint .game-label {
   color: var(--slot);
   font-weight: 700;
+}
+
+/* ---------- Theme styles ----------
+   Every theme sets the colors and the display font as variables (theme.ts); the attributes on
+   <html> pick how the pieces are drawn. brush is the base look (above). */
+
+/* Fonts wider than Amatic SC: the small handwritten notes read in the plain sans instead. */
+[data-font="suez"] .hint-line,
+[data-font="frank"] .hint-line {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 700;
+}
+[data-font="frank"] .slot {
+  font-weight: 700;
+}
+
+/* Riddle top as a map banner: a strip of the theme's map with a torn bottom, the trail under it. */
+[data-riddle-top="banner"] .scr.riddle::before {
+  content: "";
+  flex: none;
+  height: calc(104px + env(safe-area-inset-top));
+  margin: calc(-14px - env(safe-area-inset-top)) calc(-1 * var(--gutter) - env(safe-area-inset-right)) 0
+    calc(-1 * var(--gutter) - env(safe-area-inset-left));
+  background: var(--map, none) 50% 34% / cover no-repeat;
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 86% 90%, 70% 82%, 52% 94%, 34% 84%, 16% 96%, 0 86%);
+}
+[data-riddle-top="banner"] .scr.riddle > .trail {
+  margin-top: -16px;
+}
+@media (min-width: 1024px) {
+  /* Computers see the map beside the riddle: no banner. */
+  [data-riddle-top="banner"] .scr.riddle::before {
+    display: none;
+  }
+  [data-riddle-top="banner"] .scr.riddle > .trail {
+    margin-top: -4px;
+  }
+}
+
+/* Neon: every drawn line is a glowing tube; the display words glow in their own color. */
+[data-treat="neon"] .brush path,
+[data-treat="neon"] .ribbon-main,
+[data-treat="neon"] .ribbon-tail,
+[data-treat="neon"] .paper > svg path,
+[data-treat="neon"] .torn-line {
+  stroke-width: 3;
+}
+[data-treat="neon"] .brush svg {
+  filter: drop-shadow(0 0 2px var(--button-line)) drop-shadow(0 0 8px var(--button-line));
+}
+[data-treat="neon"] .ribbon svg {
+  filter: drop-shadow(0 0 2px var(--ribbon-line)) drop-shadow(0 0 9px var(--ribbon-line));
+}
+[data-treat="neon"] .paper > svg {
+  filter: drop-shadow(0 0 2px var(--paper-line)) drop-shadow(0 0 7px var(--paper-line));
+}
+[data-treat="neon"] .torn-edge {
+  filter: drop-shadow(0 0 3px var(--sheet-line)) drop-shadow(0 0 10px var(--sheet-line));
+}
+[data-treat="neon"] .brush span,
+[data-treat="neon"] .ribbon span {
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px var(--ribbon-line),
+    0 0 14px var(--ribbon-line);
+}
+[data-treat="neon"] .note-kicker,
+[data-treat="neon"] .hint-line,
+[data-treat="neon"] .riddle-q,
+[data-treat="neon"] .hint-btn,
+[data-treat="neon"] .slot {
+  text-shadow: 0 0 10px color-mix(in srgb, currentColor 55%, transparent);
+}
+[data-treat="neon"] .riddle-q {
+  color: var(--on-ribbon);
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px var(--ribbon-line),
+    0 0 14px var(--ribbon-line);
+}
+[data-treat="neon"] .hand-circle,
+[data-treat="neon"] .underline,
+[data-treat="neon"] .arrow {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+[data-treat="neon"] .opening-map img,
+[data-treat="neon"] .side,
+[data-treat="neon"] .trail img {
+  filter: saturate(1.1);
+}
+[data-mode="dark"] .answer input {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+}
+[data-mode="dark"] .answer input,
+[data-mode="dark"] .riddle-main {
+  caret-color: var(--slot);
+}
+
+/* Foil: gold-leaf lettering on the dark ribbon and button, and a deeper gold on paper. */
+[data-treat="foil"] .ribbon span,
+[data-treat="foil"] .brush span {
+  background: linear-gradient(
+    115deg,
+    #b0843a 0%,
+    #d9b45e 25%,
+    #f1dc9c 42%,
+    #c39a4c 60%,
+    #e6c77e 78%,
+    #a97b2e 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-treat="foil"] .riddle-q,
+[data-treat="foil"] .letter-head h1 {
+  background: linear-gradient(115deg, #6e4a12 0%, #94692a 30%, #b48a3e 48%, #7e5818 70%, #9a7230 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

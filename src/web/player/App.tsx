@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react'
-import type { Palette } from '../../server/domain/types.ts'
+import type { Palette, ThemeStyle } from '../../server/domain/types.ts'
 import { DecorDefs } from '../shared/decor.tsx'
 import { Desk } from '../shared/desk.tsx'
 import { tokenFromPath } from './api.ts'
 import { makeT } from './copy.ts'
+import { setIconSet } from './logic.ts'
 import { Help } from './screens/Help.tsx'
 import { Letter } from './screens/Letter.tsx'
 import { Message } from './screens/Message.tsx'
@@ -13,15 +14,31 @@ import { Redeem } from './screens/Redeem.tsx'
 import { Reveal } from './screens/Reveal.tsx'
 import { Riddle } from './screens/Riddle.tsx'
 import { screenKey } from './sync.ts'
-import { DEFAULT_PALETTE, themeVars } from './theme.ts'
+import { DEFAULT_PALETTE, fontHref, themeVars } from './theme.ts'
 import { useGame } from './useGame.ts'
 
-function useTheme(palette: Palette) {
+const NO_STYLE: ThemeStyle = {}
+
+/**
+ * Applies the game's look to the page: the palette and style as CSS variables, the style's
+ * treatment and mode as data attributes (player.css draws by them), the map for the riddle banner,
+ * and the display font, loaded only for the theme in play.
+ */
+function useTheme(palette: Palette, style: ThemeStyle, map: string | null | undefined) {
   useEffect(() => {
-    const vars = themeVars(palette)
+    const vars = themeVars(palette, style)
     const root = document.documentElement
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
     root.dataset.dark = vars['--on-bg'] === palette.ink ? 'no' : 'yes'
+    root.dataset.mode = style.mode ?? 'light'
+    root.dataset.treat = style.treatment ?? 'brush'
+    root.dataset.font = style.font ?? 'amatic'
+    root.dataset.riddleTop = style.riddleTop ?? 'trail'
+    root.dataset.sheetLine = style.sheetLine === false ? 'no' : 'yes'
+    root.style.colorScheme = style.mode === 'dark' ? 'dark' : 'light'
+    if (map) root.style.setProperty('--map', `url("${map}")`)
+    else root.style.removeProperty('--map')
+    loadFont(fontHref(style))
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     if (!meta) {
       meta = document.createElement('meta')
@@ -29,7 +46,17 @@ function useTheme(palette: Palette) {
       document.head.appendChild(meta)
     }
     meta.content = palette.background
-  }, [palette])
+  }, [palette, style, map])
+}
+
+/** Adds the display font's stylesheet once; the theme in play is the only one ever loaded. */
+function loadFont(href: string) {
+  if (document.querySelector(`link[data-font="${CSS.escape(href)}"]`)) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  link.dataset.font = href
+  document.head.appendChild(link)
 }
 
 export function App() {
@@ -37,7 +64,10 @@ export function App() {
   const { state, texts, support, offline, act, retry, captain, pause } = useGame(token)
   const view = state.phase === 'view' ? state.view : null
   const palette = view?.theme?.palette ?? DEFAULT_PALETTE
-  useTheme(palette)
+  const style = view?.theme?.style ?? NO_STYLE
+  useTheme(palette, style, view?.theme?.map)
+  // The food illustrations in the theme's colors (read while the screens render).
+  setIconSet(style.icons)
   // The players' grammar (feminine plural only for an occasion like a bachelorette).
   const voice = view?.voice ?? view?.form ?? 'she'
   const t = useMemo(() => makeT(voice, texts), [voice, texts])

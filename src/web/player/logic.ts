@@ -84,8 +84,16 @@ export function trailPath(x: number, y: number): string {
 /** Decorative food icons, one per stop, cycled. Icons are illustration, not data. */
 export const STOP_ICONS = ['fruit', 'hummus', 'falafel', 'tomatoes', 'coffee', 'spices', 'flowers']
 
+// The theme's recolored illustrations (a folder under assets/icons); empty: the originals.
+let iconSet = ''
+
+/** Sets the illustration set of the theme in play (only simple folder names are taken). */
+export function setIconSet(set: string | null | undefined) {
+  iconSet = set && /^[a-z0-9-]+$/.test(set) ? set : ''
+}
+
 export function iconUrl(name: string) {
-  return `/static/icons/${name}.webp`
+  return iconSet ? `/static/icons/${iconSet}/${name}.webp` : `/static/icons/${name}.webp`
 }
 
 export function stopIcon(index: number) {
