@@ -125,8 +125,9 @@ h1.stage-title {
   padding-bottom: 8px;
 }
 
-/* Back and next together at the bottom; sticky on phones. */
-.stage-nav {
+/* Back and next together at the bottom; sticky on phones (over the page's own positioning). */
+.stage-nav,
+.page.build > .stage-nav {
   position: sticky;
   bottom: 0;
   z-index: 9;
@@ -520,7 +521,8 @@ h1.stage-title {
 
 /* Tablets and computers: the page is a sheet on the desk; the buttons sit under the content. */
 @media (min-width: 768px) {
-  .stage-nav {
+  .stage-nav,
+  .page.build > .stage-nav {
     position: static;
     max-width: 560px;
     margin-top: 40px;

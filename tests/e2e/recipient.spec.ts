@@ -1,13 +1,9 @@
 // Recipient-first: right after the occasion the buyer says who the game is for (one person first),
 // and the questions, the riddles and the player's grammar follow.
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test'
+import { type APIRequestContext, expect, test } from '@playwright/test'
+import { answerQuestions, backButton, mainButton, next, tokenOf } from '../helpers/order.ts'
 
 test.use({ viewport: { width: 390, height: 844 } })
-
-async function toToken(page: Page) {
-  await page.waitForURL(/\/order\/[A-Za-z0-9_-]+\/photos$/)
-  return page.url().split('/order/')[1].split('/')[0]
-}
 
 /** Buyer, mock payment and the captain's start, through the API; returns the game link. */
 async function payAndStart(request: APIRequestContext, token: string) {
@@ -32,43 +28,38 @@ test('a birthday for her: she is picked first, her questions, her grammar in the
   test.setTimeout(90_000)
   await page.goto('/order')
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
-  const who = page.getByRole('radiogroup', { name: 'ולמי המשחק?' })
+  await next(page, /\/order\/for$/)
+  const who = page.getByRole('radiogroup', { name: 'למי המשחק?' })
   // One person first, and picked by default; no couple or family for a birthday.
   await expect(who.getByRole('radio')).toHaveText(['למישהי', 'למישהו', 'לקבוצה'])
   await expect(who.getByRole('radio', { name: 'למישהי' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByText('רוב המשחקים הם מתנה לאדם אחד')).toBeVisible()
-  await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
+  await page.screenshot({ path: 'docs/screens/site/build-for-birthday.png', fullPage: true, animations: 'disabled' })
+  await next(page, /\/order\/name$/)
+  await page.getByLabel(/איך קוראים לה\?/).fill('מיכל')
+  await next(page, /\/order\/look$/)
   // The palette daubs are single clean smears (no chip at the corner).
   await expect(page.locator('.daub-shape').first().locator('path')).toHaveCount(2)
-  await page.screenshot({
-    path: 'docs/screens/site/1-home-recipient.png',
-    fullPage: true,
-    animations: 'disabled',
-  })
-  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
+  await next(page, /\/order\/questions$/)
 
-  await expect(page).toHaveURL(/\/order\/questions$/)
   await expect(page.getByRole('heading', { name: /ספרו לנו/ })).toContainText('עליה')
-  await page.getByLabel(/איך קוראים לה\?/).fill('מיכל')
   await expect(page.getByLabel('מה היא הייתה אוכלת כל יום, אם רק היה אפשר?')).toBeVisible()
-  await page.getByLabel('מי או מה הייתה האהבה הראשונה שלה? (ילד מהכיתה, להקה, כלב)').fill('הספייס גירלז')
   // Not the love game's questions.
   await expect(page.getByLabel(/ביניכם/)).toHaveCount(0)
+  await page.getByLabel('מי או מה הייתה האהבה הראשונה שלה? (ילד מהכיתה, להקה, כלב)').fill('הספייס גירלז')
   await page.screenshot({
-    path: 'docs/screens/site/2-questions-birthday-she.png',
+    path: 'docs/screens/site/build-questions-birthday-she.png',
     fullPage: true,
     animations: 'disabled',
   })
-  const created = page.waitForResponse(
-    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
-  )
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+  const created = page.waitForResponse((r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST')
+  await answerQuestions(page, {})
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'birthday_friend',
     recipient: 'she',
     form: 'she',
   })
-  const token = await toToken(page)
+  const token = await tokenOf(page)
   await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלה' })).toBeVisible()
 
   const gameUrl = await payAndStart(request, token)
@@ -87,44 +78,57 @@ test('a love game for him: his questions from the giver, his grammar in the game
   test.setTimeout(90_000)
   await page.goto('/order')
   await page.getByRole('radio', { name: 'אהבה וזוגיות' }).click()
-  const who = page.getByRole('radiogroup', { name: 'ולמי המשחק?' })
+  await next(page, /\/order\/for$/)
+  const who = page.getByRole('radiogroup', { name: 'למי המשחק?' })
   await expect(who.getByRole('radio')).toHaveText(['למישהי', 'למישהו', 'לזוג'])
   await who.getByRole('radio', { name: 'למישהו' }).click()
   await expect(who.getByRole('radio', { name: 'למישהו' })).toHaveAttribute('aria-checked', 'true')
-  await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות עליו' }).click()
+  await next(page, /\/order\/name$/)
+  await page.getByLabel(/איך קוראים לו\?/).fill('יואב')
+  await next(page, /\/order\/look$/)
+  await next(page, /\/order\/questions$/)
 
   await expect(page.getByRole('heading', { name: /ספרו לנו/ })).toContainText('עליו')
-  await page.getByLabel(/איך קוראים לו\?/).fill('יואב')
   await page.getByLabel('איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)').fill('הדייט הראשון ביפו')
   await expect(page.getByLabel('מה הוא מזמין תמיד, בכל מסעדה, בלי להסתכל בתפריט?')).toBeVisible()
-  await expect(page.getByLabel('כינוי או משפט שהוא אומר רק לך')).toBeVisible()
   // The birthday's questions are not asked here.
   await expect(page.getByLabel(/אוכל כל יום/)).toHaveCount(0)
   await page.screenshot({
-    path: 'docs/screens/site/2-questions-love-he.png',
+    path: 'docs/screens/site/build-questions-love-he.png',
     fullPage: true,
     animations: 'disabled',
   })
   // The she/he switch next to the name moves to her questions and back.
+  await backButton(page).click()
+  await backButton(page).click()
+  await expect(page).toHaveURL(/\/order\/name$/)
   const sw = page.getByRole('radiogroup', { name: 'המשחק' })
   await sw.getByRole('radio', { name: 'עליה' }).click()
+  await expect(page.getByRole('heading', { name: 'איך קוראים לה?' })).toBeVisible()
+  await next(page, /\/order\/look$/)
+  await next(page, /\/order\/questions$/)
   await expect(page.getByLabel('מה היא מזמינה תמיד, בכל מסעדה, בלי להסתכל בתפריט?')).toBeVisible()
+  await backButton(page).click()
+  await backButton(page).click()
   await sw.getByRole('radio', { name: 'עליו' }).click()
+  await next(page, /\/order\/look$/)
+  await next(page, /\/order\/questions$/)
   await expect(page.getByLabel('מה הוא מזמין תמיד, בכל מסעדה, בלי להסתכל בתפריט?')).toBeVisible()
-  await page.getByLabel('איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)').fill('הדייט הראשון ביפו')
-
-  const created = page.waitForResponse(
-    (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
+  // The answer kept its slot across the switch.
+  await expect(page.getByLabel('איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)')).toHaveValue(
+    'הדייט הראשון ביפו',
   )
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
+
+  const created = page.waitForResponse((r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST')
+  await answerQuestions(page, {})
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'couple',
     recipient: 'he',
     form: 'he',
     answers: { first_love: 'הדייט הראשון ביפו' },
   })
-  const token = await toToken(page)
+  const token = await tokenOf(page)
+  await expect(mainButton(page)).toHaveText('בינתיים בלי, ממשיכים')
   await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלו' })).toBeVisible()
 
   const gameUrl = await payAndStart(request, token)

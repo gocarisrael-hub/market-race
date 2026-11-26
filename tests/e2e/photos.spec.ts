@@ -4,6 +4,7 @@
 // Sample photos: "Dog on grass" (Ina Meyer, public domain) and "Boxer dog posing on the grass"
 // (CC0), both from Wikimedia Commons.
 import { expect, test } from '@playwright/test'
+import { buildToPhotos, photosToPay } from '../helpers/order.ts'
 
 test.use({ viewport: { width: 360, height: 740 } })
 
@@ -12,23 +13,14 @@ const ANSWERS = ['תקווה', "ג'חנון", 'בוריק', 'פלאפל', 'לח�
 
 test('an order with two photos: on the riddles, in a lightbox, and in the letter', async ({ page }) => {
   test.setTimeout(120_000)
-  await page.goto('/order')
-  await page.getByRole('radio', { name: 'רווקות' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
-  await page.getByLabel(/איך קוראים לה/).fill('מיכל')
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
-  await page.waitForURL(/\/order\/[A-Za-z0-9_-]+\/photos$/)
-  const token = page.url().split('/order/')[1].split('/')[0]
+  const token = await buildToPhotos(page, { occasion: 'רווקות', name: 'מיכל' })
 
   await expect(page.getByText('יופיעו על החידות ובמכתב בסוף.')).toBeVisible()
   await page.locator('input[type=file]').setInputFiles(PHOTOS)
   await expect(page.locator('.polaroid img')).toHaveCount(2, { timeout: 20_000 })
   await expect(page.getByText('2 מתוך 5')).toBeVisible()
 
-  await page.getByRole('link', { name: 'לתשלום' }).click()
-  await page.getByLabel('השם שלכם').fill('נועה')
-  await page.getByLabel('טלפון').fill('050-1234567')
-  await page.getByLabel('אימייל').fill('noa@example.com')
+  await photosToPay(page)
   await page.getByRole('button', { name: /^לתשלום/ }).click()
   await page.frameLocator('iframe').getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
   await expect(page).toHaveURL(new RegExp(`/m/${token}`), { timeout: 30_000 })

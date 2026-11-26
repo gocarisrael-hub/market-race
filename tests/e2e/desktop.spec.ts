@@ -96,19 +96,32 @@ test('game at 1440: help and the main button sit inside the sheet, the button un
   expect(button.y + button.height).toBeLessThan(900 - 60)
 })
 
-test('site at 1440: the order button sits inside the sheet', async ({ page }) => {
+test('site at 1440: the map being built beside the stage, back and next inside the sheet', async ({ page }) => {
   await page.goto('/order')
   const sheet = page.locator('main.page')
   await expect(page.getByTestId('desk')).toBeVisible()
-  const cta = page.locator('.cta-wrap .brush')
-  await cta.scrollIntoViewIfNeeded()
+  const cta = page.locator('.stage-nav .brush')
   await expectInside(cta, sheet)
-  // The live preview beside the form, not under it.
-  await page.evaluate(() => window.scrollTo(0, 0))
+  await expectInside(page.getByRole('button', { name: 'חזרה לשלב הקודם' }), sheet)
+  // The live preview beside the stage, not above it.
   const side = page.locator('.order-side')
-  await expect(side.getByTestId('look-preview')).toBeVisible()
+  await expect(side.getByTestId('build-map')).toBeVisible()
+  await expect(page.locator('.build-map.strip')).toHaveCount(0)
   await expectBeside(side, page.locator('main.page h1'))
   expect(await sheetWidth(page, 'main.page')).toBeGreaterThan(1000)
+  await page.screenshot({ path: 'docs/screens/site/build-1440-occasion.png', animations: 'disabled' })
+
+  // The colour stage: the map beside is the preview (no second one inline).
+  await page.getByRole('radio', { name: 'רווקות' }).click()
+  await cta.click()
+  await page.locator('input[name=honoreeName]').fill('מיכל')
+  await cta.click()
+  await expect(page).toHaveURL(/\/order\/look$/)
+  await expect(side.getByTestId('build-map')).toHaveAttribute('data-painted', 'true')
+  await expect(side.getByTestId('build-ribbon')).toHaveText('המירוץ של מיכל')
+  await expect(page.getByTestId('look-preview')).toHaveCount(0)
+  await expect(side.getByTestId('price')).toContainText('396 ₪')
+  await page.screenshot({ path: 'docs/screens/site/build-1440-look.png', animations: 'disabled' })
 })
 
 test('manage at 1440: the edit form is a two-page spread', async ({ page, request }) => {
@@ -158,9 +171,16 @@ test.describe('phone', () => {
     await expect(page.locator('.game-side')).toHaveCount(0)
   })
 
-  test('the order page keeps one column with the preview inline', async ({ page }) => {
+  test('the order keeps one column, the map being built as a strip above the stage', async ({ page }) => {
     await page.goto('/order')
     await expect(page.locator('.order-side')).toHaveCount(0)
-    await expect(page.getByTestId('look-preview')).toHaveCount(1)
+    const strip = page.locator('.build-map.strip')
+    await expect(strip).toBeVisible()
+    const s = await box(strip)
+    const h = await box(page.locator('main.page h1'))
+    expect(s.y + s.height).toBeLessThanOrEqual(h.y)
+    expect(s.height).toBeLessThan(160)
+    // Back and next stay at the bottom of the window.
+    expect(await page.locator('.stage-nav').evaluate((el) => getComputedStyle(el).position)).toBe('sticky')
   })
 })

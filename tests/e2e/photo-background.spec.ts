@@ -4,6 +4,7 @@
 // back and forth on the photos step and on the manage page.
 // Sample photo: "Dog on grass" (Ina Meyer, public domain, Wikimedia Commons).
 import { expect, test } from '@playwright/test'
+import { buildToPhotos } from '../helpers/order.ts'
 
 test.use({ viewport: { width: 360, height: 740 } })
 
@@ -11,13 +12,7 @@ test('a photo without background, cut in the browser, and switched back on the m
   page,
 }) => {
   test.setTimeout(120_000)
-  await page.goto('/order')
-  await page.getByRole('radio', { name: 'רווקות' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
-  await page.getByLabel(/איך קוראים לה/).fill('מיכל')
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
-  await page.waitForURL(/\/order\/[A-Za-z0-9_-]+\/photos$/)
-  const token = page.url().split('/order/')[1].split('/')[0]
+  const token = await buildToPhotos(page, { occasion: 'רווקות', name: 'מיכל' })
 
   await page.locator('input[type=file]').setInputFiles(['tests/fixtures/dog-on-grass.jpg'])
   const drawn = page.locator('.photo-pair .polaroid img')
