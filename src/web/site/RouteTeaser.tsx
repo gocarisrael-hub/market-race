@@ -43,6 +43,7 @@ export function RouteTeaser({
   const [points, setPoints] = useState<{ x: number; y: number }[]>([])
   const [open, setOpen] = useState<number | null>(null)
   const [touched, setTouched] = useState(false)
+  const hovered = useRef<number | null>(null)
   const hover = useHover()
   const ids = useId()
 
@@ -118,15 +119,20 @@ export function RouteTeaser({
                   aria-controls={tagId}
                   onClick={() => {
                     setTouched(true)
-                    setOpen(isOpen ? null : i)
+                    // A click right after the hover opened it keeps it open; the next one closes.
+                    if (hovered.current === i) hovered.current = null
+                    else setOpen(isOpen ? null : i)
                   }}
                   onPointerEnter={(e) => {
                     if (e.pointerType !== 'mouse') return
                     setTouched(true)
+                    hovered.current = i
                     setOpen(i)
                   }}
                   onPointerLeave={(e) => {
-                    if (e.pointerType === 'mouse') setOpen((o) => (o === i ? null : o))
+                    if (e.pointerType !== 'mouse') return
+                    hovered.current = null
+                    setOpen((o) => (o === i ? null : o))
                   }}
                 >
                   <img className="rt-food" src={s.icon || FOOD[i % FOOD.length]} alt="" />

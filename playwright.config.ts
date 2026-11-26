@@ -24,6 +24,8 @@ export default defineConfig({
       ADMIN_BOOTSTRAP_PASSWORD: 'e2e-password',
       E2E_SEED: '1',
       PAYMENT_PROVIDER: 'mock',
+      // The companies site's domain: Chromium resolves *.localhost to this machine.
+      COMPANY_HOSTS: 'companies.localhost',
     },
   },
 })

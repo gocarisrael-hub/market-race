@@ -374,9 +374,7 @@ test('company payment link shows the amount and the payment state', async ({ pag
 })
 
 test('companies leave a lead', async ({ page }) => {
-  await page.goto('/order')
-  await page.getByRole('link', { name: 'לחברות וצוותים' }).click()
-  await expect(page).toHaveURL(/\/companies$/)
+  await page.goto('/companies')
   await page.getByRole('button', { name: 'שלחו לנו' }).click()
   await expect(page.getByText('כתבו את שם החברה')).toBeVisible()
   await page.getByRole('radio', { name: 'יום צוות' }).click()

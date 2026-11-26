@@ -44,10 +44,20 @@ tests/{unit,e2e,helpers}
 | `DATABASE_URL` | Postgres URL (Railway reference to the Postgres service) |
 | `UPLOAD_DIR` | Volume mount path for uploads, `/data/uploads` on Railway |
 | `PUBLIC_BASE_URL` | Origin used in links sent to customers |
+| `COMPANY_HOSTS` | Optional. Comma-separated host names (no scheme, no port) served as the companies site, see "Two sites" below. Empty: one site |
 | `APP_ENV` | `development`, `test`, `staging`, `production` |
 | `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` | Creates the first owner when there are none |
 | `TRANZILA_*` | Payment, see `docs/PAYMENT.md` (Phase 3) |
 | `SMTP_*` / `WHATSAPP_*` | Delivery (Phase 3) |
+
+## Two sites: private and companies
+
+One service serves two sites from the same `site` bundle:
+
+- **The private site** (`/` and the whole order flow) is only about celebrating a person: `/` is the landing with the route teaser (`RouteTeaser.tsx`: the market map blurred, the route and the food on it, each stop's teaser only on hover or tap) and one call to action into `/order`. A quiet footer line links to `/companies`.
+- **The companies site** (`pages/Companies.tsx`, `companies.css`) has its own look and layout (no private site nav or desk): team events, the company's logo and colours on the map, the group size range (settings `company_min_people` / `company_max_people`), and the lead form (`POST /api/leads`). The owner then sends a quote with a payment link (`/pay/:token`).
+
+**Separate domain.** Set `COMPANY_HOSTS` to the companies domain(s), e.g. `COMPANY_HOSTS=teams.example.co.il`, and add the domain to the Railway service. For a request whose Host (or `X-Forwarded-Host` behind Railway's proxy, `trustProxy` is on) is listed, the server sends the site's `index.html` marked `<html data-site="companies" data-home="<PUBLIC_BASE_URL>">` (`src/server/lib/site.ts`). The app reads the mark (`siteOf` in `logic.ts`) and routes `/` there to the companies landing; its link back goes to `data-home`, the private site's origin. Every other path (API, order, manage, payment links) works the same on both hosts. No domain is hard-coded; without `COMPANY_HOSTS` the companies landing is at `/companies` only.
 
 ## Photos: with or without background
 
