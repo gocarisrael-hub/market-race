@@ -152,7 +152,13 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
         {forms.length > 0 && (
           <div className="row form-choice" role="radiogroup" aria-label={copy.questions.formLabel}>
             {forms.map((f) => (
-              <Opt key={f} small role="radio" pressed={recipient === f} onClick={() => set(withRecipient(d, f))}>
+              <Opt
+                key={f}
+                small
+                role="radio"
+                pressed={recipient === f}
+                onClick={() => set(withRecipient(d, f))}
+              >
                 {copy.questions.forms[f]}
               </Opt>
             ))}

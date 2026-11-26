@@ -28,8 +28,8 @@ import { dailyCode } from '../domain/dailycode.ts'
 import { israelDate } from '../domain/dates.ts'
 import { paletteIssues } from '../domain/look.ts'
 import { matchAnswer } from '../domain/matcher.ts'
-import { extractSlots, fallbackFor, fillTemplate } from '../domain/template.ts'
 import { formsOfRecipients } from '../domain/recipient.ts'
+import { extractSlots, fallbackFor, fillTemplate } from '../domain/template.ts'
 import {
   ALLERGENS,
   DECORS,

@@ -16,6 +16,7 @@ import {
 import { buildGame, defaultAnswers } from '../domain/builder.ts'
 import { addYears, israelDate } from '../domain/dates.ts'
 import { checkAnswers } from '../domain/oddcheck.ts'
+import { orderRecipient, questionSetIdFor } from '../domain/recipient.ts'
 import type {
   Form,
   LetterNote,
@@ -25,7 +26,6 @@ import type {
   Question,
   Recipient,
 } from '../domain/types.ts'
-import { orderRecipient, questionSetIdFor } from '../domain/recipient.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { getSetting } from './settings.ts'
 

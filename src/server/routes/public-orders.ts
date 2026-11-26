@@ -18,13 +18,13 @@ import {
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
 import { israelDate } from '../domain/dates.ts'
-import { questionTextFor } from '../domain/template.ts'
 import {
   occasionRecipients,
   orderRecipient,
   recipientForForm,
   resolveRecipient,
 } from '../domain/recipient.ts'
+import { questionTextFor } from '../domain/template.ts'
 import {
   ALLERGENS,
   DIETS,
@@ -212,7 +212,11 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get('/api/shop/questions', async (req, reply) => {
     // By recipient; `form` alone is what older pages sent (mapped the same way old orders are).
     const q = z
-      .object({ occasion: z.string(), recipient: z.enum(RECIPIENTS).optional(), form: z.enum(FORMS).optional() })
+      .object({
+        occasion: z.string(),
+        recipient: z.enum(RECIPIENTS).optional(),
+        form: z.enum(FORMS).optional(),
+      })
       .safeParse(req.query)
     if (!q.success || (!q.data.recipient && !q.data.form)) return reply.code(400).send({ error: 'invalid' })
     const [occ] = await db.select().from(occasions).where(eq(occasions.key, q.data.occasion))

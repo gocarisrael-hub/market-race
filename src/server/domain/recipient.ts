@@ -84,7 +84,5 @@ export function orderRecipient(
 
 /** The forms an occasion's recipients use (kept in `occasions.forms` for older readers). */
 export const formsOfRecipients = (recipients: OccasionRecipients): Form[] => [
-  ...new Set(
-    RECIPIENTS.filter((r) => r in recipients).map((r) => RECIPIENT_FORM[r]),
-  ),
+  ...new Set(RECIPIENTS.filter((r) => r in recipients).map((r) => RECIPIENT_FORM[r])),
 ]

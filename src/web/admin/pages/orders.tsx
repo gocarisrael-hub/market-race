@@ -7,13 +7,13 @@ import {
   ALLERGENS,
   DIETS,
   type Form,
-  type Recipient,
   type GameSnapshot,
   type LetterNote,
   type OrderFlag,
   type OrderStatus,
   type Palette,
   type Question,
+  type Recipient,
   type TextPart,
 } from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
@@ -22,13 +22,13 @@ import {
   DIET_LABELS,
   errorText,
   FORM_LABELS,
-  RECIPIENT_LABELS,
   go,
   MoneyInput,
   NumberInput,
   type Occasion,
   type PaletteRow,
   type QuestionSet,
+  RECIPIENT_LABELS,
   type Route,
   Select,
   shekels,
@@ -905,7 +905,8 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
           <dl className="facts">
             <dt>סוג</dt>
             <dd>
-              {KIND_LABELS[o.kind]} · {d.occasion?.label ?? o.occasionKey} · {o.recipient ? RECIPIENT_LABELS[o.recipient] : FORM_LABELS[o.form]}
+              {KIND_LABELS[o.kind]} · {d.occasion?.label ?? o.occasionKey} ·{' '}
+              {o.recipient ? RECIPIENT_LABELS[o.recipient] : FORM_LABELS[o.form]}
             </dd>
             <dt>{o.kind === 'company' ? 'חברה' : 'חוגג/ת'}</dt>
             <dd>{o.companyName || o.honoreeName}</dd>
@@ -1161,8 +1162,9 @@ export function TestGamePage() {
   const choices = occ ? occasionRecipients(occ) : []
   const choice = choices.find((c) => c.recipient === recipient)
   const questions =
-    sets.find((s) => s.id === (isCompany ? occ?.questionSetId : (choice?.questionSetId ?? occ?.questionSetId)))
-      ?.questions ?? []
+    sets.find(
+      (s) => s.id === (isCompany ? occ?.questionSetId : (choice?.questionSetId ?? occ?.questionSetId)),
+    )?.questions ?? []
   const f: Form = isCompany ? form || occ?.forms[0] || 'company' : (choice?.form ?? 'she')
 
   useEffect(() => {

@@ -13,7 +13,8 @@ import {
   tastings,
   themes,
 } from '../db/schema.ts'
-import type { Decor, Palette, Question } from '../domain/types.ts'
+import { formsOfRecipients, occasionRecipients } from '../domain/recipient.ts'
+import type { Decor, OccasionRecipients, Palette, Question } from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { setSetting } from './settings.ts'
 
@@ -72,6 +73,81 @@ const privateQuestions: Question[] = [
     maxLen: 60,
   },
 ]
+
+// ---------- Question sets per occasion × recipient ----------
+// Every set fills the same riddle slots (first_love, favorite_food, one_word, catchphrase,
+// favorite_place, dream), so one template per form reads well whatever the occasion. Each set
+// asks them in its own words: a birthday about her or him, a love game about the partner from
+// the giver's side, a couple about the two of them.
+
+const pq = (
+  form: 'she' | 'he' | 'couple',
+  slot: string,
+  text: string,
+  fallback: string,
+  maxLen = 40,
+): Question => ({ slot, text: { [form]: text }, required: false, fallback, maxLen })
+
+export const birthdaySheQuestions: Question[] = [
+  pq('she', 'first_love', 'מי או מה הייתה האהבה הראשונה שלה? (ילד מהכיתה, להקה, כלב)', 'האהבה הראשונה'),
+  pq('she', 'favorite_food', 'מה היא הייתה אוכלת כל יום, אם רק היה אפשר?', 'עוגת יום הולדת'),
+  pq('she', 'one_word', 'איך היא מבפנים, במילה אחת? (למשל: רכה, מצחיקה, עקשנית)', 'רכה', 20),
+  pq('she', 'catchphrase', 'משפט שכל מי שמכיר אותה שמע ממנה אלף פעם', 'יאללה, זזים', 60),
+  pq('she', 'favorite_place', 'המקום שהכי עושה לה טוב', 'הים'),
+  pq('she', 'dream', 'חלום שאתם מאחלים לה להגשים השנה', 'כל החלומות', 60),
+]
+
+export const birthdayHeQuestions: Question[] = [
+  pq(
+    'he',
+    'first_love',
+    'מי או מה הייתה האהבה הראשונה שלו? (ילדה מהכיתה, קבוצת כדורגל, אופניים)',
+    'האהבה הראשונה',
+  ),
+  pq('he', 'favorite_food', 'מה הוא היה אוכל כל יום, אם רק היה אפשר?', 'עוגת יום הולדת'),
+  pq('he', 'one_word', 'איך הוא מבפנים, במילה אחת? (למשל: רך, מצחיק, עקשן)', 'רך', 20),
+  pq('he', 'catchphrase', 'משפט שכל מי שמכיר אותו שמע ממנו אלף פעם', 'יאללה, זזים', 60),
+  pq('he', 'favorite_place', 'המקום שהכי עושה לו טוב', 'הים'),
+  pq('he', 'dream', 'חלום שאתם מאחלים לו להגשים השנה', 'כל החלומות', 60),
+]
+
+// A love game is a gift to her or to him, written from the giver's side.
+export const loveSheQuestions: Question[] = [
+  pq('she', 'first_love', 'איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)', 'הפעם הראשונה שנפגשנו'),
+  pq('she', 'favorite_food', 'מה היא מזמינה תמיד, בכל מסעדה, בלי להסתכל בתפריט?', 'פסטה'),
+  pq('she', 'one_word', 'איך היא מבפנים, כמו שרק מי שקרוב אליה יודע? מילה אחת', 'רכה', 20),
+  pq('she', 'catchphrase', 'כינוי או משפט שהיא אומרת רק לך', 'אני אוהבת אותך', 60),
+  pq('she', 'favorite_place', 'המקום שלכם (חוף, בית קפה, עיר)', 'הים'),
+  pq('she', 'dream', 'חלום שאתם עוד רוצים להגשים ביחד', 'כל מה שעוד מחכה לנו', 60),
+]
+
+export const loveHeQuestions: Question[] = [
+  pq('he', 'first_love', 'איך הכול התחיל ביניכם? (למשל: הדייט הראשון בפלורנטין)', 'הפעם הראשונה שנפגשנו'),
+  pq('he', 'favorite_food', 'מה הוא מזמין תמיד, בכל מסעדה, בלי להסתכל בתפריט?', 'המבורגר'),
+  pq('he', 'one_word', 'איך הוא מבפנים, כמו שרק מי שקרוב אליו יודע? מילה אחת', 'רך', 20),
+  pq('he', 'catchphrase', 'כינוי או משפט שהוא אומר רק לך', 'אני אוהב אותך', 60),
+  pq('he', 'favorite_place', 'המקום שלכם (חוף, בית קפה, עיר)', 'הים'),
+  pq('he', 'dream', 'חלום שאתם עוד רוצים להגשים ביחד', 'כל מה שעוד מחכה לנו', 60),
+]
+
+// A couple: questions about the two of them.
+export const coupleQuestions: Question[] = [
+  pq('couple', 'first_love', 'איפה הכול התחיל אצלם? (למשל: המסיבה של נועה)', 'הפעם הראשונה שנפגשו'),
+  pq('couple', 'favorite_food', 'המנה ששניהם תמיד חולקים (ורבים על הביס האחרון)', 'פיצה משותפת'),
+  pq('couple', 'one_word', 'איך הם ביחד, במילה אחת? (למשל: מתוקים, משוגעים)', 'מתוקים', 20),
+  pq('couple', 'catchphrase', 'משפט ששניהם אומרים כל הזמן', 'יאללה, זזים', 60),
+  pq('couple', 'favorite_place', 'המקום שלהם', 'הים'),
+  pq('couple', 'dream', 'חלום משותף שעוד מחכה להם', 'כל מה שעוד מחכה להם', 60),
+]
+
+/** The demo question sets per recipient, by name (each editable in the admin). */
+export const RECIPIENT_SETS = {
+  birthdayShe: { name: 'יום הולדת: לה', questions: birthdaySheQuestions },
+  birthdayHe: { name: 'יום הולדת: לו', questions: birthdayHeQuestions },
+  loveShe: { name: 'אהבה: לה, מצד מי שנותן', questions: loveSheQuestions },
+  loveHe: { name: 'אהבה: לו, מצד מי שנותן', questions: loveHeQuestions },
+  couple: { name: 'זוג: על שניהם', questions: coupleQuestions },
+} as const
 
 const companyQuestions: Question[] = [
   { slot: 'company_name', text: { company: 'שם החברה' }, required: true, fallback: '', maxLen: 40 },
@@ -271,12 +347,12 @@ export const friendsQuestions: Question[] = [
   gq('group_legend', 'מישהו שכולם זוכרים, ומה הכינוי שלו?', 'מי שכולם זוכרים'),
   gq('group_years', 'כמה זמן אתם ביחד?', 'כל השנים האלה', 30),
   gq('group_wish', 'משאלה לקבוצה לשנים הבאות?', 'עוד הרבה שנים ביחד', 60),
+  gq('who_late', 'מי תמיד מגיע/ה אחרון/ה?', "מישהו מהחבר'ה", 30),
+  gq('who_hungry', 'מי הראשון/ה לשאול "מה אוכלים"?', 'הרעבים של החבורה', 30),
+  gq('who_laugh', 'מי צוחק/ת הכי חזק?', 'הצחקנים של החבורה', 30),
   hidden('family_tradition', 'הקפה של הבוקר'),
-  hidden('who_late', "מישהו מהחבר'ה"),
   hidden('who_cheeky', 'החוצפן של החבורה'),
-  hidden('who_hungry', 'הרעבים של החבורה'),
   hidden('who_phone', 'מכורי הטלפון'),
-  hidden('who_laugh', 'הצחקנים של החבורה'),
 ]
 
 export const genericQuestions: Question[] = [
@@ -326,9 +402,103 @@ export const GROUP_TEMPLATES: Record<string, string> = {
 /** Demo price of the group occasions (same as the private ones). */
 export const GROUP_PRICE = { base: 0, perPerson: 9900 }
 
+type SetIds = Record<keyof typeof RECIPIENT_SETS, number> & {
+  private: number
+  family: number
+  friends: number
+  generic: number
+}
+
+/**
+ * Who each demo occasion is for, with its question set. One person first: a birthday is mostly
+ * for her or him (a friends' birthday also for a group), a love game is a gift to her or him (or
+ * to a couple), family and friends are group games, generic offers everyone sensible defaults.
+ */
+export function demoRecipients(id: SetIds): Record<string, OccasionRecipients> {
+  return {
+    bachelorette: { she: id.private },
+    couple: { she: id.loveShe, he: id.loveHe, couple: id.couple },
+    birthday_parent: { she: id.birthdayShe, he: id.birthdayHe },
+    birthday_friend: { she: id.birthdayShe, he: id.birthdayHe, group: id.generic },
+    family: { family: id.family },
+    friends: { group: id.friends },
+    generic: { she: id.private, he: id.private, couple: id.couple, group: id.generic, family: id.family },
+  }
+}
+
+/** Adds the per-recipient demo sets missing by name; returns every one's id. */
+async function insertRecipientSets(db: DB): Promise<Record<keyof typeof RECIPIENT_SETS, number>> {
+  const have = new Map((await db.select().from(questionSets)).map((q) => [q.name, q.id]))
+  const out = {} as Record<keyof typeof RECIPIENT_SETS, number>
+  for (const [k, v] of Object.entries(RECIPIENT_SETS) as [
+    keyof typeof RECIPIENT_SETS,
+    (typeof RECIPIENT_SETS)[keyof typeof RECIPIENT_SETS],
+  ][]) {
+    out[k] =
+      have.get(v.name) ??
+      (
+        await db
+          .insert(questionSets)
+          .values({ name: v.name, questions: [...v.questions] })
+          .returning()
+      )[0].id
+  }
+  return out
+}
+
+/**
+ * Tops up a database seeded before recipients existed: adds the per-recipient sets and gives the
+ * demo occasions their recipients, only where the owner has not changed them (still the ones the
+ * migration derived from the old forms, all on the occasion's own set). Idempotent.
+ */
+export async function ensureRecipientSets(db: DB): Promise<number> {
+  const rows = await db
+    .select()
+    .from(occasions)
+    .where(inArray(occasions.key, Object.keys(DEMO_DECOR)))
+  const byName = new Map((await db.select().from(questionSets)).map((q) => [q.name, q.id]))
+  const group = (key: string) => GROUP_OCCASIONS.find((g) => g.key === key)
+  const priv = rows.find((o) => o.key === 'bachelorette')?.questionSetId
+  const fam = byName.get(group('family')?.setName ?? '')
+  const fri = byName.get(group('friends')?.setName ?? '')
+  const gen = byName.get(group('generic')?.setName ?? '')
+  if (!priv || !fam || !fri || !gen) return 0
+  const R = demoRecipients({
+    private: priv,
+    family: fam,
+    friends: fri,
+    generic: gen,
+    ...(await insertRecipientSets(db)),
+  })
+  let n = 0
+  for (const o of rows) {
+    const want = R[o.key]
+    if (!want || o.audience !== 'private') continue
+    const derived = occasionRecipients({ ...o, recipients: {} })
+    const current = occasionRecipients(o)
+    const untouched =
+      current.length === derived.length &&
+      current.every((c, i) => c.recipient === derived[i].recipient && c.questionSetId === o.questionSetId)
+    if (!untouched) continue
+    await db
+      .update(occasions)
+      .set({
+        recipients: want,
+        forms: formsOfRecipients(want),
+        playersFeminine: o.key === 'bachelorette',
+        ...(o.key === 'couple' && o.label === 'זוג' ? { label: 'אהבה וזוגיות' } : {}),
+        ...(o.key === 'birthday_friend' && o.label === 'יום הולדת לחבר/ה' ? { label: 'יום הולדת' } : {}),
+      })
+      .where(eq(occasions.id, o.id))
+    n++
+  }
+  return n
+}
+
 export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelThemeId: number }> {
   const existing = await db.select().from(markets).limit(1)
   if (existing.length) {
+    await ensureRecipientSets(db)
     const [route] = await db.select().from(routes).limit(1)
     const [theme] = await db.select().from(themes).where(eq(themes.marketId, route.marketId)).limit(1)
     return { carmelRouteId: route.id, carmelThemeId: theme.id }
@@ -703,52 +873,29 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     groupSets.push(
       (await db.insert(questionSets).values({ name: g.setName, questions: g.questions }).returning())[0],
     )
-  await db.insert(occasions).values([
-    {
-      key: 'bachelorette',
-      decor: DEMO_DECOR.bachelorette,
-      label: 'רווקות',
-      audience: 'private',
-      questionSetId: qsPrivate.id,
-      forms: ['she'],
-      sort: 1,
-    },
-    {
-      key: 'couple',
-      decor: DEMO_DECOR.couple,
-      label: 'זוג',
-      audience: 'private',
-      questionSetId: qsPrivate.id,
-      forms: ['couple'],
-      sort: 2,
-    },
-    {
-      key: 'birthday_parent',
-      decor: DEMO_DECOR.birthday_parent,
-      label: 'יום הולדת להורה',
-      audience: 'private',
-      questionSetId: qsPrivate.id,
-      forms: ['she', 'he'],
-      sort: 3,
-    },
-    {
-      key: 'birthday_friend',
-      decor: DEMO_DECOR.birthday_friend,
-      label: 'יום הולדת לחבר/ה',
-      audience: 'private',
-      questionSetId: qsPrivate.id,
-      forms: ['she', 'he'],
-      sort: 4,
-    },
-    ...GROUP_OCCASIONS.map((g, i) => ({
-      key: g.key,
-      label: g.label,
+  const sets = await insertRecipientSets(db)
+  const [family, friends, generic] = groupSets.map((g) => g.id)
+  const R = demoRecipients({ private: qsPrivate.id, family, friends, generic, ...sets })
+  const priv = (key: string, label: string, sort: number, questionSetId: number) => {
+    const recipients = R[key]
+    return {
+      key,
+      label,
       audience: 'private' as const,
-      questionSetId: groupSets[i].id,
-      forms: ['group' as const],
-      decor: DEMO_DECOR[g.key] ?? 'generic',
-      sort: 5 + i,
-    })),
+      decor: DEMO_DECOR[key] ?? 'generic',
+      questionSetId,
+      recipients,
+      forms: formsOfRecipients(recipients),
+      playersFeminine: key === 'bachelorette',
+      sort,
+    }
+  }
+  await db.insert(occasions).values([
+    priv('bachelorette', 'רווקות', 1, qsPrivate.id),
+    priv('couple', 'אהבה וזוגיות', 2, qsPrivate.id),
+    priv('birthday_parent', 'יום הולדת להורה', 3, qsPrivate.id),
+    priv('birthday_friend', 'יום הולדת', 4, qsPrivate.id),
+    ...GROUP_OCCASIONS.map((g, i) => priv(g.key, g.label, 5 + i, groupSets[i].id)),
     {
       key: 'team_day',
       decor: DEMO_DECOR.team_day,

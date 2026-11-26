@@ -16,7 +16,6 @@ import {
   Check,
   CrudPage,
   DECOR_LABELS,
-  RECIPIENT_LABELS,
   DIET_LABELS,
   type EditorProps,
   errorText,
@@ -27,6 +26,7 @@ import {
   NumberInput,
   type Occasion,
   type QuestionSet,
+  RECIPIENT_LABELS,
   Select,
   type Stall,
   shekels,
@@ -379,12 +379,14 @@ function OccasionEditor({ value, set }: EditorProps<Occasion>) {
   const recipients: OccasionRecipients =
     value.recipients && Object.keys(value.recipients).length
       ? value.recipients
-      : Object.fromEntries(occasionRecipients({
+      : Object.fromEntries(
+          occasionRecipients({
             audience: 'private',
             forms: value.forms ?? [],
             questionSetId: null,
             decor: value.decor,
-          }).map((c) => [c.recipient, null]))
+          }).map((c) => [c.recipient, null]),
+        )
   return (
     <>
       <Text label="מפתח (באנגלית)" value={value.key} onChange={(key) => set({ key })} dir="ltr" required />
