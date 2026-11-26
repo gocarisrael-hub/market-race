@@ -1,4 +1,4 @@
-// Pure logic of the order flow: prices, step validation, the draft kept between steps.
+// Pure logic of the order flow: prices, validation, the draft kept between stages.
 import type {
   Buyer,
   HintQuestion,
@@ -365,14 +365,26 @@ export function clearDraft() {
   } catch {}
 }
 
+/** The stages of the order build that have their own path (see stages.ts). */
+export type BuildStageKey =
+  | 'occasion'
+  | 'for'
+  | 'name'
+  | 'look'
+  | 'questions'
+  | 'photos'
+  | 'notes'
+  | 'hints'
+  | 'people'
+  | 'diet'
+  | 'details'
+  | 'pay'
+
 /** Parses the site path into a page. */
 export type Route =
   | { page: 'landing' }
   | { page: 'tastings' }
-  | { page: 'home' }
-  | { page: 'questions' }
-  | { page: 'photos'; token: string }
-  | { page: 'checkout'; token: string }
+  | { page: 'build'; stage: BuildStageKey; part: number; token?: string }
   | { page: 'payDone' }
   | { page: 'payMock' }
   | { page: 'companyPay'; token: string }
@@ -387,14 +399,18 @@ export function parseRoute(pathname: string): Route {
   // working).
   if (p === '/') return { page: 'landing' }
   if (p === '/tastings') return { page: 'tastings' }
-  if (p === '/order') return { page: 'home' }
-  if (p === '/order/questions') return { page: 'questions' }
+  // The order is a guided build, one short stage per path (see stages.ts).
+  if (p === '/order') return { page: 'build', stage: 'occasion', part: 1 }
+  let m = p.match(/^\/order\/(for|name|look|notes|hints|people|diet)$/)
+  if (m) return { page: 'build', stage: m[1] as BuildStageKey, part: 1 }
+  m = p.match(/^\/order\/questions(?:\/([1-9][0-9]?))?$/)
+  if (m) return { page: 'build', stage: 'questions', part: Number(m[1] ?? 1) }
   if (p === '/companies') return { page: 'companies' }
   if (p === '/lost-link') return { page: 'lostLink' }
   if (p === '/pay/done') return { page: 'payDone' }
   if (p === '/pay/mock') return { page: 'payMock' }
-  let m = p.match(/^\/order\/([A-Za-z0-9_-]{10,64})\/(photos|pay)$/)
-  if (m) return { page: m[2] === 'photos' ? 'photos' : 'checkout', token: m[1] }
+  m = p.match(/^\/order\/([A-Za-z0-9_-]{10,64})\/(photos|details|pay)$/)
+  if (m) return { page: 'build', stage: m[2] as BuildStageKey, part: 1, token: m[1] }
   m = p.match(/^\/pay\/([A-Za-z0-9_-]{10,64})$/)
   if (m) return { page: 'companyPay', token: m[1] }
   m = p.match(/^\/m\/([A-Za-z0-9_-]{10,64})$/)

@@ -918,73 +918,6 @@ ol.howto {
   pointer-events: none;
 }
 
-/* Progress trail: a dashed walk between the four steps, like the riddle trail of the game. */
-.step-trail {
-  position: relative;
-  height: 64px;
-  margin: 0 -8px 10px -40px;
-}
-.step-path {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 48px;
-  overflow: visible;
-}
-.step-path path {
-  fill: none;
-  stroke: var(--dim);
-  stroke-width: 2;
-  stroke-dasharray: 5 8;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-.step-trail ol {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.step-trail li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 64px;
-}
-.step-trail li:nth-child(even) {
-  margin-top: 8px;
-}
-.step-trail .dot {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--dim);
-  background: var(--bg);
-  border-radius: 50%;
-}
-.step-trail .now .dot {
-  color: var(--accent);
-  font-size: 30px;
-}
-.step-trail .now .ring {
-  inset: -4px -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 8px);
-}
-.step-trail .dot-tick {
-  width: 22px;
-  height: 18px;
-  overflow: visible;
-}
-.step-trail .dot-tick path,
 .opt .tick path,
 .daub .tick path {
   fill: none;
@@ -992,17 +925,6 @@ ol.howto {
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-.step-trail .word {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 19px;
-  line-height: 1;
-  color: var(--dim);
-  margin-top: 2px;
-}
-.step-trail .now .word {
-  color: var(--ink);
 }
 
 /* A question on a torn scrap of paper. */
@@ -1939,8 +1861,8 @@ ol.howto.drawn li {
   }
 }
 
-/* Computers (from 1024px): the order pages use the width. The form on the reading side, a large
-   live preview beside it (order-side.tsx), sticky while the form scrolls. Type and the drawn
+/* Computers (from 1024px): the order pages use the width. The stage on the reading side, the map
+   being built beside it (build/BuildMap.tsx), sticky while the stage scrolls. Type and the drawn
    illustrations grow with the window. */
 @media (min-width: 1024px) {
   :root:has(.order-side) {
@@ -1967,37 +1889,12 @@ ol.howto.drawn li {
   .page:has(> .order-side) .cta-wrap {
     max-width: 460px;
   }
-  .side-look {
-    position: relative;
-  }
-  .order-side .look-preview {
-    max-width: none;
-    margin: 0;
-  }
-  .order-side .pv-map {
-    height: clamp(220px, 26vh, 320px);
-  }
-  .order-side .pv-ribbon span {
-    font-size: clamp(30px, 2.4vw, 40px);
-  }
-  .order-side .pv-button {
-    height: 52px;
-  }
-  .order-side .pv-button span {
-    font-size: clamp(24px, 1.9vw, 30px);
-  }
-  .side-doodles {
-    z-index: 2;
-  }
   .side-caption {
     margin: 14px 0 0;
     font-family: var(--display);
     font-size: 30px;
     font-weight: 700;
     text-align: center;
-  }
-  .order-side .tastings {
-    margin-top: 30px;
   }
   .order-side .price {
     margin-top: 22px;
