@@ -1,0 +1,1 @@
+ALTER TABLE "occasions" ADD COLUMN "icons" text[] DEFAULT '{}'::text[] NOT NULL;

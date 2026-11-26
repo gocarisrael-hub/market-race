@@ -53,7 +53,7 @@ export function demoSeedingEnabled(env: Record<string, string | undefined>, appE
 }
 
 /** Bump when the demo content changes, so seeded databases pick it up at their next boot. */
-export const DEMO_SEED_VERSION = 4
+export const DEMO_SEED_VERSION = 5
 
 export interface RefreshReport {
   ran: boolean
