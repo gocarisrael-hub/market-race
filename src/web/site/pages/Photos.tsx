@@ -5,6 +5,7 @@ import { Doodles, Icon } from '../../shared/decor.tsx'
 import { ApiError, deletePhoto, listPhotos, type Photo, type Shop, uploadPhoto } from '../api.ts'
 import { copy } from '../copy.ts'
 import { type Draft, decorFor, errorText, MAX_PHOTOS } from '../logic.ts'
+import { OrderSide } from '../order-side.tsx'
 import { BackgroundChoice } from '../photo-background.tsx'
 import { Arrow, Back, Cta, Deco, Polaroid, Sketch, Spinner, StepTrail, TitleIcon } from '../ui.tsx'
 import { STEPS } from './Home.tsx'
@@ -62,6 +63,7 @@ export function Photos(props: { token: string; shop: Shop; draft: Draft }) {
 
   return (
     <main className="page" data-decor={decor ?? undefined}>
+      <OrderSide shop={shop} draft={draft} />
       {decor && (
         <Doodles
           className="deco"

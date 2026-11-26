@@ -1,0 +1,113 @@
+/* Tablets and computers (from 768px): the phone column becomes a torn sheet of paper lying on a
+   desk made of the faded market map, with the occasion's doodles in the wide margins (desk.tsx).
+   Phones keep their layout untouched: nothing here applies below 768px.
+   Each app sets --sheet-w (the sheet's width) and --desk-tint (the ink the desk is shaded with). */
+.desk {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --sheet-top: 44px;
+    /* The torn edge, in pixels on the long sides so it reads the same on short and tall pages. */
+    --torn: polygon(
+      0 7px,
+      7% 2px,
+      15% 6px,
+      24% 0,
+      33% 5px,
+      41% 1px,
+      52% 6px,
+      60% 0,
+      69% 5px,
+      78% 1px,
+      87% 6px,
+      94% 0,
+      100% 4px,
+      calc(100% - 4px) 12%,
+      100% 25%,
+      calc(100% - 3px) 38%,
+      100% 52%,
+      calc(100% - 5px) 66%,
+      100% 80%,
+      calc(100% - 2px) 92%,
+      100% calc(100% - 5px),
+      91% 100%,
+      82% calc(100% - 5px),
+      71% calc(100% - 1px),
+      60% calc(100% - 6px),
+      48% 100%,
+      37% calc(100% - 4px),
+      26% calc(100% - 1px),
+      15% calc(100% - 6px),
+      6% 100%,
+      0 calc(100% - 4px),
+      3px 88%,
+      0 74%,
+      4px 60%,
+      0 46%,
+      3px 31%,
+      0 17%
+    );
+  }
+
+  .desk {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    overflow: hidden;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--bg) 91%, var(--desk-tint));
+  }
+  .desk-map {
+    position: absolute;
+    inset: -3%;
+    background: var(--desk-map) center / cover no-repeat;
+    opacity: 0.15;
+    filter: saturate(0.75);
+  }
+  /* Fades the map out toward the sheet so it never sits right behind the text. */
+  .desk-wash {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      transparent 0,
+      color-mix(in srgb, var(--bg) 70%, transparent) calc(50% - var(--sheet-w) / 2),
+      color-mix(in srgb, var(--bg) 70%, transparent) calc(50% + var(--sheet-w) / 2),
+      transparent 100%
+    );
+  }
+  .desk-doodles .doodle {
+    opacity: 0.75;
+  }
+
+  /* The sheet: the page column, on the desk, its paper drawn behind the content. */
+  html :is(.page, .scr) {
+    z-index: 1;
+    isolation: isolate;
+    width: var(--sheet-w);
+    max-width: calc(100% - 48px);
+    min-height: 0;
+    margin: var(--sheet-top) auto 56px;
+  }
+  html :is(.page, .scr)::before,
+  html :is(.page, .scr)::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    clip-path: var(--torn);
+  }
+  html :is(.page, .scr)::before {
+    inset: 0;
+    z-index: -1;
+    background: var(--bg);
+  }
+  /* A thin darker paper edge just around the sheet, even on all sides (no offset shadow). */
+  html :is(.page, .scr)::after {
+    inset: -3px -3px -4px;
+    z-index: -2;
+    background: color-mix(in srgb, var(--desk-tint) 16%, transparent);
+  }
+}

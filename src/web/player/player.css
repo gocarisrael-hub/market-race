@@ -76,6 +76,12 @@ h2 {
   overflow-x: clip;
 }
 
+/* Wide screens split the riddle into columns (see the end of the file); phones read the
+   wrapper as if it were not there. */
+.riddle-main {
+  display: contents;
+}
+
 /* The main button sits at the bottom of the screen and stays reachable on long content. */
 .foot {
   position: sticky;
@@ -1735,4 +1741,230 @@ h2 {
   font-size: 32px;
   font-weight: 700;
   line-height: 1.1;
+}
+
+/* ---------- Tablets and computers: the screen as a sheet on the desk (shared/desk.css) ---------- */
+
+@media (min-width: 768px) {
+  :root {
+    --sheet-w: 540px;
+    --desk-tint: var(--on-bg);
+    --gutter: 34px;
+  }
+  /* Room at the top for the help scrawl in the sheet's corner. */
+  .scr {
+    padding-top: 56px;
+    padding-bottom: 34px;
+    overflow-x: visible;
+  }
+  /* The main button sits right under the content, not at the bottom of the window. */
+  .foot {
+    position: static;
+    margin-top: 20px;
+    padding: 0 4px;
+    background: none;
+  }
+  .answer-form {
+    flex: none;
+  }
+  .answer-block {
+    margin: 0;
+    padding-top: 34px;
+  }
+  /* Help in the sheet's corner, scrolling with it. */
+  .help-btn {
+    position: absolute;
+    top: calc(var(--sheet-top) + 14px);
+    left: calc(50% - min(var(--sheet-w), 100% - 48px) / 2 + 16px);
+  }
+  .help-layer {
+    align-items: center;
+  }
+}
+
+/* ---------- Computers (from 1024px): layouts that use the width ---------- */
+
+@media (min-width: 768px) {
+  /* The opening is a poster: tall enough for the map over the sheet. */
+  .opening {
+    min-height: min(860px, calc(100dvh - 2 * var(--sheet-top)));
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --sheet-w: min(760px, 100% - 160px);
+    --gutter: clamp(40px, 4vw, 64px);
+  }
+  /* The riddle: a large card and the answer on the reading side, the map and route beside it. */
+  :root:has(.game-side) {
+    --sheet-w: min(1180px, 100% - 160px);
+  }
+  :root:has(.scr.reveal) {
+    --sheet-w: min(1100px, 100% - 160px);
+  }
+  .riddle:has(> .game-side) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+    align-content: start;
+    column-gap: clamp(44px, 5vw, 96px);
+  }
+  .riddle:has(> .game-side) > .trail {
+    grid-column: 1 / -1;
+    height: 120px;
+    margin-inline: 0;
+  }
+  .riddle-main {
+    display: block;
+    min-width: 0;
+  }
+  .riddle .trail-stops img {
+    width: 58px;
+  }
+  .riddle .trail-stops .now,
+  .riddle .trail-stops .now img {
+    width: 100px;
+  }
+  .trail-label {
+    font-size: 16px;
+  }
+  .note .paper-body {
+    padding: 36px 40px 34px;
+  }
+  .note-kicker {
+    font-size: 38px;
+  }
+  .riddle-text {
+    font-size: clamp(21px, 1.7vw, 26px);
+  }
+  .riddle-q {
+    font-size: clamp(60px, 5vw, 76px);
+  }
+  .riddle-photo {
+    width: min(40%, 220px);
+  }
+  .answer-block {
+    padding-top: 40px;
+  }
+  .answer input {
+    font-size: 22px;
+  }
+  .riddle .foot {
+    max-width: 480px;
+  }
+
+  .game-side {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    padding-top: 12px;
+  }
+  .side-map {
+    position: relative;
+  }
+  .side-map .doodles {
+    z-index: 3;
+  }
+  .game-side .map-crop {
+    width: 100%;
+    margin: 0;
+  }
+  .side-route {
+    margin: 22px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .side-route li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1.5px dashed color-mix(in srgb, var(--line) 28%, transparent);
+  }
+  .side-route li:last-child {
+    border-bottom: 0;
+  }
+  .side-stop-icon {
+    position: relative;
+    flex: none;
+    width: 46px;
+  }
+  .side-stop-icon img {
+    display: block;
+    width: 100%;
+  }
+  .side-route .later .side-stop-icon img {
+    opacity: 0.4;
+  }
+  .side-stop-icon .tick {
+    position: absolute;
+    right: -6px;
+    bottom: -4px;
+  }
+  .side-stop-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .side-stop-title {
+    position: relative;
+    align-self: flex-start;
+    font-family: var(--hand);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.05;
+  }
+  .side-route .later .side-stop-title {
+    color: var(--muted);
+  }
+  .side-route .now .side-stop-title {
+    color: var(--mark);
+  }
+  .side-stop-title .hand-circle {
+    inset: -8px -14px;
+    width: calc(100% + 28px);
+    height: calc(100% + 14px);
+  }
+  .side-stop-where {
+    font-size: 15px;
+    color: var(--muted);
+  }
+
+  /* The reveal: the news and the next stall on the reading side, the map large beside them. */
+  .reveal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head map"
+      "stall map"
+      "foot map";
+    align-content: start;
+    column-gap: clamp(44px, 5vw, 96px);
+  }
+  .reveal > .reveal-head {
+    grid-area: head;
+  }
+  .reveal > .map-crop {
+    grid-area: map;
+    align-self: center;
+    width: 100%;
+    margin: 0;
+  }
+  .reveal > .reveal-stall {
+    grid-area: stall;
+  }
+  .reveal > .foot {
+    grid-area: foot;
+    align-self: start;
+  }
+
+  /* The other screens: a wider sheet and larger type. */
+  .letter-title {
+    font-size: clamp(84px, 7vw, 112px);
+  }
+  .muted-label {
+    font-size: 16px;
+  }
 }

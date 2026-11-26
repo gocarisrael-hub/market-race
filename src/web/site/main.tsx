@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../shared/fonts.css'
 import '../shared/decor.css'
+import '../shared/desk.css'
 import './site.css'
 import { DecorDefs } from '../shared/decor.tsx'
+import { Desk } from '../shared/desk.tsx'
 import { getShop, type Shop } from './api.ts'
 import { copy } from './copy.ts'
 import {
   chooseTheme,
   type Draft,
+  decorFor,
   emptyDraft,
   loadDraft,
   orderableThemes,
@@ -59,19 +62,26 @@ function App() {
     saveDraft(d)
   }
 
+  // Pages without the shop: a plain desk (the manage page draws its own, with the order's look).
+  const bare = (page: React.ReactNode) => (
+    <>
+      <Desk />
+      {page}
+    </>
+  )
   switch (route.page) {
     case 'payMock':
-      return <PayMock search={loc.search} />
+      return bare(<PayMock search={loc.search} />)
     case 'payDone':
-      return <PayDone search={loc.search} />
+      return bare(<PayDone search={loc.search} />)
     case 'manage':
       return <Manage token={route.token} search={loc.search} />
     case 'companyPay':
-      return <CompanyPay token={route.token} />
+      return bare(<CompanyPay token={route.token} />)
     case 'lostLink':
-      return <LostLink />
+      return bare(<LostLink />)
     case 'notFound':
-      return (
+      return bare(
         <main className="page">
           <p className="status" style={{ marginTop: 80 }}>
             {copy.notFound}
@@ -79,23 +89,38 @@ function App() {
           <Sketch href="/" icon="house" small>
             {copy.toHome}
           </Sketch>
-        </main>
+        </main>,
       )
   }
-  if (shopError) return <Failed text={copy.loadFailed} />
-  if (!shop || !draft) return <Loading />
+  if (shopError) return bare(<Failed text={copy.loadFailed} />)
+  if (!shop || !draft) return bare(<Loading />)
+  let page: React.ReactNode
   switch (route.page) {
     case 'home':
-      return <Home shop={shop} draft={draft} setDraft={setDraft} />
+      page = <Home shop={shop} draft={draft} setDraft={setDraft} />
+      break
     case 'questions':
-      return <Questions shop={shop} draft={draft} setDraft={setDraft} />
+      page = <Questions shop={shop} draft={draft} setDraft={setDraft} />
+      break
     case 'photos':
-      return <Photos token={route.token} shop={shop} draft={draft} />
+      page = <Photos token={route.token} shop={shop} draft={draft} />
+      break
     case 'checkout':
-      return <Checkout token={route.token} shop={shop} draft={draft} setDraft={setDraft} />
+      page = <Checkout token={route.token} shop={shop} draft={draft} setDraft={setDraft} />
+      break
     case 'companies':
-      return <Companies shop={shop} />
+      page = <Companies shop={shop} />
+      break
   }
+  // The desk behind the page on wide screens: the chosen map and the occasion's doodles.
+  const themes = orderableThemes(shop)
+  const theme = themes.find((t) => t.id === draft.themeId) ?? themes[0]
+  return (
+    <>
+      <Desk map={theme?.map} decor={decorFor(shop, draft.occasionKey)} />
+      {page}
+    </>
+  )
 }
 
 createRoot(document.getElementById('root')!).render(

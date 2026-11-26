@@ -3,10 +3,12 @@
 // The component is keyed by stop, so a poll for the same step never clears what is being typed.
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
+import { useWide } from '../../shared/useWide.ts'
 import { riddleTitle } from '../copy.ts'
 import { Arrow, BrushButton, HandCircle, Paper, SketchButton, Tick, Trail } from '../draw.tsx'
 import { splitQuestion, stopIcon } from '../logic.ts'
 import { TapedPhoto, useLightbox } from '../photo.tsx'
+import { GameSide } from './GameSide.tsx'
 import type { ScreenProps } from './types.ts'
 import { useBusy } from './useBusy.ts'
 
@@ -23,6 +25,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
   const { body, question } = splitQuestion(cur.riddle.parts)
   const inputRef = useRef<HTMLInputElement>(null)
   const lightbox = useLightbox(t, t('riddle.photoAlt'))
+  const wide = useWide()
 
   // A gentle shake of the answer line on a wrong answer (not a remount: keeps the keyboard up).
   useEffect(() => {
@@ -97,156 +100,160 @@ export function Riddle({ view, t, act }: ScreenProps) {
         <div className="trail-label">{t('riddle.stopOf', { n: cur.index + 1, total: view.totalStops })}</div>
       </header>
 
-      <Paper className={`note rise ${cur.photo ? 'with-photo' : ''}`} tilt={cur.index % 2 ? -1.2 : 1.2}>
-        <h1 className="note-kicker">
-          <Icon name={cur.finale ? 'trophy' : 'magnifier'} size={30} tilt={-8} />
-          {riddleTitle(t, cur.index, cur.finale)}
-        </h1>
-        {cur.photo && (
-          <TapedPhoto
-            className="riddle-photo"
-            src={cur.photo}
-            alt={t('riddle.photoAlt')}
-            tilt={cur.index % 2 ? 4 : -4}
-            t={t}
-            onOpen={lightbox.open}
-          />
-        )}
-        <p className="riddle-text">
-          {body.map((p, i) =>
-            p.t === 'slot' ? (
-              // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
-              <span key={i} className="slot">
-                {p.v}
-              </span>
-            ) : (
-              // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
-              <span key={i}>{p.v}</span>
-            ),
+      {/* Wide screens: the riddle and the answer in one column, the map and route beside them. */}
+      <div className="riddle-main">
+        <Paper className={`note rise ${cur.photo ? 'with-photo' : ''}`} tilt={cur.index % 2 ? -1.2 : 1.2}>
+          <h1 className="note-kicker">
+            <Icon name={cur.finale ? 'trophy' : 'magnifier'} size={30} tilt={-8} />
+            {riddleTitle(t, cur.index, cur.finale)}
+          </h1>
+          {cur.photo && (
+            <TapedPhoto
+              className="riddle-photo"
+              src={cur.photo}
+              alt={t('riddle.photoAlt')}
+              tilt={cur.index % 2 ? 4 : -4}
+              t={t}
+              onOpen={lightbox.open}
+            />
           )}
-        </p>
-        {question && <p className="riddle-q">{question}</p>}
-        {!cur.photo && <img className="note-peek bob" src={stopIcon(cur.index + 3)} alt="" />}
-      </Paper>
+          <p className="riddle-text">
+            {body.map((p, i) =>
+              p.t === 'slot' ? (
+                // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
+                <span key={i} className="slot">
+                  {p.v}
+                </span>
+              ) : (
+                // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
+                <span key={i}>{p.v}</span>
+              ),
+            )}
+          </p>
+          {question && <p className="riddle-q">{question}</p>}
+          {!cur.photo && <img className="note-peek bob" src={stopIcon(cur.index + 3)} alt="" />}
+        </Paper>
 
-      {showQuestion && (
-        <form className="hintq-form" onSubmit={answerHint} noValidate>
-          <Paper className="hintq rise" tilt={-1}>
-            <p className="hintq-kicker">
-              <Icon name="key" size={30} tilt={-8} />
-              <span>{t('hintq.title')}</span>
-            </p>
-            <p className="hintq-question" id="hintq-question">
-              {cur.riddle.hintQuestion}
-            </p>
-            <label className="answer">
-              <span className="answer-label">
-                <Icon name="pencil" size={22} tilt={-6} />
-                {t('hintq.answerLabel')}
-              </span>
-              <input
-                value={hintAnswer}
-                onChange={(e) => {
-                  setHintAnswer(e.target.value)
-                  if (hintWrong) setHintWrong(0)
-                }}
-                maxLength={200}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="go"
-                dir="auto"
-                aria-describedby="hintq-question hintq-feedback"
-                // biome-ignore lint/a11y/noAutofocus: opened on purpose by tapping the hint
-                autoFocus
-              />
-            </label>
-            <p id="hintq-feedback" className="hintq-feedback" aria-live="polite">
-              {hintWrong > 0 && (
-                <span key={hintWrong} className="feedback-text">
-                  {t('hintq.wrong')}
+        {showQuestion && (
+          <form className="hintq-form" onSubmit={answerHint} noValidate>
+            <Paper className="hintq rise" tilt={-1}>
+              <p className="hintq-kicker">
+                <Icon name="key" size={30} tilt={-8} />
+                <span>{t('hintq.title')}</span>
+              </p>
+              <p className="hintq-question" id="hintq-question">
+                {cur.riddle.hintQuestion}
+              </p>
+              <label className="answer">
+                <span className="answer-label">
+                  <Icon name="pencil" size={22} tilt={-6} />
+                  {t('hintq.answerLabel')}
+                </span>
+                <input
+                  value={hintAnswer}
+                  onChange={(e) => {
+                    setHintAnswer(e.target.value)
+                    if (hintWrong) setHintWrong(0)
+                  }}
+                  maxLength={200}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="go"
+                  dir="auto"
+                  aria-describedby="hintq-question hintq-feedback"
+                  // biome-ignore lint/a11y/noAutofocus: opened on purpose by tapping the hint
+                  autoFocus
+                />
+              </label>
+              <p id="hintq-feedback" className="hintq-feedback" aria-live="polite">
+                {hintWrong > 0 && (
+                  <span key={hintWrong} className="feedback-text">
+                    {t('hintq.wrong')}
+                  </span>
+                )}
+              </p>
+              <div className="hintq-actions">
+                <SketchButton type="submit" className="hintq-go accent" disabled={busy}>
+                  {t('hintq.submit')}
+                </SketchButton>
+                <SketchButton
+                  className="hintq-skip"
+                  onClick={() => {
+                    setAsking(false)
+                    setHintAnswer('')
+                    setHintWrong(0)
+                  }}
+                >
+                  {t('hintq.skip')}
+                </SketchButton>
+              </div>
+            </Paper>
+          </form>
+        )}
+
+        <form className="answer-form" onSubmit={submit} noValidate>
+          <div className="answer-block">
+            {cur.riddle.hint && (
+              <div className="hint-line rise" role="note">
+                <Icon name="bulb" size={30} tilt={8} />
+                <Arrow />
+                <span>
+                  {t('riddle.hintPrefix')} {cur.riddle.hint}
+                </span>
+              </div>
+            )}
+            <div className="answer-row">
+              <label className="answer">
+                <span className="answer-label">
+                  <Icon name="pencil" size={24} tilt={-6} />
+                  {t('riddle.answerLabel')}
+                </span>
+                <input
+                  ref={inputRef}
+                  value={answer}
+                  onChange={(e) => {
+                    setAnswer(e.target.value)
+                    if (feedback) setFeedback(null)
+                  }}
+                  maxLength={200}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="go"
+                  dir="auto"
+                  aria-describedby="answer-feedback"
+                />
+              </label>
+              {cur.riddle.hasHint && !cur.riddle.hint && !showQuestion && (
+                <button
+                  type="button"
+                  className="hint-btn wiggle"
+                  aria-label={t('riddle.hintButton')}
+                  onClick={askHint}
+                  disabled={busy}
+                >
+                  ?
+                  <HandCircle />
+                </button>
+              )}
+            </div>
+            <p id="answer-feedback" className="feedback" aria-live="polite">
+              {feedback && (
+                <span key={feedback.n} className="feedback-text">
+                  {feedback.text}
                 </span>
               )}
             </p>
-            <div className="hintq-actions">
-              <SketchButton type="submit" className="hintq-go accent" disabled={busy}>
-                {t('hintq.submit')}
-              </SketchButton>
-              <SketchButton
-                className="hintq-skip"
-                onClick={() => {
-                  setAsking(false)
-                  setHintAnswer('')
-                  setHintWrong(0)
-                }}
-              >
-                {t('hintq.skip')}
-              </SketchButton>
-            </div>
-          </Paper>
-        </form>
-      )}
-
-      <form className="answer-form" onSubmit={submit} noValidate>
-        <div className="answer-block">
-          {cur.riddle.hint && (
-            <div className="hint-line rise" role="note">
-              <Icon name="bulb" size={30} tilt={8} />
-              <Arrow />
-              <span>
-                {t('riddle.hintPrefix')} {cur.riddle.hint}
-              </span>
-            </div>
-          )}
-          <div className="answer-row">
-            <label className="answer">
-              <span className="answer-label">
-                <Icon name="pencil" size={24} tilt={-6} />
-                {t('riddle.answerLabel')}
-              </span>
-              <input
-                ref={inputRef}
-                value={answer}
-                onChange={(e) => {
-                  setAnswer(e.target.value)
-                  if (feedback) setFeedback(null)
-                }}
-                maxLength={200}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="go"
-                dir="auto"
-                aria-describedby="answer-feedback"
-              />
-            </label>
-            {cur.riddle.hasHint && !cur.riddle.hint && !showQuestion && (
-              <button
-                type="button"
-                className="hint-btn wiggle"
-                aria-label={t('riddle.hintButton')}
-                onClick={askHint}
-                disabled={busy}
-              >
-                ?
-                <HandCircle />
-              </button>
-            )}
           </div>
-          <p id="answer-feedback" className="feedback" aria-live="polite">
-            {feedback && (
-              <span key={feedback.n} className="feedback-text">
-                {feedback.text}
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="foot">
-          <BrushButton type="submit" disabled={busy}>
-            {busy ? t('riddle.checking') : t('riddle.submit')}
-          </BrushButton>
-        </div>
-      </form>
+          <div className="foot">
+            <BrushButton type="submit" disabled={busy}>
+              {busy ? t('riddle.checking') : t('riddle.submit')}
+            </BrushButton>
+          </div>
+        </form>
+      </div>
+      {wide && <GameSide view={view} t={t} />}
       {lightbox.element}
     </main>
   )

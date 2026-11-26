@@ -29,7 +29,7 @@ test('step 1 recolors the map preview live, in three palettes', async ({ page })
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   // The occasion's doodles and a playful line appear once it is picked.
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
-  await expect(page.locator('.doodles [data-doodle="balloons"]')).toHaveCount(1)
+  await expect(page.locator('main .doodles [data-doodle="balloons"]')).toHaveCount(1)
   await expect(page.getByText('יאללה, נרות ועוגה!')).toBeVisible()
 
   const daubs = page.getByRole('radiogroup', { name: 'ובאיזה צבע?' })
