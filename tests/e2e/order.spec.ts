@@ -37,7 +37,7 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   // A bachelorette is for her only: no "who is it for" stage, no she/he switch.
   await next(page, /\/order\/name$/)
   await expect(bar).toHaveAttribute('aria-valuenow', '2')
-  await expect(bar).toHaveAttribute('aria-valuetext', /שלב 2 מתוך 12, השם/)
+  await expect(bar).toHaveAttribute('aria-valuetext', /שלב 2 מתוך 13, השם/)
   await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
   // The first stop passed shows a tasting on the map.
   await expect(map.locator('.bm-stop.done .bm-food')).toHaveCount(1)
@@ -60,7 +60,7 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
 
   // The questions, a few per screen.
   await next(page, /\/order\/questions$/)
-  await expect(page.getByText('חלק 1 מתוך 2')).toBeVisible()
+  await expect(page.getByText('חלק 1 מתוך 3')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'ספרו לנו עליה' })).toBeVisible()
   await page.getByLabel('מי הייתה האהבה הראשונה שלה?').fill('יואב מהשכבה')
   await page.getByLabel('מה האוכל האהוב עליה?').fill('סושי')
@@ -71,6 +71,9 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   // A refresh keeps the stage and the answers (the draft is saved on every change).
   await page.reload()
   await expect(page.getByLabel('משפט שהיא תמיד אומרת')).toHaveValue('יאללה')
+  // The last part: the optional question about the first photo (for the photo mini-game).
+  await next(page, /\/order\/questions\/3$/)
+  await expect(page.getByLabel(/איפה צולמה הראשונה/)).toBeVisible()
   await expect(mainButton(page)).toHaveText('ממשיכים לתמונות')
   const created = page.waitForResponse(
     (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
@@ -102,11 +105,14 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
 
   // Back and forth keeps the same order and updates it.
   await backButton(page).click()
+  await expect(page).toHaveURL(/\/order\/questions\/3$/)
+  await backButton(page).click()
   await expect(page).toHaveURL(/\/order\/questions\/2$/)
   await backButton(page).click()
   await expect(page).toHaveURL(/\/order\/questions$/)
   await page.getByLabel('מה האוכל האהוב עליה?').fill('פיצה')
   await next(page, /\/order\/questions\/2$/)
+  await next(page, /\/order\/questions\/3$/)
   const updated = page.waitForResponse((r) => r.request().method() === 'PUT')
   await mainButton(page).click()
   expect((await updated).request().postDataJSON().answers.favorite_food).toBe('פיצה')
@@ -163,7 +169,7 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   // The summary: the game is ready to be built.
   await next(page, new RegExp(`/order/${token}/pay$`))
   await expect(page.getByRole('heading', { name: 'המשחק שלכם מוכן לבנייה' })).toBeVisible()
-  await expect(bar).toHaveAttribute('aria-valuenow', '12')
+  await expect(bar).toHaveAttribute('aria-valuenow', '13')
   await expect(page.getByTestId('total')).toContainText('495 ₪')
   await expect(page.getByText('בוטנים, טבעוני')).toBeVisible()
   await expect(page.getByText('תמונה אחת')).toBeVisible()
@@ -423,6 +429,7 @@ test('a family game: no who-for or she/he, the name field is the family name, fa
   await page.getByLabel(/מי הכי מאחר\/ת במשפחה/).fill('דוד שמעון')
   // Hidden questions of the set are never asked.
   await expect(page.getByLabel(/כינוי/)).toHaveCount(0)
+  await next(page, /\/order\/questions\/3$/)
   const created = page.waitForResponse(
     (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
   )
