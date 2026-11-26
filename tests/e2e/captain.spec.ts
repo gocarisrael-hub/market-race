@@ -119,6 +119,27 @@ test('the captain starts with the players who came, shares the link, and everyon
   await friendCtx.close()
 })
 
+test('a game for one: singular counts on the start and one portion at the stall', async ({
+  page,
+  request,
+}) => {
+  const { manageToken } = await paidOrder(request, 1)
+  await page.goto(`/m/${manageToken}`)
+  await expect(page.getByTestId('players')).toHaveText('1')
+  await expect(page.getByText('משתתף אחד מתוך 1')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'פחות משתתפים' })).toBeDisabled()
+  await page.getByRole('button', { name: 'מתחילים את המשחק' }).click()
+  await expect(page.getByText('הולכים לתחנה הראשונה עם משתתף אחד.')).toBeVisible()
+  await page.getByRole('button', { name: 'כן, מתחילים!' }).click()
+  await expect(page.getByText('משחקים עם משתתף אחד.')).toBeVisible()
+  await page.getByRole('link', { name: 'ממשיכים למשחק' }).click()
+  await expect(riddle1(page)).toBeVisible()
+  await page.getByLabel('התשובה שלכן').fill('תקווה')
+  await page.getByRole('button', { name: 'בודקות!' }).click()
+  await page.getByRole('button', { name: 'הגענו, למימוש' }).click()
+  await expect(page.getByText('מנה אחת מיץ תפוזים טרי')).toBeVisible()
+})
+
 test('a hint behind a personal question: wrong keeps it hidden, right opens it', async ({
   page,
   request,
