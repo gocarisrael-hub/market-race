@@ -1,5 +1,6 @@
 // Walking the order build in end-to-end tests: one stage per screen, the main button at the bottom.
 import { expect, type Page } from '@playwright/test'
+import { noBareLinks } from './links.ts'
 
 /** The stage's main button (its words change: ממשיכים, בינתיים בלי, לסיכום, לתשלום...). */
 export const mainButton = (page: Page) => page.locator('.stage-nav .brush')
@@ -11,6 +12,8 @@ export const progress = (page: Page) => page.getByRole('progressbar')
 /** Presses the main button and waits for the next stage's path. */
 export async function next(page: Page, path?: RegExp) {
   const from = page.url()
+  // Every stage of the order: no underlined text links, only drawn actions.
+  await noBareLinks(page)
   await mainButton(page).click()
   if (path) await page.waitForURL(path)
   else await expect.poll(() => page.url()).not.toBe(from)

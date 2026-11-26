@@ -2,6 +2,7 @@
 // page with the players who arrived, shares the players' link, and goes into the game. Hints can
 // sit behind a personal question the buyer added on the edit page.
 import { type APIRequestContext, devices, expect, type Page, test } from '@playwright/test'
+import { noBareLinks } from '../helpers/links.ts'
 
 const SYNC = { timeout: 15_000 }
 
@@ -26,17 +27,6 @@ async function paidOrder(request: APIRequestContext, people = 5) {
   const m = await (await request.get(`/api/manage/${manageToken}`)).json()
   expect(m.status).toBe('ready')
   return { manageToken, gameUrl: m.gameLink as string }
-}
-
-/** Every visible action is drawn (brush or outline), none is a bare underlined text link. */
-async function noBareLinks(page: Page) {
-  const bare = await page.$$eval('a, button', (els) =>
-    els
-      .filter((el) => (el as HTMLElement).offsetParent !== null)
-      .filter((el) => getComputedStyle(el).textDecorationLine.includes('underline'))
-      .map((el) => el.textContent?.trim()),
-  )
-  expect(bare).toEqual([])
 }
 
 const riddle1 = (p: Page) => p.getByRole('heading', { name: 'חידה ראשונה', exact: true })

@@ -3,7 +3,7 @@
 // the map, the group size range from the settings, and the lead form. Companies don't order on the
 // site; they leave a lead, and the owner sends a quote with a payment link (/pay/:token).
 import { type CSSProperties, useState } from 'react'
-import { type DoodleName, Doodles, Icon } from '../../shared/decor.tsx'
+import { type DoodleName, Doodles, Icon, SketchShape } from '../../shared/decor.tsx'
 import { ApiError, type Shop, sendLead } from '../api.ts'
 import { copy } from '../copy.ts'
 import {
@@ -38,8 +38,9 @@ export function Companies({ shop, site }: { shop: Shop; site: Site }) {
     <div className="co" data-decor="company">
       <header className="co-bar">
         <span className="co-brand">{c.brand(shop.brand)}</span>
-        <a className="co-bar-link" href="#lead">
-          {c.toForm}
+        <a className="sketch small co-bar-link" href="#lead">
+          <SketchShape />
+          <span>{c.toForm}</span>
         </a>
       </header>
 
@@ -159,8 +160,9 @@ export function Companies({ shop, site }: { shop: Shop; site: Site }) {
 
       <footer className="co-foot">
         {c.footer.text}{' '}
-        <a href={home} className="co-foot-link">
-          {c.footer.link}
+        <a href={home} className="sketch small co-foot-link">
+          <SketchShape />
+          <span>{c.footer.link}</span>
         </a>
       </footer>
     </div>

@@ -8,7 +8,7 @@ import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
 import { formatShekels, fromPerPerson, orderableThemes, privateOccasions, routeForTheme } from '../logic.ts'
 import { RouteTeaser } from '../RouteTeaser.tsx'
-import { Brush, Deco, Fold, Link } from '../ui.tsx'
+import { Brush, Deco, Fold, Sketch } from '../ui.tsx'
 import { TastingsExplorer } from './Tastings.tsx'
 
 // One food illustration (assets/icons) per step of "how it works".
@@ -90,9 +90,9 @@ export function Landing({ shop }: { shop: Shop }) {
 
       <footer className="l-footer">
         {c.footer.text}{' '}
-        <Link href="/companies" className="l-footer-link">
+        <Sketch href="/companies" icon="briefcase" small className="l-footer-link">
           {c.footer.link}
-        </Link>
+        </Sketch>
       </footer>
     </main>
   )
