@@ -89,8 +89,10 @@ export function Landing({ shop }: { shop: Shop }) {
               </li>
             ))}
             <li>
-              <Doodle name="briefcase" className="l-occ-doodle" />
-              <Link href="/companies">{c.forCompanies}</Link>
+              <Link href="/companies" className="l-occ-link">
+                <Doodle name="briefcase" className="l-occ-doodle" />
+                <span>{c.forCompanies}</span>
+              </Link>
             </li>
           </ul>
         </section>

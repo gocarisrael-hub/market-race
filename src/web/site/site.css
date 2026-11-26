@@ -2209,8 +2209,14 @@ ol.howto.drawn li {
   font-weight: 700;
   line-height: 1;
 }
-.l-occasions a {
-  color: var(--accent);
+/* Companies lead to their own page, drawn like the other occasions. */
+.l-occ-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: none;
 }
 .l-occ-doodle {
   flex: none;
