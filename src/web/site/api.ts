@@ -9,6 +9,8 @@ export type Occasion = {
   forms: string[]
   /** Who the game can be for, one person first. Missing from older servers: derived from forms. */
   recipients?: string[]
+  /** The occasion's own name for a recipient (e.g. "לילדה"); missing: the default. */
+  recipientLabels?: Record<string, string>
   /** Doodle set of the occasion (birthday, love, ...). */
   decor?: string
 }
@@ -58,7 +60,14 @@ export type Shop = {
   diets: string[]
   cardEnabled: boolean
 }
-export type Question = { slot: string; text: string; required: boolean; maxLen: number }
+export type Question = {
+  slot: string
+  text: string
+  /** A short example answer, shown as "למשל: …" in the empty field. Missing from older servers. */
+  example?: string
+  required: boolean
+  maxLen: number
+}
 export type LetterNote = { text: string; signature: string }
 /** A personal question about the honoree, asked in the game to unlock a hint. */
 export type HintQuestion = { question: string; answer: string }

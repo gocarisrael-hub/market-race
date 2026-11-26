@@ -186,6 +186,59 @@ describe('builder selection', () => {
     expect(buildMinigames(input({ content: { ...DEFAULT_MINIGAMES, after: [] } }))).toEqual([])
   })
 
+  it("plays a kid's birthday as true/false then the photo, never the cipher", () => {
+    const kid = {
+      name: 'נועה',
+      favorite_food: 'פיצה',
+      favorite_game: 'מחבואים',
+      dream: 'להיות וטרינרית',
+      one_word: 'שובבה',
+      favorite_place: 'גן השעשועים',
+      catchphrase: 'עוד פעם!',
+      photo_where: 'הים',
+    }
+    for (let i = 0; i < 12; i++) {
+      const games = buildMinigames(input({ answers: kid, occasionKey: 'birthday_kid', seed: `MR-${i}` }))
+      expect(games.map((g) => g.type)).toEqual(['true_false', 'photo'])
+      const again = regenerateMinigame(
+        input({ answers: kid, occasionKey: 'birthday_kid' }),
+        games,
+        1,
+        `again-${i}`,
+      )
+      // Another try may be any allowed type except the other game's, never the cipher.
+      expect(['photo', 'who_said']).toContain(again?.type)
+    }
+    // The kid's favourite game is one of the statements it can make.
+    const tf = buildMinigames(
+      input({ answers: kid, occasionKey: 'birthday_kid', content: only('true_false') }),
+    )
+    expect(tf[0].slots.length).toBeGreaterThanOrEqual(3)
+    const all = new Set(
+      Array.from(
+        { length: 12 },
+        (_, i) =>
+          buildMinigames(
+            input({ answers: kid, occasionKey: 'birthday_kid', content: only('true_false'), seed: `S${i}` }),
+          )[0].slots,
+      ).flat(),
+    )
+    expect(all).toContain('favorite_game')
+    // Other occasions keep every type; a type the setting turns off stays off for kids too.
+    const other = new Set(
+      Array.from({ length: 12 }, (_, i) =>
+        buildMinigames(input({ seed: `MR-${i}` })).map((g) => g.type),
+      ).flat(),
+    )
+    expect(other).toContain('cipher')
+    const noPhoto = { ...DEFAULT_MINIGAMES, types: ['who_said', 'true_false'] as MinigameType[] }
+    expect(
+      buildMinigames(input({ answers: kid, occasionKey: 'birthday_kid', content: noPhoto })).map(
+        (g) => g.type,
+      ),
+    ).toEqual(['true_false', 'who_said'])
+  })
+
   it('prefers answers the riddles have not shown yet', () => {
     // The riddles before the game showed the food and the place: the statements lead with the rest.
     const games = buildMinigames(

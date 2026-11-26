@@ -140,7 +140,7 @@ test('a hint behind a personal question: wrong keeps it hidden, right opens it',
   await page.goto(`/m/${manageToken}`)
   await page.getByRole('button', { name: 'ערוך' }).click()
   await expect(page.getByRole('heading', { name: 'שאלות אישיות לרמזים' })).toBeVisible()
-  await expect(page.getByText('נשאל אותן במהלך המשחק כדי לפתוח רמזים')).toBeVisible()
+  await expect(page.getByText('שאלה שרק מי שמכיר אותה יודע לענות עליה')).toBeVisible()
   await page.getByRole('button', { name: '+ להוסיף שאלה' }).click()
   await page.locator('input[name="hintQuestion0"]').fill('איך קוראים לכלב שלה?')
   // Half a pair is not saved.

@@ -8,6 +8,7 @@ import type {
   Palette,
   Question,
   Recipient,
+  RecipientLabels,
   RiddleTemplates,
   RouteStop,
   ThemeStyle,
@@ -69,6 +70,8 @@ export interface Occasion {
   forms: Form[]
   /** Who a private game can be for, each with its question set (null: questionSetId). */
   recipients: OccasionRecipients
+  /** The occasion's own name for a recipient on the order (e.g. "לילדה"); empty: the default. */
+  recipientLabels?: RecipientLabels
   playersFeminine: boolean
   decor: Decor
   sort: number
@@ -91,7 +94,9 @@ export interface PaletteRow {
 }
 export const DECOR_LABELS: Record<Decor, string> = {
   birthday: 'יום הולדת (בלונים, עוגה, כובע, קונפטי)',
+  kids: 'יום הולדת לילדים (בלונים, עוגה, כתרים, כוכבים)',
   love: 'אהבה (לבבות, טבעת, נשיקה, פרחים)',
+  anniversary: 'יום נישואים (טבעות, לבבות, הרמת כוסית)',
   family: 'משפחה (בית, משפחה, לב)',
   friends: 'חברים וקבוצות (כיף, דגל, כוכבים)',
   company: 'חברה (תיק, טיל, קפה)',

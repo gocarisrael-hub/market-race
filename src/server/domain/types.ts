@@ -20,6 +20,8 @@ export const RECIPIENT_FORM: Record<Recipient, Form> = {
 }
 /** An occasion's recipients: each offered one, with its question set (null: the occasion's own). */
 export type OccasionRecipients = Partial<Record<Recipient, number | null>>
+/** An occasion's own name for a recipient on the order (e.g. "לילדה"); missing: the default. */
+export type RecipientLabels = Partial<Record<Recipient, string>>
 
 // Fixed lists (SPEC: allergens are never free text).
 export const ALLERGENS = [
@@ -65,6 +67,8 @@ export interface Question {
   text: Partial<Record<Form, string>>
   required: boolean
   fallback: Partial<Record<Form, string>> | string
+  /** A short example answer, shown in the empty field as "למשל: …" (per form, or one for all). */
+  example?: Partial<Record<Form, string>> | string
   maxLen: number
   /**
    * Not asked: the buyer never sees it, riddles get the fallback. Lets one riddle template use
@@ -145,7 +149,16 @@ export interface ThemeStyle {
 }
 
 // Hand-drawn doodle sets shown around the game and the order flow, picked per occasion.
-export const DECORS = ['birthday', 'love', 'family', 'friends', 'company', 'generic'] as const
+export const DECORS = [
+  'birthday',
+  'kids',
+  'love',
+  'anniversary',
+  'family',
+  'friends',
+  'company',
+  'generic',
+] as const
 export type Decor = (typeof DECORS)[number]
 export const isDecor = (v: unknown): v is Decor => DECORS.includes(v as Decor)
 

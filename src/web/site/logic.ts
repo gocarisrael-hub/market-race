@@ -116,6 +116,11 @@ export function recipientsFor(occ: Occasion | undefined): SiteRecipient[] {
   return SITE_RECIPIENTS.filter((r) => own.includes(r))
 }
 
+/** How the order names a recipient: the occasion's own label (e.g. "לילדה"), else the default. */
+export function recipientLabel(occ: Occasion | undefined, r: SiteRecipient): string {
+  return occ?.recipientLabels?.[r]?.trim() || copy.home.recipients[r]
+}
+
 /** Sets the recipient and its grammar. */
 export const withRecipient = (d: Draft, recipient: SiteRecipient | null): Draft => ({
   ...d,

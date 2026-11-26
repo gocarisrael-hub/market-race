@@ -87,9 +87,14 @@ describe('recipient-first in the demo catalog', () => {
 
   it('offers who the game is for on the shop, one person first', async () => {
     const shop = (await t.app.inject({ url: '/api/shop' })).json()
-    const r = (key: string) => shop.occasions.find((o: { key: string }) => o.key === key).recipients
+    const find = (key: string) => shop.occasions.find((o: { key: string }) => o.key === key)
+    const r = (key: string) => find(key).recipients
     expect(r('birthday_friend')).toEqual(['she', 'he', 'group'])
-    expect(r('birthday_parent')).toEqual(['she', 'he'])
+    expect(r('birthday_kid')).toEqual(['she', 'he'])
+    expect(find('birthday_kid').recipientLabels).toEqual({ she: 'לילדה', he: 'לילד' })
+    expect(r('anniversary')).toEqual(['she', 'he', 'couple'])
+    // A parent's birthday is folded into the birthday: inactive, not on the shop.
+    expect(find('birthday_parent')).toBeUndefined()
     expect(r('couple')).toEqual(['she', 'he', 'couple'])
     expect(r('bachelorette')).toEqual(['she'])
     expect(r('family')).toEqual(['family'])
@@ -103,16 +108,21 @@ describe('recipient-first in the demo catalog', () => {
     expect(bdShe.map((q) => q.text)).toContain(RECIPIENT_SETS.birthdayShe.questions[1].text.she)
     expect(bdShe.every((q) => !/ביניכם|שלו\b/.test(q.text))).toBe(true)
     const bdHe = await questions('birthday_friend', 'he')
-    expect(bdHe[1].text).toBe('מה הוא היה אוכל כל יום, אם רק היה אפשר?')
+    expect(bdHe[1]).toMatchObject({ text: 'מה האוכל האהוב עליו?', example: 'שווארמה' })
+    // Every question is short and direct, with an example answer.
+    for (const q of [...bdShe, ...bdHe]) {
+      expect(q.text.length).toBeLessThanOrEqual(40)
+      expect((q as { example?: string }).example).toBeTruthy()
+    }
     const loveHe = await questions('couple', 'he')
     expect(loveHe[0].text).toMatch(/ביניכם/) // the giver's side
-    expect(loveHe[1].text).toMatch(/הוא מזמין/)
+    expect(loveHe[1].text).toMatch(/הוא תמיד מזמין/)
     const couple = await questions('couple', 'couple')
-    expect(couple[0].text).toMatch(/אצלם/) // the two of them
+    expect(couple[0].text).toBe('איפה הם הכירו?') // the two of them
     const group = await questions('birthday_friend', 'group')
     expect(group.map((q) => q.slot)).toContain('who_late') // "who is the most…"
     const family = await questions('generic', 'family')
-    expect(family[0].text).toBe('שם המשפחה?')
+    expect(family[0].text).toBe('איך קוראים למשפחה?')
     // Older pages asked by form.
     const byForm = await t.app.inject({ url: '/api/shop/questions?occasion=couple&form=he' })
     expect(byForm.json().questions[0].text).toBe(loveHe[0].text)
@@ -150,11 +160,45 @@ describe('recipient-first in the demo catalog', () => {
     expect(manage.recipient).toBe('he')
   })
 
+  it("a kid's birthday for her: a parent's questions, kid-friendly riddle lines, no cipher", async () => {
+    const qs = await questions('birthday_kid', 'she')
+    expect(qs.map((q) => q.slot)).not.toContain('first_love') // never asked of a child
+    expect(qs[0]).toMatchObject({ text: 'מה האוכל האהוב עליה?', example: 'פיצה' })
+    const res = await t.app.inject({
+      method: 'POST',
+      url: '/api/orders',
+      payload: order({
+        occasionKey: 'birthday_kid',
+        recipient: 'she',
+        honoreeName: 'נועה',
+        answers: { favorite_food: 'פיצה', one_word: 'שובבה', favorite_place: 'גן השעשועים' },
+      }),
+    })
+    expect(res.statusCode).toBe(200)
+    const [o] = await t.db.select().from(orders).where(eq(orders.manageToken, res.json().manageToken))
+    const built = await buildOrderGame(t.db, o.id)
+    expect(built.flags).toEqual([])
+    expect(built.game).toMatchObject({ form: 'she', recipient: 'she', decor: 'kids' })
+    const text = built.game!.stops.map((s) => partsToString(s.riddle.parts)).join('\n')
+    expect(text).toContain('ומאז היום שנולדה, נועה יודעת')
+    expect(text).toContain('ומבפנים שובבה')
+    expect((built.game!.minigames ?? []).map((g) => g.type)).not.toContain('cipher')
+  })
+
+  it('an anniversary for the couple asks about the two of them, from the giver', async () => {
+    const qs = await questions('anniversary', 'couple')
+    expect(qs.map((q) => q.slot)).toEqual(
+      expect.arrayContaining(['first_love', 'wedding_song', 'favorite_place', 'dream']),
+    )
+    expect(qs[0].text).toContain('איפה הם נפגשו')
+    expect((await questions('anniversary', 'she'))[0].text).toContain('איפה נפגשתם')
+  })
+
   it('refuses a recipient the occasion does not offer', async () => {
     const res = await t.app.inject({
       method: 'POST',
       url: '/api/orders',
-      payload: order({ occasionKey: 'birthday_parent', recipient: 'couple' }),
+      payload: order({ occasionKey: 'birthday_kid', recipient: 'couple' }),
     })
     expect(res.statusCode).toBe(400)
     expect(res.json().error).toBe('bad_form')
@@ -298,7 +342,8 @@ describe('recipient-first in the demo catalog', () => {
         .set({ recipients: { family: fam.questionSetId, group: fam.questionSetId } })
         .where(eq(occasions.id, fam.id))
       const before = (await t2.db.select().from(questionSets)).length
-      expect(await ensureRecipientSets(t2.db)).toBe(4) // not family (owner changed), bachelorette and friends (same)
+      // Not family (owner changed), bachelorette and friends (same).
+      expect(await ensureRecipientSets(t2.db)).toBe(6)
       expect((await t2.db.select().from(questionSets)).length).toBe(before)
       const [love] = await t2.db.select().from(occasions).where(eq(occasions.key, 'couple'))
       expect(Object.keys(love.recipients).sort()).toEqual(['couple', 'he', 'she'])

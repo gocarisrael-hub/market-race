@@ -26,6 +26,7 @@ import type {
   PhotoBackground,
   Question,
   Recipient,
+  RecipientLabels,
   RiddleTemplates,
   RouteStop,
   ThemeStyle,
@@ -141,6 +142,9 @@ export const occasions = pgTable('occasions', {
   // Who a private game can be for, each with its question set (null: questionSetId). Kept in step
   // with `forms`. Empty on rows saved before recipients existed: derived from `forms`.
   recipients: jsonb().$type<OccasionRecipients>().notNull().default({}),
+  // How the order names each recipient on this occasion (e.g. "לילדה" on a kid's birthday); a
+  // missing or empty one uses the site's default ("למישהי").
+  recipientLabels: jsonb().$type<RecipientLabels>().notNull().default({}),
   // The players are addressed in the feminine plural (a bachelorette), whoever the game is for.
   playersFeminine: boolean().notNull().default(false),
   // Doodle set drawn around the game and the order flow (see DECORS).

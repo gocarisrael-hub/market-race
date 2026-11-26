@@ -65,15 +65,15 @@ test('owner builds a family test game (group form) and plays its first riddle', 
   await login(page)
   await nav(page, 'משחק בדיקה')
   const form = page.locator('form.editor')
-  await form.getByRole('combobox', { name: /^אירוע/ }).selectOption({ label: 'משפחתי' })
+  await form.getByRole('combobox', { name: /^אירוע/ }).selectOption({ label: 'יום משפחתי' })
   await expect(form.getByRole('combobox', { name: /^למי המשחק/ })).toHaveValue('family')
   await form.getByRole('combobox', { name: /^עיצוב/ }).selectOption({ label: 'כרמל בצבעי מים' })
   await expect(form.getByRole('combobox', { name: /^מסלול/ })).not.toHaveValue('')
   await form.getByLabel('שם הקבוצה / המשפחה').fill(FAMILY)
   // The family's name is the name field; its question is not asked twice. Hidden ones never.
-  await expect(form.getByLabel(/^שם המשפחה\?/)).toHaveCount(0)
+  await expect(form.getByLabel(/^איך קוראים למשפחה\?/)).toHaveCount(0)
   await expect(form.getByLabel(/כינוי/)).toHaveCount(0)
-  await form.getByLabel(/מי הכי מאחר/).fill('דוד שמעון')
+  await form.getByLabel(/מי תמיד מאחר/).fill('דוד שמעון')
   await form.getByRole('button', { name: 'יצירת משחק' }).click()
 
   const result = page.locator('section.result')

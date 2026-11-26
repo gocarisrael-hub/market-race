@@ -24,6 +24,11 @@ export interface MinigameContent {
   after: number[]
   /** Types the builder may use. */
   types: MinigameType[]
+  /**
+   * Per occasion key: the types it may use, tried in this order (e.g. a kid's birthday prefers
+   * true/false and the photo, and never the cipher). Only types also in `types` count.
+   */
+  byOccasion?: Record<string, MinigameType[]>
   /** "מי אמר את זה?": plausible lines to mix with the honoree's own. */
   lines: string[]
   /** Plausible alternatives per kind, to make false statements and wrong choices. A kind can have
@@ -48,6 +53,7 @@ const all = (text: string): PerForm => ({ she: text, he: text, couple: text, gro
 export const DEFAULT_MINIGAMES: MinigameContent = {
   after: [2, 4],
   types: [...MINIGAME_TYPES],
+  byOccasion: { birthday_kid: ['true_false', 'photo', 'who_said'] },
   lines: [
     'יאללה, זזים',
     'עוד חמש דקות',
@@ -106,6 +112,32 @@ export const DEFAULT_MINIGAMES: MinigameContent = {
       'לכתוב ספר',
       'לראות את הזוהר הצפוני',
     ],
+    game: [
+      'מחבואים',
+      'לגו',
+      'תופסת',
+      'כדורגל',
+      'בלואי',
+      'פרוזן',
+      'מיינקראפט',
+      'פאזלים',
+      'קלפים',
+      'מונופול',
+      'בובות',
+      'טרמפולינה',
+    ],
+    song: [
+      'פרח בגני',
+      'אהבת נעוריי',
+      'את',
+      'מה אברך',
+      'שיר אהבה בדואי',
+      'מכל האהבות',
+      'Perfect',
+      'All of Me',
+      "Can't Help Falling in Love",
+      'Thinking Out Loud',
+    ],
     tradition: [
       'קידוש בשישי בערב',
       'ארוחת בוקר בשבת',
@@ -138,6 +170,15 @@ export const DEFAULT_MINIGAMES: MinigameContent = {
     { slot: 'favorite_place', kind: 'place', text: all('המקום שהכי עושה ל{name} טוב: {x}') },
     { slot: 'one_word', kind: 'word', text: all('{name} במילה אחת: {x}') },
     { slot: 'dream', kind: 'dream', text: all('החלום של {name}: {x}') },
+    {
+      slot: 'favorite_game',
+      kind: 'game',
+      text: {
+        she: 'המשחק או הסדרה ש{name} הכי אוהבת: {x}',
+        he: 'המשחק או הסדרה ש{name} הכי אוהב: {x}',
+      },
+    },
+    { slot: 'wedding_song', kind: 'song', text: all('השיר של החתונה של {name}: {x}') },
     { slot: 'group_food', kind: 'food', text: { group: 'אצל {group_name} תמיד יש {x}' } },
     { slot: 'group_place', kind: 'place', text: { group: '{group_name} לא ישכחו את {x}' } },
     { slot: 'family_tradition', kind: 'tradition', text: { group: 'המסורת של {group_name}: {x}' } },
@@ -262,6 +303,8 @@ export interface MinigameInput {
   content: MinigameContent
   /** How many stops the route has: a mini-game always comes before the last one. */
   stopCount: number
+  /** The order's occasion: picks the occasion's own mini-game types (`byOccasion`), if any. */
+  occasionKey?: string
   /** Personal slots each stop's riddle shows, in route order: games prefer what was not seen yet. */
   riddleSlots?: string[][]
   seed: string
@@ -449,21 +492,38 @@ function seen(input: MinigameInput, afterStop: number): Set<string> {
   return new Set((input.riddleSlots ?? []).slice(0, afterStop).flat())
 }
 
-/** One game for a placement: the first type (in seeded order) the order has the data for. */
+/** One game for a placement: the first type (in preference or seeded order) the order has data for. */
 function buildOne(
   input: MinigameInput,
   afterStop: number,
   types: MinigameType[],
   used: Set<string>,
   seed: string,
+  ordered = false,
 ) {
   const rand = rng(seed)
   const c: Ctx = { ...input, rand, avoid: new Set([...seen(input, afterStop), ...used]) }
-  for (const type of shuffle(types, rand)) {
+  // An occasion's own list is tried in its order of preference; otherwise in a seeded order.
+  const order = ordered ? types : shuffle(types, rand)
+  for (const type of order) {
     const built = BUILDERS[type](c)
     if (built) return built
   }
   return null
+}
+
+/** The occasion's own types, in its order of preference (only those the setting allows), if any. */
+function occasionTypes(input: MinigameInput): MinigameType[] | null {
+  const own = input.occasionKey ? input.content.byOccasion?.[input.occasionKey] : undefined
+  if (!own?.length) return null
+  return own.filter(
+    (t, i) => MINIGAME_TYPES.includes(t) && input.content.types.includes(t) && own.indexOf(t) === i,
+  )
+}
+
+/** The types an order may use: its occasion's (in order), else the setting's. */
+export function typesFor(input: MinigameInput): MinigameType[] {
+  return occasionTypes(input) ?? input.content.types.filter((t) => MINIGAME_TYPES.includes(t))
 }
 
 /**
@@ -473,9 +533,16 @@ function buildOne(
 export function buildMinigames(input: MinigameInput): SnapshotMinigame[] {
   const out: SnapshotMinigame[] = []
   const used = new Set<string>()
-  const left = new Set(input.content.types.filter((t) => MINIGAME_TYPES.includes(t)))
+  const left = new Set(typesFor(input))
   for (const afterStop of placements(input.content.after, input.stopCount)) {
-    const built = buildOne(input, afterStop, [...left], used, `${input.seed}:${afterStop}`)
+    const built = buildOne(
+      input,
+      afterStop,
+      [...left],
+      used,
+      `${input.seed}:${afterStop}`,
+      occasionTypes(input) != null,
+    )
     if (!built) continue
     left.delete(built.type)
     for (const s of built.slots) used.add(s)
@@ -498,7 +565,7 @@ export function regenerateMinigame(
   if (!current) return null
   const otherTypes = new Set(games.filter((_, i) => i !== index).map((g) => g.type))
   const used = new Set(games.filter((_, i) => i !== index).flatMap((g) => g.slots))
-  const types = input.content.types.filter((t) => MINIGAME_TYPES.includes(t) && !otherTypes.has(t))
+  const types = typesFor(input).filter((t) => !otherTypes.has(t))
   const built = buildOne(input, current.afterStop, types, used, seed)
   return built ? { ...built, afterStop: current.afterStop, reward: current.reward } : null
 }

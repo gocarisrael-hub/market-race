@@ -85,7 +85,9 @@ export const copy = {
   /** A playful line once an occasion is picked, by its doodle set. */
   cheer: {
     birthday: 'יאללה, נרות ועוגה! את השיר תשירו בשוק.',
+    kids: 'בלונים, עוגה וכתר ליום אחד. יוצאים לחגוג!',
     love: 'אהבה באוויר, וגם ריח של פלאפל.',
+    anniversary: 'עוד שנה ביחד. מרימים כוסית בשוק.',
     family: 'כל המשפחה בשוק, וטעימה לכל אחד.',
     friends: 'החבר׳ה הכי טובים, הטעימות הכי טובות.',
     company: 'צוות שאוכל יחד, נשאר יחד.',
@@ -144,13 +146,17 @@ export const copy = {
   questions: {
     title: (form: SiteForm | null) =>
       form ? ['ספרו לנו', byForm(form, 'עליה', 'עליו', 'עליהם', 'עליכם')] : ['ספרו לנו', 'על מי שחוגגים'],
-    intro: 'מילה או שתיים. זה נכנס לחידות ולמכתב בסוף.',
+    intro: 'התשובות נכנסות לחידות ולמכתב. מילה או שתיים מספיקות.',
+    /** A question's example answer, shown in its empty field. */
+    example: (e: string | undefined) => (e?.trim() ? `למשל: ${e.trim()}` : undefined),
     name: (form: SiteForm | null) =>
       form
-        ? byForm(form, 'איך קוראים לה?', 'איך קוראים לו?', 'איך קוראים להם?', 'שם הקבוצה / המשפחה')
+        ? byForm(form, 'איך קוראים לה?', 'איך קוראים לו?', 'איך קוראים להם?', 'איך קוראים לקבוצה?')
         : 'איך קוראים למי שחוגגים?',
-    namePlaceholder: (form: SiteForm | null) =>
-      byForm(form, 'למשל: מיכל', 'למשל: יואב', 'למשל: מיכל ויואב', 'למשל: משפחת כהן, צוות אלפא'),
+    namePlaceholder: (form: SiteForm | null, recipient?: SiteRecipient | null) =>
+      recipient === 'family'
+        ? 'למשל: משפחת כהן'
+        : byForm(form, 'למשל: מיכל', 'למשל: יואב', 'למשל: מיכל ויואב', "למשל: החבר'ה מהשכונה"),
     /** The small she/he choice next to the name, when the occasion allows both. */
     formLabel: 'המשחק',
     forms: { she: 'עליה', he: 'עליו', couple: 'על זוג', group: 'על קבוצה' } as Record<string, string>,
@@ -179,8 +185,9 @@ export const copy = {
 
   hintQuestions: {
     title: 'שאלות אישיות לרמזים',
-    intro: 'נשאל אותן במהלך המשחק כדי לפתוח רמזים: עונים נכון, והרמז נפתח. בלי שאלות, הרמזים פתוחים כרגיל.',
-    question: 'השאלה',
+    intro: (form: SiteForm | null) =>
+      `שאלה שרק מי ${byForm(form, 'שמכיר אותה', 'שמכיר אותו', 'שמכיר אותם', 'שמכיר אתכם')} יודע לענות עליה. מי שעונה נכון מקבל רמז.`,
+    question: 'שאלה',
     questionPlaceholder: (form: SiteForm | null) =>
       byForm(
         form,
@@ -189,8 +196,9 @@ export const copy = {
         'למשל: איפה הם הכירו?',
         'למשל: לאן נוסעים כל קיץ?',
       ),
-    answer: 'התשובה',
-    answerPlaceholder: 'מילה או שתיים',
+    answer: 'תשובה',
+    answerPlaceholder: (form: SiteForm | null) =>
+      byForm(form, 'למשל: בונבון', 'למשל: רקס', 'למשל: בחתונה של רוני', 'למשל: לאילת'),
     add: (n: number) => (n ? '+ עוד שאלה' : '+ להוסיף שאלה'),
     remove: 'הסרה',
     incomplete: 'לכל שאלה לרמז צריך גם תשובה',

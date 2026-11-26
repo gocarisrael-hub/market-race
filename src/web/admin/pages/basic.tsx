@@ -448,6 +448,14 @@ function OccasionEditor({ value, set }: EditorProps<Occasion>) {
                     onChange={(v) => set({ recipients: { ...recipients, [r]: v || null } })}
                   />
                 )}
+                {on && (
+                  <Text
+                    label="שם בכפתור (ריק = ברירת מחדל)"
+                    value={value.recipientLabels?.[r] ?? ''}
+                    placeholder={RECIPIENT_LABELS[r].split(' (')[0]}
+                    onChange={(v) => set({ recipientLabels: { ...(value.recipientLabels ?? {}), [r]: v } })}
+                  />
+                )}
               </div>
             )
           })}
@@ -484,6 +492,7 @@ export function OccasionsPage() {
         questionSetId: null,
         forms: ['she', 'he'],
         recipients: { she: null, he: null },
+        recipientLabels: {},
         playersFeminine: false,
         decor: 'generic',
         sort: 0,

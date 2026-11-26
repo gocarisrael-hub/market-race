@@ -127,6 +127,25 @@ function QuestionEditor({
           )
         })
       )}
+      {typeof q.example === 'object' ? (
+        FORMS.filter((f) => q.text[f] !== undefined || (q.example as Record<string, string>)[f]).map((f) => {
+          const ex = q.example as Partial<Record<Form, string>>
+          return (
+            <Text
+              key={f}
+              label={`דוגמה לתשובה (${FORM_LABELS[f]}), מוצגת כ"למשל: …"`}
+              value={ex[f]}
+              onChange={(v) => onChange({ ...q, example: { ...ex, [f]: v } })}
+            />
+          )
+        })
+      ) : (
+        <Text
+          label='דוגמה לתשובה, מוצגת בשדה כ"למשל: …"'
+          value={q.example ?? ''}
+          onChange={(example) => onChange({ ...q, example: example || undefined })}
+        />
+      )}
       <div className="actions">
         <button type="button" onClick={() => onMove(-1)}>
           למעלה

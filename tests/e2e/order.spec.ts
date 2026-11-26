@@ -73,6 +73,9 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'ספרו לנו עליה' })).toBeVisible()
   await page.getByLabel('מי הייתה האהבה הראשונה שלה?').fill('יואב מהשכבה')
   await page.getByLabel('מה האוכל האהוב עליה?').fill('סושי')
+  // One line says what the answers are for; each question shows a short example.
+  await expect(page.getByText('התשובות נכנסות לחידות ולמכתב. מילה או שתיים מספיקות.')).toBeVisible()
+  await expect(page.getByLabel('מה האוכל האהוב עליה?')).toHaveAttribute('placeholder', 'למשל: סושי')
   await expect(page.getByLabel('משפט שהיא תמיד אומרת')).toHaveCount(0)
   await shot(page, 'build-04-questions')
   await next(page, /\/order\/questions\/2$/)
@@ -82,7 +85,7 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(page.getByLabel('משפט שהיא תמיד אומרת')).toHaveValue('יאללה')
   // The last part: the optional question about the first photo (for the photo mini-game).
   await next(page, /\/order\/questions\/3$/)
-  await expect(page.getByLabel(/איפה צולמה הראשונה/)).toBeVisible()
+  await expect(page.getByLabel(/איפה צולמה התמונה הראשונה/)).toBeVisible()
   await expect(mainButton(page)).toHaveText('ממשיכים לתמונות')
   const created = page.waitForResponse(
     (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',
@@ -141,10 +144,14 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   ])
   // Optional hint questions: an incomplete one is caught.
   await page.getByRole('button', { name: '+ להוסיף שאלה' }).click()
-  await page.getByLabel('השאלה 1').fill('איך קוראים לכלב שלה?')
+  await expect(
+    page.getByText('שאלה שרק מי שמכיר אותה יודע לענות עליה. מי שעונה נכון מקבל רמז.'),
+  ).toBeVisible()
+  await page.getByLabel('שאלה 1', { exact: true }).fill('איך קוראים לכלב שלה?')
+  await expect(page.getByLabel('תשובה 1', { exact: true })).toHaveAttribute('placeholder', 'למשל: בונבון')
   await mainButton(page).click()
   await expect(page.getByText('לכל שאלה לרמז צריך גם תשובה')).toBeVisible()
-  await page.getByLabel('התשובה 1').fill('בוני')
+  await page.getByLabel('תשובה 1', { exact: true }).fill('בוני')
 
   await next(page, /\/order\/people$/)
   await expect(page.getByTestId('price')).toContainText('396 ₪')
@@ -421,19 +428,20 @@ test('a family game: no who-for or she/he, the name field is the family name, fa
   page,
 }) => {
   await page.goto('/order')
-  await page.getByRole('radio', { name: 'משפחתי' }).click()
+  await page.getByRole('radio', { name: 'יום משפחתי' }).click()
   // A family game is for a family only: straight to the name, no she/he.
   await next(page, /\/order\/name$/)
   await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
   // The family's name is asked once, with the question set's own wording.
-  await expect(page.getByRole('heading', { name: 'שם המשפחה?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'איך קוראים למשפחה?' })).toBeVisible()
+  await expect(page.getByPlaceholder('למשל: משפחת כהן')).toBeVisible()
   await mainButton(page).click()
   await expect(page.getByText('כתבו את שם הקבוצה או המשפחה')).toBeVisible()
-  await page.getByLabel(/שם המשפחה\?/).fill('משפחת כהן')
+  await page.getByLabel(/איך קוראים למשפחה\?/).fill('משפחת כהן')
   await next(page, /\/order\/look$/)
   await next(page, /\/order\/questions$/)
   await expect(page.getByRole('heading', { name: /ספרו לנו/ })).toContainText('עליכם')
-  await expect(page.getByLabel(/שם המשפחה\?/)).toHaveCount(0)
+  await expect(page.getByLabel(/איך קוראים למשפחה\?/)).toHaveCount(0)
   await expect(page.getByLabel(/המאכל שתמיד יש בארוחת שישי/)).toBeVisible()
   await expect(page.getByLabel(/המשפט הכי מוכר של אבא או אמא/)).toBeVisible()
   await shot(page, 'build-04b-questions-family')

@@ -70,6 +70,8 @@ export interface BuildInput {
   questions: Question[]
   /** The `minigames` setting. Absent: the game has no mini-games. */
   minigames?: MinigameContent
+  /** The order's occasion (the mini-games an occasion prefers, see MinigameContent.byOccasion). */
+  occasionKey?: string
   /** Makes the random choices of a sold game reproducible (the order number). */
   seed?: string
   order: {
@@ -327,6 +329,7 @@ export function buildGame(input: BuildInput): BuildResult {
       photos: [...new Set(order.photos.filter((p) => typeof p === 'string' && p.trim()))],
       letterNotes: order.letterNotes,
       content: input.minigames,
+      occasionKey: input.occasionKey,
       stopCount: stops.length,
       riddleSlots: stops.map((s) => s.riddle.parts.flatMap((p) => (p.t === 'slot' ? [p.slot] : []))),
       seed: input.seed ?? game.builtAt,

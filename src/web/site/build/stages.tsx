@@ -20,6 +20,7 @@ import {
   palettesFor,
   priceAgorot,
   privateOccasions,
+  recipientLabel,
   recipientsFor,
   themesForDraft,
   toggle,
@@ -117,7 +118,8 @@ export function OccasionStage({ shop, d, set }: StageProps) {
 }
 
 export function ForStage({ shop, d, set, recipient }: StageProps) {
-  const recipients = recipientsFor(shop.occasions.find((o) => o.key === d.occasionKey))
+  const occ = shop.occasions.find((o) => o.key === d.occasionKey)
+  const recipients = recipientsFor(occ)
   return (
     <>
       <StageHead cheer={copy.build.cheer.for} title={copy.build.title.for} />
@@ -131,7 +133,7 @@ export function ForStage({ shop, d, set, recipient }: StageProps) {
             pressed={recipient === r}
             onClick={() => set(withRecipient(d, r))}
           >
-            {copy.home.recipients[r]}
+            {recipientLabel(occ, r)}
           </Opt>
         ))}
       </div>
@@ -169,7 +171,7 @@ export function NameStage({ shop, d, set, questions, form, recipient }: StagePro
         <input
           name="honoreeName"
           value={d.honoreeName}
-          placeholder={copy.questions.namePlaceholder(form)}
+          placeholder={copy.questions.namePlaceholder(form, recipient)}
           autoComplete="off"
           enterKeyHint="next"
           aria-invalid={n > 40 || undefined}
@@ -291,6 +293,7 @@ export function QuestionsStage({ d, set, asked, part, parts, form }: StageProps)
               key={q.slot}
               name={q.slot}
               label={q.text}
+              placeholder={copy.questions.example(q.example)}
               value={d.answers[q.slot] ?? ''}
               onChange={(v) => set({ answers: { ...d.answers, [q.slot]: v } })}
               maxLen={q.maxLen || undefined}
@@ -388,7 +391,7 @@ export function HintsStage({ d, set, form }: StageProps) {
       <StageHead
         cheer={copy.build.cheer.hints}
         title={copy.hintQuestions.title}
-        lead={`${copy.hintQuestions.intro} (${copy.optional})`}
+        lead={`${copy.hintQuestions.intro(form)} (${copy.optional})`}
       />
       <HintQuestions
         bare
