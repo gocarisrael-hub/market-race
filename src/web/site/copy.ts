@@ -2,6 +2,8 @@
 // occasions, themes, questions, the brand name) come from the API, never from here.
 
 export type SiteForm = 'she' | 'he' | 'couple' | 'group'
+/** Who the game is for (see RECIPIENTS on the server). */
+export type SiteRecipient = 'she' | 'he' | 'couple' | 'group' | 'family'
 
 /** Picks the wording for the grammatical form of the honoree. A group defaults to the plural. */
 export const byForm = (
@@ -37,6 +39,16 @@ export const copy = {
     intro:
       'חידות אישיות על מי שחוגגים, דוכנים אמיתיים בשוק וטעימה בכל תחנה. משחקים יחד מהטלפון, ביום שמתאים לכם.',
     occasion: 'איזה משחק?',
+    recipient: 'ולמי המשחק?',
+    recipients: {
+      she: 'למישהי',
+      he: 'למישהו',
+      couple: 'לזוג',
+      group: 'לקבוצה',
+      family: 'למשפחה',
+    } as Record<SiteRecipient, string>,
+    recipientHint: 'רוב המשחקים הם מתנה לאדם אחד: החידות נכתבות עליה או עליו.',
+    pickRecipient: 'בחרו למי המשחק',
     theme: 'איך זה ייראה?',
     palette: 'ובאיזה צבע?',
     paletteHint: 'המפה, הכפתורים והסרט בפתיחה נצבעים בצבע שבחרתם.',
@@ -82,7 +94,7 @@ export const copy = {
       byForm(form, 'למשל: מיכל', 'למשל: יואב', 'למשל: מיכל ויואב', 'למשל: משפחת כהן, צוות אלפא'),
     /** The small she/he choice next to the name, when the occasion allows both. */
     formLabel: 'המשחק',
-    forms: { she: 'עליה', he: 'עליו', couple: 'על זוג', group: 'על קבוצה' } as Record<SiteForm, string>,
+    forms: { she: 'עליה', he: 'עליו', couple: 'על זוג', group: 'על קבוצה' } as Record<string, string>,
     pickForm: 'בחרו: עליה או עליו?',
     later: 'אמלא את השאלות אחר כך',
     laterHint: 'אחרי התשלום נשלח לכם קישור למלא אותן. המשחק נבנה כשהתשובות אצלנו.',

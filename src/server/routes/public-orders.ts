@@ -18,13 +18,33 @@ import {
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
 import { israelDate } from '../domain/dates.ts'
+import {
+  occasionRecipients,
+  orderRecipient,
+  recipientForForm,
+  resolveRecipient,
+} from '../domain/recipient.ts'
 import { questionTextFor } from '../domain/template.ts'
-import { ALLERGENS, DIETS, FORMS, type Form, type OrderStatus } from '../domain/types.ts'
+import {
+  ALLERGENS,
+  DIETS,
+  FORMS,
+  type Form,
+  type OrderStatus,
+  RECIPIENT_FORM,
+  RECIPIENTS,
+} from '../domain/types.ts'
 import { iconUrl } from '../lib/icons.ts'
 import { captainToken } from '../lib/tokens.ts'
 import { cardEnabled } from '../services/context.ts'
 import { interpolate, links, qrPng, sendManageLinks, sendToBuyer } from '../services/delivery.ts'
-import { BuildError, buildOrderGame, createOrder, questionsForOccasion } from '../services/orders.ts'
+import {
+  BuildError,
+  buildOrderGame,
+  createOrder,
+  questionsForOccasion,
+  questionsForOrder,
+} from '../services/orders.ts'
 import { afterBuilt, handleNotify, PaymentError, priceFor, startPayment } from '../services/payments.ts'
 import { completeMockPayment, mockPaymentInfo } from '../services/payments-mock.ts'
 import { checkPelecardReturn, handlePelecardCallback } from '../services/payments-pelecard.ts'
@@ -70,6 +90,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         label: o.label,
         audience: o.audience,
         forms: o.forms,
+        // Who the game can be for, one person first. Never the question set ids.
+        recipients: occasionRecipients(o).map((c) => c.recipient),
         decor: o.decor,
       })),
       markets: mk,
@@ -188,10 +210,20 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   )
 
   app.get('/api/shop/questions', async (req, reply) => {
-    const q = z.object({ occasion: z.string(), form: z.enum(FORMS) }).safeParse(req.query)
-    if (!q.success) return reply.code(400).send({ error: 'invalid' })
-    const questions = await questionsForOccasion(db, q.data.occasion)
-    return { questions: publicQuestions(questions, q.data.form) }
+    // By recipient; `form` alone is what older pages sent (mapped the same way old orders are).
+    const q = z
+      .object({
+        occasion: z.string(),
+        recipient: z.enum(RECIPIENTS).optional(),
+        form: z.enum(FORMS).optional(),
+      })
+      .safeParse(req.query)
+    if (!q.success || (!q.data.recipient && !q.data.form)) return reply.code(400).send({ error: 'invalid' })
+    const [occ] = await db.select().from(occasions).where(eq(occasions.key, q.data.occasion))
+    const recipient = q.data.recipient ?? recipientForForm(q.data.form as Form, occ?.decor)
+    const form = recipient ? RECIPIENT_FORM[recipient] : (q.data.form as Form)
+    const questions = await questionsForOccasion(db, q.data.occasion, recipient)
+    return { questions: publicQuestions(questions, form) }
   })
 
   const buyerBody = z.object({
@@ -201,7 +233,9 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
   })
   const orderBody = z.object({
     occasionKey: z.string().min(1),
-    form: z.enum(['she', 'he', 'couple', 'group']),
+    // Who the game is for. Pages from before recipients existed send only the form.
+    recipient: z.enum(RECIPIENTS).optional(),
+    form: z.enum(['she', 'he', 'couple', 'group']).optional(),
     honoreeName: z.string().trim().min(1).max(40),
     themeId: z.number().int(),
     paletteId: z.number().int().nullable().default(null),
@@ -224,7 +258,9 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     const b = parsed.data
     const [occ] = await db.select().from(occasions).where(eq(occasions.key, b.occasionKey))
     if (!occ?.active || occ.audience !== 'private') return { error: 'bad_occasion' } as const
-    if (!occ.forms.includes(b.form)) return { error: 'bad_form' } as const
+    const recipient = b.recipient ?? (b.form ? recipientForForm(b.form, occ.decor) : null)
+    const choice = resolveRecipient(occ, recipient)
+    if (!choice) return { error: 'bad_form' } as const
     const [min, max] = [await getSetting(db, 'min_people'), await getSetting(db, 'max_people')]
     if (b.people < min || b.people > max) return { error: 'bad_people' } as const
     const { theme, route } = await routeForTheme(b.themeId)
@@ -236,13 +272,14 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     }
     const price = await priceFor(db, b.occasionKey, b.people)
     if (!price) return { error: 'no_price' } as const
-    const questions = await questionsForOccasion(db, b.occasionKey)
+    const questions = await questionsForOccasion(db, b.occasionKey, choice.recipient)
     return {
       answersLater: b.answersLater,
       buyer: b.buyer,
       values: {
         occasionKey: b.occasionKey,
-        form: b.form,
+        form: choice.form,
+        recipient: choice.recipient,
         honoreeName: b.honoreeName,
         themeId: theme.id,
         paletteId: b.paletteId,
@@ -417,6 +454,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       .select({ decor: occasions.decor })
       .from(occasions)
       .where(eq(occasions.key, order.occasionKey))
+    const recipient = orderRecipient(order, occ)
     const block = startBlock(order, state, israelDate())
     const started = !!state && state.step !== 'opening'
     const gameLink = links(base, order).gameLink
@@ -442,6 +480,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       paid: !!order.paidAt,
       honoree: order.companyName || order.honoreeName,
       form: order.form,
+      recipient,
       occasionKey: order.occasionKey,
       // The occasion's doodle set, for the page's decorations.
       decor: occ?.decor ?? 'generic',
@@ -488,7 +527,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       look: editable ? await lookFor(order) : undefined,
       questions:
         needsAnswers || editable
-          ? publicQuestions(await questionsForOccasion(db, order.occasionKey), order.form)
+          ? publicQuestions(await questionsForOccasion(db, order.occasionKey, recipient), order.form)
           : undefined,
     }
   })
@@ -522,7 +561,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         if (!pal?.active || !order.themeId || !pal.themeIds.includes(order.themeId))
           return reply.code(400).send({ error: 'bad_palette' })
       }
-      const questions = await questionsForOccasion(db, order.occasionKey)
+      const questions = await questionsForOrder(db, order)
       await db
         .update(orders)
         .set({

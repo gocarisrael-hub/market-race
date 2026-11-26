@@ -11,7 +11,8 @@ async function stepOne(page: Page) {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /מירוץ טעימות/ })).toBeVisible()
   await page.getByRole('radio', { name: 'רווקות' }).click()
-  // Bachelorette allows one form only: picked for the buyer, no she/he question.
+  // A bachelorette is for her only: picked for the buyer, no "who is it for" or she/he question.
+  await expect(page.getByRole('radiogroup', { name: 'ולמי המשחק?' })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
   await expect(page.getByTestId('price')).toContainText('396 ₪')
 }
@@ -288,6 +289,8 @@ test('a family game: no she/he choice, the name field is the family name, family
   await page.goto('/')
   await expect(page.getByText('איזה משחק?')).toBeVisible()
   await page.getByRole('radio', { name: 'משפחתי' }).click()
+  // A family game is for a family only: no "who is it for" choice, no she/he.
+  await expect(page.getByRole('radiogroup', { name: 'ולמי המשחק?' })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
   await expect(page.getByTestId('price')).toContainText('396 ₪')
   await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
@@ -315,30 +318,11 @@ test('a family game: no she/he choice, the name field is the family name, family
   const body = (await created).request().postDataJSON()
   expect(body).toMatchObject({
     occasionKey: 'family',
+    recipient: 'family',
     form: 'group',
     honoreeName: 'משפחת כהן',
     answers: { group_name: 'משפחת כהן', who_late: 'דוד שמעון' },
   })
   await toToken(page)
   await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלכם' })).toBeVisible()
-})
-
-test('a birthday asks she or he next to the name, only there', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('radio', { name: 'יום הולדת לחבר/ה' }).click()
-  await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'כרמל בצבעי מים' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות', exact: true }).click()
-  await expect(page).toHaveURL(/\/order\/questions$/)
-  const choice = page.getByRole('radiogroup', { name: 'המשחק' })
-  await expect(choice.getByRole('radio')).toHaveText(['עליה', 'עליו'])
-  await page.getByLabel(/איך קוראים למי שחוגגים/).fill('יואב')
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
-  await expect(page.getByText('בחרו: עליה או עליו?')).toBeVisible()
-  await choice.getByRole('radio', { name: 'עליו' }).click()
-  await expect(page.getByLabel(/איך קוראים לו\?/)).toHaveValue('יואב')
-  await expect(page.getByLabel('מה האוכל האהוב עליו?')).toBeVisible()
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
-  await toToken(page)
-  await expect(page.getByRole('heading', { name: 'ועכשיו, תמונות שלו' })).toBeVisible()
 })

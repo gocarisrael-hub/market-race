@@ -11,7 +11,7 @@ import type {
   ShopPalette,
   Theme,
 } from './api.ts'
-import { copy, type SiteForm } from './copy.ts'
+import { copy, type SiteForm, type SiteRecipient } from './copy.ts'
 
 export const MAX_NOTES = 3
 export const MAX_HINT_QUESTIONS = 5
@@ -19,9 +19,21 @@ export const MAX_PHOTOS = 5
 const PHONE = /^[0-9+\-\s]{9,16}$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SITE_FORMS: SiteForm[] = ['she', 'he', 'couple', 'group']
+/** Who the game can be for, in the order they are offered: one person first. */
+export const SITE_RECIPIENTS: SiteRecipient[] = ['she', 'he', 'couple', 'group', 'family']
+export const RECIPIENT_FORM: Record<SiteRecipient, SiteForm> = {
+  she: 'she',
+  he: 'he',
+  couple: 'couple',
+  group: 'group',
+  family: 'group',
+}
 
 export type Draft = {
   occasionKey: string | null
+  /** Who the game is for; picks the questions with the occasion. */
+  recipient: SiteRecipient | null
+  /** The grammar of the recipient (kept with it). */
   form: SiteForm | null
   themeId: number | null
   /** The palette the map is played in; null plays the map's own colors. */
@@ -45,6 +57,7 @@ export type Draft = {
 export function emptyDraft(minPeople = 2): Draft {
   return {
     occasionKey: null,
+    recipient: null,
     form: null,
     themeId: null,
     paletteId: null,
@@ -83,6 +96,32 @@ export const companyOccasions = (shop: Shop) => shop.occasions.filter((o) => o.a
 /** The grammatical forms the buyer can pick for an occasion (company is never a site form). */
 export const formsFor = (occ: Occasion | undefined): SiteForm[] =>
   occ ? SITE_FORMS.filter((f) => occ.forms.includes(f)) : []
+
+/** The recipient an old form stands for (a group on a family occasion is the family). */
+const recipientOfForm = (form: SiteForm, occ: Occasion | undefined): SiteRecipient =>
+  form === 'group' && occ?.decor === 'family' ? 'family' : form
+
+/** Who the game can be for on an occasion, one person first. */
+export function recipientsFor(occ: Occasion | undefined): SiteRecipient[] {
+  if (!occ) return []
+  const own = occ.recipients ?? formsFor(occ).map((f) => recipientOfForm(f, occ))
+  return SITE_RECIPIENTS.filter((r) => own.includes(r))
+}
+
+/** Sets the recipient and its grammar. */
+export const withRecipient = (d: Draft, recipient: SiteRecipient | null): Draft => ({
+  ...d,
+  recipient,
+  form: recipient ? RECIPIENT_FORM[recipient] : null,
+})
+
+/** The draft's recipient, also for a draft saved before recipients existed (form only). */
+export function draftRecipient(shop: Shop, d: Draft): SiteRecipient | null {
+  const occ = shop.occasions.find((o) => o.key === d.occasionKey)
+  const offered = recipientsFor(occ)
+  const r = d.recipient ?? (d.form ? recipientOfForm(d.form, occ) : null)
+  return r && offered.includes(r) ? r : null
+}
 
 /** Themes whose market has an active route: an order needs both. */
 export const orderableThemes = (shop: Shop): Theme[] =>
@@ -131,14 +170,13 @@ export const clampPeople = (n: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number.isFinite(n) ? n : min)))
 
 /**
- * Applies an occasion choice: keeps the form when still allowed, auto-picks a single one (couple
- * for a couple, she for a bachelorette, group for family and friends). With several (she or he),
- * the form stays open: the buyer picks it next to the name field on the questions step.
+ * Applies an occasion choice: keeps the recipient when the occasion offers it, else picks the
+ * first one it offers. One person comes first, so a gift for her (or him) is the default.
  */
 export function chooseOccasion(d: Draft, occ: Occasion): Draft {
-  const forms = formsFor(occ)
-  const form = d.form && forms.includes(d.form) ? d.form : forms.length === 1 ? forms[0] : null
-  return { ...d, occasionKey: occ.key, form }
+  const offered = recipientsFor(occ)
+  const keep = d.recipient && offered.includes(d.recipient) ? d.recipient : null
+  return withRecipient({ ...d, occasionKey: occ.key }, keep ?? offered[0] ?? null)
 }
 
 export const toggle = (list: string[], v: string) =>
@@ -147,7 +185,8 @@ export const toggle = (list: string[], v: string) =>
 /** Error message for step 1, or null when it is complete. */
 export function step1Error(d: Draft, shop: Shop): string | null {
   const occ = shop.occasions.find((o) => o.key === d.occasionKey && o.audience === 'private')
-  if (!occ || formsFor(occ).length === 0) return copy.home.pickOccasion
+  if (!occ || recipientsFor(occ).length === 0) return copy.home.pickOccasion
+  if (!draftRecipient(shop, d)) return copy.home.pickRecipient
   if (!orderableThemes(shop).some((t) => t.id === d.themeId)) return copy.home.pickTheme
   const pals = palettesFor(shop, d.themeId)
   if (pals.length && !pals.some((p) => p.id === d.paletteId)) return copy.home.pickPalette
@@ -158,15 +197,21 @@ export function step1Error(d: Draft, shop: Shop): string | null {
 
 const len = (s: string) => [...s.trim()].length
 
-/** The forms the buyer picks between on the questions step: none when the occasion has one. */
-export function formChoice(shop: Shop, d: Draft): SiteForm[] {
-  const forms = formsFor(shop.occasions.find((o) => o.key === d.occasionKey))
-  return forms.length > 1 ? forms : []
+/**
+ * The small she/he switch next to the name on the questions step: only for a gift to one person,
+ * when the occasion offers both. Never for a couple, a group or a family.
+ */
+export function formChoice(shop: Shop, d: Draft): SiteRecipient[] {
+  const r = draftRecipient(shop, d)
+  if (r !== 'she' && r !== 'he') return []
+  const offered = recipientsFor(shop.occasions.find((o) => o.key === d.occasionKey))
+  return offered.includes('she') && offered.includes('he') ? ['she', 'he'] : []
 }
 
 /** Error message for step 2 (questions), or null. */
-export function step2Error(d: Draft, questions: Question[], forms: SiteForm[] = []): string | null {
-  if (!d.form || (forms.length > 0 && !forms.includes(d.form))) return copy.questions.pickForm
+export function step2Error(d: Draft, questions: Question[], forms: SiteRecipient[] = []): string | null {
+  if (!d.form || (forms.length > 0 && !(d.recipient && forms.includes(d.recipient))))
+    return copy.questions.pickForm
   if (!d.honoreeName.trim()) return copy.questions.missingName(d.form)
   if (len(d.honoreeName) > 40) return copy.questions.tooLong
   if (d.answersLater) return null
@@ -263,9 +308,11 @@ export function orderPayload(d: Draft, questions: Question[]): OrderPayload {
   // A group's name is the name field (the server fills the slot from it as well).
   if (d.form === 'group' && questions.some((q) => q.slot === 'group_name') && d.honoreeName.trim())
     answers.group_name = d.honoreeName.trim()
+  const recipient = d.recipient ?? d.form ?? 'she'
   return {
     occasionKey: d.occasionKey ?? '',
-    form: d.form ?? 'she',
+    recipient,
+    form: RECIPIENT_FORM[recipient],
     honoreeName: d.honoreeName.trim(),
     themeId: d.themeId ?? 0,
     paletteId: d.paletteId ?? null,

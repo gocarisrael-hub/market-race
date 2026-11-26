@@ -36,7 +36,9 @@ export function App() {
   const view = state.phase === 'view' ? state.view : null
   const palette = view?.theme?.palette ?? DEFAULT_PALETTE
   useTheme(palette)
-  const t = useMemo(() => makeT(view?.form ?? 'she', texts), [view?.form, texts])
+  // The players' grammar (feminine plural only for an occasion like a bachelorette).
+  const voice = view?.voice ?? view?.form ?? 'she'
+  const t = useMemo(() => makeT(voice, texts), [voice, texts])
 
   let screen: React.ReactNode
   if (state.phase === 'loading') screen = <Message t={t} kind="loading" />

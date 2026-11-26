@@ -167,18 +167,12 @@ const DAUBS = [
 ]
 const STREAKS = 'M14 19 C 26 16, 40 15, 52 18 M11 27 C 24 25, 37 26, 50 28 M18 33 C 28 31, 36 32, 44 33'
 
-/** A paint daub in a palette's colors: a smear of the accent and a drop of the second color. */
+/** A paint daub in a palette's colors: one clean smear of the accent, nothing at its corner. */
 export function Daub({ palette, index }: { palette: Palette; index: number }) {
   return (
     <svg className="daub-shape" viewBox="0 0 64 44" aria-hidden="true">
       <path d={DAUBS[index % DAUBS.length]} fill={palette.accent} />
       <path d={STREAKS} fill="none" stroke={palette.ink} strokeOpacity="0.22" strokeWidth="1.2" />
-      <path
-        d="M49 34 C 51 30.5, 58 31, 58.5 35.5 C 59 40, 52 41.5, 49.5 38 Z"
-        fill={palette.accent2 ?? palette.background}
-        stroke={palette.ink}
-        strokeWidth="1"
-      />
     </svg>
   )
 }

@@ -92,11 +92,12 @@ describe('group games in the demo catalog', () => {
 
   it('lists the group occasions on the shop and their questions without hidden ones', async () => {
     const shop = (await t.app.inject({ url: '/api/shop' })).json()
-    for (const key of ['family', 'friends', 'generic']) {
-      const o = shop.occasions.find((x: { key: string }) => x.key === key)
-      expect(o, key).toMatchObject({ audience: 'private', forms: ['group'] })
-      expect(shop.prices[key].perPerson).toBeGreaterThan(0)
-    }
+    const occ = (key: string) => shop.occasions.find((x: { key: string }) => x.key === key)
+    expect(occ('family')).toMatchObject({ audience: 'private', forms: ['group'], recipients: ['family'] })
+    expect(occ('friends')).toMatchObject({ audience: 'private', forms: ['group'], recipients: ['group'] })
+    // A generic game can be for anyone, one person first.
+    expect(occ('generic').recipients).toEqual(['she', 'he', 'couple', 'group', 'family'])
+    for (const key of ['family', 'friends', 'generic']) expect(shop.prices[key].perPerson).toBeGreaterThan(0)
     const res = await t.app.inject({ url: '/api/shop/questions?occasion=family&form=group' })
     expect(res.statusCode).toBe(200)
     const slots = res.json().questions.map((q: { slot: string }) => q.slot)

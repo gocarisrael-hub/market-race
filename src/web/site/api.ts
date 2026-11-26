@@ -1,12 +1,14 @@
 // Thin client for the site API (src/server/routes/public-orders.ts).
 import type { Palette } from '../../server/domain/types.ts'
-import type { SiteForm } from './copy.ts'
+import type { SiteForm, SiteRecipient } from './copy.ts'
 
 export type Occasion = {
   key: string
   label: string
   audience: 'private' | 'company'
   forms: string[]
+  /** Who the game can be for, one person first. Missing from older servers: derived from forms. */
+  recipients?: string[]
   /** Doodle set of the occasion (birthday, love, ...). */
   decor?: string
 }
@@ -51,6 +53,7 @@ export type HintQuestion = { question: string; answer: string }
 export type Buyer = { name: string; phone: string; email: string }
 export type OrderPayload = {
   occasionKey: string
+  recipient: SiteRecipient
   form: SiteForm
   honoreeName: string
   themeId: number
@@ -70,6 +73,8 @@ export type Manage = {
   paid: boolean
   honoree: string
   form: string
+  /** Who the game is for (null for a company game). */
+  recipient?: string | null
   occasionKey: string
   /** The occasion's doodle set. */
   decor?: string
@@ -159,9 +164,9 @@ export const getShop = () => {
   return shopPromise
 }
 
-export const getQuestions = (occasion: string, form: string) =>
+export const getQuestions = (occasion: string, recipient: string) =>
   api<{ questions: Question[] }>(
-    `/api/shop/questions?occasion=${encodeURIComponent(occasion)}&form=${encodeURIComponent(form)}`,
+    `/api/shop/questions?occasion=${encodeURIComponent(occasion)}&recipient=${encodeURIComponent(recipient)}`,
   ).then((r) => r.questions)
 
 export const getRoutePreview = (

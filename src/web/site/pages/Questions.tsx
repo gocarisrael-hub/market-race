@@ -18,15 +18,18 @@ import {
   askedQuestions,
   type Draft,
   decorFor,
+  draftRecipient,
   errorText,
   formChoice,
   MAX_NOTES,
   nameLabel,
   orderPayload,
   payloadKey,
+  RECIPIENT_FORM,
   saveAction,
   step1Error,
   step2Error,
+  withRecipient,
 } from '../logic.ts'
 import { navigate } from '../router.ts'
 import {
@@ -52,14 +55,22 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
   const [busy, setBusy] = useState(false)
   const incomplete = step1Error(d, shop)
   const forms = formChoice(shop, d)
-  const form = d.form
+  const recipient = draftRecipient(shop, d)
+  const form = recipient ? RECIPIENT_FORM[recipient] : d.form
+
+  // A draft saved before recipients existed gets its recipient from its form.
+  useEffect(() => {
+    if (recipient && recipient !== d.recipient) setDraft(withRecipient(d, recipient))
+  }, [recipient, d, setDraft])
 
   useEffect(() => {
     if (incomplete) return navigate('/', { replace: true })
-    // Until she/he is picked there is nothing to ask beyond the name.
-    if (!d.form) return setQuestions([])
-    getQuestions(d.occasionKey!, d.form).then(setQuestions, () => setLoadError(true))
-  }, [d.occasionKey, d.form, incomplete])
+    if (!recipient) return setQuestions([])
+    // The questions follow who the game is for: a birthday for her asks about her, a love game for
+    // him asks about him from the giver's side.
+    setQuestions(null)
+    getQuestions(d.occasionKey!, recipient).then(setQuestions, () => setLoadError(true))
+  }, [d.occasionKey, recipient, incomplete])
 
   if (incomplete) return null
   if (loadError) return <Failed text={copy.loadFailed} />
@@ -141,7 +152,13 @@ export function Questions(props: { shop: Shop; draft: Draft; setDraft: (d: Draft
         {forms.length > 0 && (
           <div className="row form-choice" role="radiogroup" aria-label={copy.questions.formLabel}>
             {forms.map((f) => (
-              <Opt key={f} small role="radio" pressed={form === f} onClick={() => set({ form: f })}>
+              <Opt
+                key={f}
+                small
+                role="radio"
+                pressed={recipient === f}
+                onClick={() => set(withRecipient(d, f))}
+              >
                 {copy.questions.forms[f]}
               </Opt>
             ))}

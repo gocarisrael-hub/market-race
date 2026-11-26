@@ -43,6 +43,11 @@ export interface PlayerView {
   company: { name: string; logo: string | null } | null
   honoree: string
   form: string
+  /**
+   * The form the player's own copy is picked by. "she" only when the players are addressed in the
+   * feminine plural (a bachelorette); a game for her from a mixed group reads in the plain plural.
+   */
+  voice: string
   /** Portions bought per stop. */
   people: number
   /** Players who arrived, chosen by the captain at the start: the portions each stall serves. */
@@ -204,6 +209,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     company: game.company ? { name: game.company.name, logo: fileUrl(game.company.logo) } : null,
     honoree: game.honoree,
     form: game.form,
+    voice: playersVoice(game),
     people: game.people,
     players,
     allergens: game.allergens,
@@ -557,4 +563,11 @@ export async function resumeGame(
   const fresh = await load(db, gameToken)
   if (typeof fresh === 'string') return { ok: false, error: fresh }
   return { ok: true, view: await buildView(db, fresh, opts.pollSeconds ?? 4, now) }
+}
+
+/** The players' grammar: feminine plural only for an occasion that says so (older games: by form). */
+export function playersVoice(game: Pick<GameSnapshot, 'form' | 'playersFeminine'>): string {
+  if (game.playersFeminine === undefined) return game.form
+  if (game.playersFeminine) return 'she'
+  return game.form === 'she' ? 'group' : game.form
 }

@@ -1,5 +1,5 @@
-// Step 1: which game (the occasion), theme, people, allergens and diets, live price.
-// About whom (she or he) is asked next to the name on step 2, only when the occasion allows both.
+// Step 1: which game (the occasion) and who it is for (one person first), theme, people,
+// allergens and diets, live price. The recipient picks the questions of step 2.
 import { useState } from 'react'
 import { Doodles } from '../../shared/decor.tsx'
 import type { Shop } from '../api.ts'
@@ -11,13 +11,16 @@ import {
   currentPalette,
   type Draft,
   decorFor,
+  draftRecipient,
   formatShekels,
   orderableThemes,
   palettesFor,
   priceAgorot,
   privateOccasions,
+  recipientsFor,
   step1Error,
   toggle,
+  withRecipient,
 } from '../logic.ts'
 import { navigate } from '../router.ts'
 import { RouteTastings } from '../tastings.tsx'
@@ -55,6 +58,8 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
   const decor = decorFor(shop, d.occasionKey)
   const pals = palettesFor(shop, theme?.id)
   const pal = currentPalette(shop, d)
+  const recipients = recipientsFor(occasions.find((o) => o.key === d.occasionKey))
+  const recipient = draftRecipient(shop, d)
 
   const next = () => {
     const e = step1Error(d, shop)
@@ -128,6 +133,31 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
               </p>
             )}
           </section>
+
+          {recipients.length > 1 && (
+            <section className="section" aria-labelledby="l-rcp">
+              <QNote id="l-rcp" tilt={1.2} icon="heart">
+                {copy.home.recipient}
+              </QNote>
+              <div className="row recipients" role="radiogroup" aria-labelledby="l-rcp">
+                {recipients.map((r) => (
+                  <Opt
+                    key={r}
+                    role="radio"
+                    // One person (her or him) is the usual gift: drawn larger, and picked first.
+                    small={r !== 'she' && r !== 'he'}
+                    pressed={recipient === r}
+                    onClick={() => set(withRecipient(d, r))}
+                  >
+                    {copy.home.recipients[r]}
+                  </Opt>
+                ))}
+              </div>
+              {(recipients.includes('she') || recipients.includes('he')) && (
+                <p className="hint">{copy.home.recipientHint}</p>
+              )}
+            </section>
+          )}
 
           <section className="section" aria-labelledby="l-theme">
             <QNote id="l-theme" tilt={-1} icon="map">
@@ -294,7 +324,7 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
           </p>
 
           <Cta onClick={next} error={error}>
-            {copy.home.next(d.form)}
+            {copy.home.next(recipient ? d.form : null)}
           </Cta>
         </>
       )}

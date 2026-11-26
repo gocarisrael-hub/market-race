@@ -1,5 +1,7 @@
 // Question sets and riddles (with live preview per form and an answer tester).
+
 import { useEffect, useMemo, useState } from 'react'
+import { occasionRecipients } from '../../../server/domain/recipient.ts'
 import { extractSlots, nameSlots } from '../../../server/domain/template.ts'
 import type { RiddleTemplates } from '../../../server/domain/types.ts'
 import { FORMS, type Form, type Question, type TextPart } from '../../../server/domain/types.ts'
@@ -292,7 +294,16 @@ function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
   // Switching form: preview with a question set an occasion of that form uses, when the current one isn't.
   const pickForm = (f: Form) => {
     setForm(f)
-    const setsFor = (occasions.items ?? []).filter((o) => o.forms.includes(f)).map((o) => o.questionSetId)
+    // Every set an occasion asks for a recipient of this form (or for its company form).
+    const setsFor = (occasions.items ?? []).flatMap((o) =>
+      o.audience === 'company'
+        ? o.forms.includes(f)
+          ? [o.questionSetId]
+          : []
+        : occasionRecipients(o)
+            .filter((c) => c.form === f)
+            .map((c) => c.questionSetId),
+    )
     if (setsFor.length && !setsFor.includes(qsId)) setQsId(setsFor[0])
   }
 

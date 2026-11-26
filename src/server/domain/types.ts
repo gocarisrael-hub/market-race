@@ -5,6 +5,22 @@
 export const FORMS = ['she', 'he', 'couple', 'group', 'company'] as const
 export type Form = (typeof FORMS)[number]
 
+// Who a private game is for, asked early in the order. Most games are a gift for one person, so
+// she and he come first. The recipient picks the question set (with the occasion) and the form:
+// family is a group game with its own questions. A company game has no recipient.
+export const RECIPIENTS = ['she', 'he', 'couple', 'group', 'family'] as const
+export type Recipient = (typeof RECIPIENTS)[number]
+export const isRecipient = (v: unknown): v is Recipient => RECIPIENTS.includes(v as Recipient)
+export const RECIPIENT_FORM: Record<Recipient, Form> = {
+  she: 'she',
+  he: 'he',
+  couple: 'couple',
+  group: 'group',
+  family: 'group',
+}
+/** An occasion's recipients: each offered one, with its question set (null: the occasion's own). */
+export type OccasionRecipients = Partial<Record<Recipient, number | null>>
+
 // Fixed lists (SPEC: allergens are never free text).
 export const ALLERGENS = [
   'גלוטן',
@@ -149,6 +165,13 @@ export interface GameSnapshot {
   decor?: Decor
   company: { name: string; logo: string | null } | null
   form: Form
+  /** Who the game is for. Missing on games built before recipients existed. */
+  recipient?: Recipient | null
+  /**
+   * The players are addressed in the feminine plural (a bachelorette). Missing on older games,
+   * which used it whenever the form was "she".
+   */
+  playersFeminine?: boolean
   honoree: string
   people: number
   allergens: string[]

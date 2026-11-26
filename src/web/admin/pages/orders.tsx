@@ -1,6 +1,7 @@
 // Orders: list with filters, review queue, order detail (answers, game, links, payments,
 // messages, redemptions, company tools), test-game form, live games.
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { occasionRecipients } from '../../../server/domain/recipient.ts'
 import { nameSlots, questionTextFor } from '../../../server/domain/template.ts'
 import {
   ALLERGENS,
@@ -12,6 +13,7 @@ import {
   type OrderStatus,
   type Palette,
   type Question,
+  type Recipient,
   type TextPart,
 } from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
@@ -26,6 +28,7 @@ import {
   type Occasion,
   type PaletteRow,
   type QuestionSet,
+  RECIPIENT_LABELS,
   type Route,
   Select,
   shekels,
@@ -104,7 +107,7 @@ interface OrderRow {
   deliveredAt: string | null
   usage?: Usage
 }
-type FullOrder = OrderRow & { game: GameSnapshot | null }
+type FullOrder = OrderRow & { game: GameSnapshot | null; recipient?: Recipient | null }
 
 interface Detail {
   order: FullOrder
@@ -902,7 +905,8 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
           <dl className="facts">
             <dt>סוג</dt>
             <dd>
-              {KIND_LABELS[o.kind]} · {d.occasion?.label ?? o.occasionKey} · {FORM_LABELS[o.form]}
+              {KIND_LABELS[o.kind]} · {d.occasion?.label ?? o.occasionKey} ·{' '}
+              {o.recipient ? RECIPIENT_LABELS[o.recipient] : FORM_LABELS[o.form]}
             </dd>
             <dt>{o.kind === 'company' ? 'חברה' : 'חוגג/ת'}</dt>
             <dd>{o.companyName || o.honoreeName}</dd>
@@ -1136,6 +1140,7 @@ export function TestGamePage() {
   const [paletteId, setPaletteId] = useState<number | null>(null)
   const [occasionKey, setOccasionKey] = useState('')
   const [form, setForm] = useState<Form | ''>('')
+  const [recipient, setRecipient] = useState<Recipient | ''>('')
   const [themeId, setThemeId] = useState<number | null>(null)
   const [routeId, setRouteId] = useState<number | null>(null)
   const [people, setPeople] = useState(4)
@@ -1152,13 +1157,23 @@ export function TestGamePage() {
   const theme = themes.find((t) => t.id === themeId)
   const marketRoutes = routes.filter((r) => !theme || r.marketId === theme.marketId)
   const themePalettes = palettes.filter((p) => theme && p.themeIds.includes(theme.id))
-  const questions = sets.find((s) => s.id === occ?.questionSetId)?.questions ?? []
   const isCompany = occ?.audience === 'company'
-  const f: Form = form || occ?.forms[0] || 'she'
+  // A private game is for someone (she, he, a couple, a group, a family): that picks its questions.
+  const choices = occ ? occasionRecipients(occ) : []
+  const choice = choices.find((c) => c.recipient === recipient)
+  const questions =
+    sets.find(
+      (s) => s.id === (isCompany ? occ?.questionSetId : (choice?.questionSetId ?? occ?.questionSetId)),
+    )?.questions ?? []
+  const f: Form = isCompany ? form || occ?.forms[0] || 'company' : (choice?.form ?? 'she')
 
   useEffect(() => {
-    if (occ && (!form || !occ.forms.includes(form))) setForm(occ.forms[0] ?? '')
-  }, [occ, form])
+    if (!occ) return
+    if (occ.audience === 'company') {
+      if (!form || !occ.forms.includes(form)) setForm(occ.forms[0] ?? '')
+    } else if (!recipient || !choices.some((c) => c.recipient === recipient))
+      setRecipient(choices[0]?.recipient ?? '')
+  }, [occ, form, recipient, choices])
   useEffect(() => {
     if (theme && !marketRoutes.some((r) => r.id === routeId)) setRouteId(marketRoutes[0]?.id ?? null)
   }, [theme, marketRoutes, routeId])
@@ -1173,6 +1188,7 @@ export function TestGamePage() {
         json: {
           occasionKey,
           form: f,
+          recipient: isCompany ? null : recipient || null,
           honoreeName: isCompany ? '' : honoreeName,
           companyName: isCompany ? companyName : undefined,
           themeId,
@@ -1215,12 +1231,21 @@ export function TestGamePage() {
             options={occasions.map((o) => ({ value: o.key, label: o.label }))}
             onChange={setOccasionKey}
           />
-          <Select
-            label="צורת פנייה"
-            value={form}
-            options={(occ?.forms ?? []).map((x) => ({ value: x, label: FORM_LABELS[x] }))}
-            onChange={(v) => setForm(v as Form)}
-          />
+          {isCompany ? (
+            <Select
+              label="צורת פנייה"
+              value={form}
+              options={(occ?.forms ?? []).map((x) => ({ value: x, label: FORM_LABELS[x] }))}
+              onChange={(v) => setForm(v as Form)}
+            />
+          ) : (
+            <Select
+              label="למי המשחק"
+              value={recipient}
+              options={choices.map((c) => ({ value: c.recipient, label: RECIPIENT_LABELS[c.recipient] }))}
+              onChange={(v) => setRecipient(v as Recipient)}
+            />
+          )}
         </div>
         <div className="row">
           <Select
