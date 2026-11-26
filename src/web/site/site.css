@@ -2069,8 +2069,10 @@ ol.howto.drawn li {
   text-align: center;
 }
 .l-footer-link {
-  color: var(--muted);
-  text-underline-offset: 3px;
+  margin-inline-start: 6px;
+  vertical-align: middle;
+  --sketch-ink: var(--muted);
+  --sketch-line: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
 /* The route teaser (RouteTeaser.tsx): the map blurred, the route and the food crisp on top. */

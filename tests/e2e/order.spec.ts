@@ -1,6 +1,7 @@
 // The order as a guided build: one short stage per screen, the game built on the map as the
 // buyer goes, back and next on every stage.
 import { expect, type Page, test } from '@playwright/test'
+import { noBareLinks } from '../helpers/links.ts'
 import {
   backButton,
   buildToPhotos,
@@ -173,6 +174,8 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(page.getByTestId('total')).toContainText('495 ₪')
   await expect(page.getByText('בוטנים, טבעוני')).toBeVisible()
   await expect(page.getByText('תמונה אחת')).toBeVisible()
+  // The summary, like every stage before it (checked in next()), has no underlined links.
+  await noBareLinks(page)
   await shot(page, 'build-09-pay')
   // e2e runs with the mock provider; simulate card payment being off to check the message.
   await page.route('**/api/orders/*/pay', (route) =>
@@ -359,6 +362,7 @@ test('company payment link shows the amount and the payment state', async ({ pag
   expect(put.ok()).toBe(true)
   await page.goto(`/pay/${token}`)
   await expect(page.getByTestId('total')).toContainText('396 ₪')
+  await noBareLinks(page)
   await shot(page, '7-pay-link')
   await page.route('**/api/orders/*/pay', (route) =>
     route.fulfill({ status: 400, json: { error: 'card_disabled' } }),
@@ -375,6 +379,7 @@ test('company payment link shows the amount and the payment state', async ({ pag
 
 test('companies leave a lead', async ({ page }) => {
   await page.goto('/companies')
+  await noBareLinks(page)
   await page.getByRole('button', { name: 'שלחו לנו' }).click()
   await expect(page.getByText('כתבו את שם החברה')).toBeVisible()
   await page.getByRole('radio', { name: 'יום צוות' }).click()

@@ -2,6 +2,7 @@
 // the tastings page (/tastings): what you taste on the way, never which stall serves it. At phone
 // and desktop widths.
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test'
+import { noBareLinks } from '../helpers/links.ts'
 
 const DESKTOP = { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }
 
@@ -113,6 +114,8 @@ for (const [name, opts] of [
       // The FAQ is folded too; group size comes from the settings.
       await page.getByRole('button', { name: 'שאלות' }).click()
       await expect(page.getByText(`מ־${shop.minPeople} עד ${shop.maxPeople} משתתפים`)).toBeVisible()
+      // No underlined text links anywhere on the page, the footer's way to the companies included.
+      await noBareLinks(page)
 
       // The lowest per-person price from the settings, next to the call to action.
       const per = Object.values(shop.prices as Record<string, { perPerson: number }>)
@@ -149,6 +152,10 @@ for (const [name, opts] of [
       await expect(page.locator('.co-features li')).toHaveCount(4)
       await expect(page.locator('.co-how li')).toHaveCount(4)
       await noHorizontalScroll(page)
+      // The top bar's way to the form and the footer's way back are drawn, never underlined.
+      await expect(page.locator('.co-bar-link.sketch .sketch-shape')).toBeVisible()
+      await expect(page.locator('.co-foot-link.sketch .sketch-shape')).toBeVisible()
+      await noBareLinks(page)
 
       // The call to action leads to the form; the form sends a lead.
       await page.getByRole('button', { name: 'לקבלת הצעת מחיר' }).click()
@@ -163,6 +170,7 @@ for (const [name, opts] of [
       await page.getByLabel('כמה משתתפים בערך?').fill('40')
       await page.getByRole('button', { name: 'שלחו לנו' }).click()
       await expect(page.getByText('נחזור אליכם בקרוב עם הצעה.')).toBeVisible()
+      await noBareLinks(page)
 
       // A quiet way back to the private site.
       await page.getByRole('link', { name: 'לאתר החוגגים' }).click()
@@ -183,6 +191,7 @@ for (const [name, opts] of [
       await expect(page.locator('.t-route .stop.swapped, .t-route .stop.blocked').first()).toBeVisible()
       await expectNoStalls(page, names)
       await noHorizontalScroll(page)
+      await noBareLinks(page)
       if (name === 'desktop') {
         const filter = await page.locator('.t-filter').boundingBox()
         const routes = await page.locator('.t-routes').boundingBox()
@@ -201,6 +210,7 @@ test('a COMPANY_HOSTS domain serves the companies landing at /', async ({ page, 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('יום צוות בשוק')
   await expect(page.locator('.co-bar')).toBeVisible()
   await expect(page.getByTestId('route-teaser')).toHaveCount(0)
+  await noBareLinks(page)
   await expect(page).toHaveURL(new RegExp(`companies\\.localhost:${port}/$`))
   // The quiet link back goes to the private site's own origin.
   await expect(page.getByRole('link', { name: 'לאתר החוגגים' })).toHaveAttribute(

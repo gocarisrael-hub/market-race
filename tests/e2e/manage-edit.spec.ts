@@ -1,19 +1,9 @@
 // The buyer's edit link: after paying (mock provider), the buyer opens the manage page, taps
 // "ערוך", changes an answer, the name and the color, and the game shows the change.
 import { expect, type Page, test } from '@playwright/test'
+import { noBareLinks } from '../helpers/links.ts'
 
 test.use({ viewport: { width: 390, height: 844 } })
-
-/** Every visible action is drawn (brush or outline), none is a bare underlined text link. */
-async function noBareLinks(page: Page) {
-  const bare = await page.$$eval('a, button', (els) =>
-    els
-      .filter((el) => (el as HTMLElement).offsetParent !== null)
-      .filter((el) => getComputedStyle(el).textDecorationLine.includes('underline'))
-      .map((el) => el.textContent?.trim()),
-  )
-  expect(bare).toEqual([])
-}
 
 test('buyer edits an answer after paying and sees it in the first riddle', async ({ page }) => {
   const shop = await (await page.request.get('/api/shop')).json()

@@ -38,17 +38,12 @@
   font-weight: 700;
   line-height: 1;
 }
+/* A small drawn outline in the companies' ink, never an underlined link. */
 .co-bar-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-family: var(--display);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
+  --sketch-ink: var(--accent);
+  --sketch-line: var(--accent);
+  --sketch-fill: color-mix(in srgb, var(--co-sun) 22%, transparent);
+  flex: none;
 }
 .co-main {
   max-width: 1200px;
@@ -359,8 +354,10 @@
   text-align: center;
 }
 .co-foot-link {
-  color: var(--muted);
-  text-underline-offset: 3px;
+  --sketch-ink: var(--ink);
+  --sketch-line: color-mix(in srgb, var(--ink) 55%, transparent);
+  margin-inline-start: 6px;
+  vertical-align: middle;
 }
 
 @media (min-width: 768px) {

@@ -3,6 +3,7 @@
 // הקישור" on the site. Emails are not configured in the e2e server, so they are checked in the
 // admin's message log (logged as skipped).
 import { type APIRequestContext, devices, expect, type Page, test } from '@playwright/test'
+import { noBareLinks } from '../helpers/links.ts'
 
 const SYNC = { timeout: 15_000 }
 const run = Date.now().toString(36)
@@ -42,17 +43,6 @@ async function sentTemplates(request: APIRequestContext, orderNo: string): Promi
   return d.messages
     .filter((m: { channel: string }) => m.channel === 'email')
     .map((m: { template: string }) => m.template)
-}
-
-/** Every visible action is drawn (brush or outline), none is a bare underlined text link. */
-async function noBareLinks(page: Page) {
-  const bare = await page.$$eval('a, button', (els) =>
-    els
-      .filter((el) => (el as HTMLElement).offsetParent !== null)
-      .filter((el) => getComputedStyle(el).textDecorationLine.includes('underline'))
-      .map((el) => el.textContent?.trim()),
-  )
-  expect(bare).toEqual([])
 }
 
 const riddle = (p: Page, name: string) => p.getByRole('heading', { name, exact: true })
