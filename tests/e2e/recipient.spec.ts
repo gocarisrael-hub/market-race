@@ -95,7 +95,7 @@ test('a love game for him: his questions from the giver, his grammar in the game
   await next(page, /\/order\/questions$/)
 
   await expect(page.getByRole('heading', { name: /ספרו לנו/ })).toContainText('עליו')
-  await page.getByLabel('איך הכול התחיל ביניכם?').fill('הדייט הראשון ביפו')
+  await page.getByLabel('איפה הכול התחיל ביניכם?').fill('הדייט הראשון ביפו')
   await expect(page.getByLabel('מה הוא תמיד מזמין?')).toBeVisible()
   // The birthday's questions are not asked here.
   await expect(page.getByLabel(/האוכל האהוב עליו/)).toHaveCount(0)
@@ -121,7 +121,7 @@ test('a love game for him: his questions from the giver, his grammar in the game
   await next(page, /\/order\/questions$/)
   await expect(page.getByLabel('מה הוא תמיד מזמין?')).toBeVisible()
   // The answer kept its slot across the switch.
-  await expect(page.getByLabel('איך הכול התחיל ביניכם?')).toHaveValue('הדייט הראשון ביפו')
+  await expect(page.getByLabel('איפה הכול התחיל ביניכם?')).toHaveValue('הדייט הראשון ביפו')
 
   const created = page.waitForResponse(
     (r) => r.url().endsWith('/api/orders') && r.request().method() === 'POST',

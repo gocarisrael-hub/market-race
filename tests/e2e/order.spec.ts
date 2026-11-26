@@ -147,11 +147,14 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(
     page.getByText('שאלה שרק מי שמכיר אותה יודע לענות עליה. מי שעונה נכון מקבל רמז.'),
   ).toBeVisible()
-  await page.getByLabel('שאלה 1', { exact: true }).fill('איך קוראים לכלב שלה?')
-  await expect(page.getByLabel('תשובה 1', { exact: true })).toHaveAttribute('placeholder', 'למשל: בונבון')
+  await page.getByRole('textbox', { name: 'שאלה 1', exact: true }).fill('איך קוראים לכלב שלה?')
+  await expect(page.getByRole('textbox', { name: 'תשובה 1', exact: true })).toHaveAttribute(
+    'placeholder',
+    'למשל: בונבון',
+  )
   await mainButton(page).click()
   await expect(page.getByText('לכל שאלה לרמז צריך גם תשובה')).toBeVisible()
-  await page.getByLabel('תשובה 1', { exact: true }).fill('בוני')
+  await page.getByRole('textbox', { name: 'תשובה 1', exact: true }).fill('בוני')
 
   await next(page, /\/order\/people$/)
   await expect(page.getByTestId('price')).toContainText('396 ₪')
@@ -442,11 +445,11 @@ test('a family game: no who-for or she/he, the name field is the family name, fa
   await next(page, /\/order\/questions$/)
   await expect(page.getByRole('heading', { name: /ספרו לנו/ })).toContainText('עליכם')
   await expect(page.getByLabel(/איך קוראים למשפחה\?/)).toHaveCount(0)
-  await expect(page.getByLabel(/המאכל שתמיד יש בארוחת שישי/)).toBeVisible()
-  await expect(page.getByLabel(/המשפט הכי מוכר של אבא או אמא/)).toBeVisible()
+  await expect(page.getByLabel(/מה תמיד יש בארוחת שישי/)).toBeVisible()
+  await expect(page.getByLabel(/משפט שאבא או אמא תמיד אומרים/)).toBeVisible()
   await shot(page, 'build-04b-questions-family')
   await next(page, /\/order\/questions\/2$/)
-  await page.getByLabel(/מי הכי מאחר\/ת במשפחה/).fill('דוד שמעון')
+  await page.getByLabel(/מי תמיד מאחר/).fill('דוד שמעון')
   // Hidden questions of the set are never asked.
   await expect(page.getByLabel(/כינוי/)).toHaveCount(0)
   await next(page, /\/order\/questions\/3$/)
