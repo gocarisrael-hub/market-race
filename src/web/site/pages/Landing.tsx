@@ -8,7 +8,7 @@ import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
 import { formatShekels, fromPerPerson, orderableThemes, privateOccasions, routeForTheme } from '../logic.ts'
 import { RouteTeaser } from '../RouteTeaser.tsx'
-import { Brush, Deco, Fold, Sketch } from '../ui.tsx'
+import { Brush, Deco, Faq, Fold, Sketch } from '../ui.tsx'
 import { TastingsExplorer } from './Tastings.tsx'
 
 // One food illustration (assets/icons) per step of "how it works".
@@ -76,16 +76,14 @@ export function Landing({ shop }: { shop: Shop }) {
       </Fold>
 
       <Fold title={c.faqTitle} icon="question" className="l-faq">
-        <dl>
-          <dt>{c.faq.validity.q}</dt>
-          <dd>{c.faq.validity.a(shop.validYears)}</dd>
-          <dt>{c.faq.duration.q}</dt>
-          <dd>{c.faq.duration.a(shop.gameDuration, route?.stops ?? 0)}</dd>
-          <dt>{c.faq.allergies.q}</dt>
-          <dd>{c.faq.allergies.a}</dd>
-          <dt>{c.faq.people.q}</dt>
-          <dd>{c.faq.people.a(shop.minPeople, shop.maxPeople)}</dd>
-        </dl>
+        <Faq
+          items={[
+            { q: c.faq.validity.q, a: c.faq.validity.a(shop.validYears) },
+            { q: c.faq.duration.q, a: c.faq.duration.a(shop.gameDuration, route?.stops ?? 0) },
+            { q: c.faq.allergies.q, a: c.faq.allergies.a },
+            { q: c.faq.people.q, a: c.faq.people.a(shop.minPeople, shop.maxPeople) },
+          ]}
+        />
       </Fold>
 
       <footer className="l-footer">

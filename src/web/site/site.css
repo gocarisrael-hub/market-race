@@ -2536,20 +2536,73 @@ ol.howto.drawn li {
 .l-faq {
   margin-top: 40px;
 }
-.l-faq dl {
+/* Questions and answers: one column, each answer right under its question, dashed lines between. */
+.faq {
+  max-width: 680px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.faq-item {
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.faq-q {
   margin: 0;
 }
-.l-faq dt {
-  margin-top: 14px;
+.faq-q button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
   font-family: var(--display);
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1.05;
+  text-align: start;
+  cursor: pointer;
 }
-.l-faq dd {
-  margin: 4px 0 0;
+.faq-mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-inline-start: auto;
+  transition: transform 0.2s ease-out;
+}
+.faq-mark path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.faq-mark-v {
+  transition: opacity 0.2s ease-out;
+}
+.faq-item.open .faq-mark {
+  transform: rotate(180deg);
+}
+.faq-item.open .faq-mark-v {
+  opacity: 0;
+}
+.faq-a p {
+  margin: 0;
+  padding: 0 0 16px;
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.6;
+  animation: fold-open 0.2s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .faq-mark,
+  .faq-mark-v {
+    transition: none;
+  }
+  .faq-a p {
+    animation: none;
+  }
 }
 
 /* ---------- Tastings page (/tastings) ---------- */
@@ -2673,10 +2726,11 @@ ol.howto.drawn li {
   .fold-head button {
     font-size: clamp(36px, 3vw, 44px);
   }
-  .l-faq dl {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 48px;
+  .faq-q button {
+    font-size: 32px;
+  }
+  .faq-a p {
+    font-size: 17px;
   }
 
   .t-body {
