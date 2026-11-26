@@ -1,15 +1,21 @@
-// /: what the product is, for a first-time visitor. How it works, who it is for, what you get, a
-// peek at the tastings, prices and a short FAQ, all from the shop (prices, people, validity and
-// the duration are settings). The order itself starts at /order.
-import { Doodle, Doodles, decorSet, Icon } from '../../shared/decor.tsx'
+// /: what the product is, in a few lines, then one choice between the two games. The tastings
+// and the FAQ open in place. Prices, group size, validity and duration come from the settings.
+import { Doodles } from '../../shared/decor.tsx'
 import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
-import { formatShekels, orderableThemes, privateOccasions, routeForTheme } from '../logic.ts'
-import { Brush, Deco, Link, SectionHead, SiteNav, Sketch, TornPaper, Underline } from '../ui.tsx'
+import {
+  companyOccasions,
+  formatShekels,
+  fromPerPerson,
+  orderableThemes,
+  privateOccasions,
+  routeForTheme,
+} from '../logic.ts'
+import { Brush, Deco, Fold } from '../ui.tsx'
+import { TastingsExplorer } from './Tastings.tsx'
 
 // One food illustration (assets/icons) per step of "how it works".
 const STEP_ICONS = ['spices', 'gate', 'falafel', 'flowers']
-const PEEK = 3
 
 export function Landing({ shop }: { shop: Shop }) {
   const c = copy.landing
@@ -18,13 +24,24 @@ export function Landing({ shop }: { shop: Shop }) {
   const market = shop.markets.find((m) => m.id === theme?.marketId)?.name ?? ''
   const [t1, t2] = copy.home.title(market)
   const route = routeForTheme(shop, theme?.id)
-  const occasions = privateOccasions(shop)
-  const priced = occasions.filter((o) => shop.prices[o.key])
+  const products = [
+    {
+      key: 'private',
+      ...c.products.private,
+      href: '/order',
+      from: fromPerPerson(shop, privateOccasions(shop)),
+    },
+    {
+      key: 'company',
+      ...c.products.company,
+      href: '/companies',
+      from: fromPerPerson(shop, companyOccasions(shop)),
+    },
+  ] as const
 
   return (
     <main className="page landing" data-decor="generic">
       <Deco icon="awning" className="sway" style={{ top: -30, left: -36, width: 210 }} />
-      <SiteNav current="about" />
 
       <header className="l-hero">
         <div className="l-hero-text">
@@ -35,14 +52,6 @@ export function Landing({ shop }: { shop: Shop }) {
             {t2}
           </h1>
           <p className="lead">{c.lead}</p>
-          <div className="l-ctas">
-            <Brush href="/order" icon="flagStart">
-              {c.ctaOrder}
-            </Brush>
-            <Sketch href="/tastings" icon="basket">
-              {c.ctaTastings}
-            </Sketch>
-          </div>
         </div>
         {theme?.map && (
           <figure className="l-hero-map">
@@ -58,112 +67,55 @@ export function Landing({ shop }: { shop: Shop }) {
         )}
       </header>
 
-      <section className="section l-how" aria-labelledby="l-how">
-        <SectionHead icon="map" id="l-how">
-          {c.howTitle}
-        </SectionHead>
-        <ol className="l-steps">
-          {c.steps.map((s, i) => (
-            <li key={s.title} className="l-step">
-              <img className="l-step-art bob" src={`/static/icons/${STEP_ICONS[i]}.png`} alt="" />
-              <span className="l-step-no" aria-hidden="true">
-                {i + 1}
-              </span>
-              <h3>{s.title}</h3>
-              <p>{s.text}</p>
-            </li>
+      <ol className="l-strip" aria-label={c.howLabel}>
+        {c.steps.map((s, i) => (
+          <li key={s.title}>
+            <img src={`/static/icons/${STEP_ICONS[i]}.png`} alt="" />
+            <span className="l-strip-text">
+              <strong>
+                {i + 1}. {s.title}
+              </strong>
+              <span>{s.text}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <Fold title={c.tastingsTitle} icon="basket" className="l-tastings">
+        <TastingsExplorer shop={shop} />
+      </Fold>
+
+      <section className="section l-choice" aria-labelledby="l-choice">
+        <h2 className="sub" id="l-choice">
+          {c.choiceTitle}
+        </h2>
+        <div className="l-products">
+          {products.map((p) => (
+            <article key={p.key} className={`l-product l-product-${p.key}`} aria-labelledby={`p-${p.key}`}>
+              <Doodles decor="generic" spots={[{ top: -22, left: 14, size: 52, rot: -10 }]} />
+              <svg
+                className="l-product-paper"
+                viewBox="0 0 300 300"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 10 L 80 4 L 160 9 L 240 3 L 294 8 L 297 90 L 292 170 L 297 250 L 291 294 L 210 297 L 130 291 L 50 297 L 4 292 L 8 200 L 3 120 Z"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+              <h3 id={`p-${p.key}`}>{p.title}</h3>
+              <p className="l-product-text">{p.text}</p>
+              {p.from !== null && <p className="l-product-price">{c.from(formatShekels(p.from))}</p>}
+              <Brush href={p.href} icon={p.key === 'private' ? 'flagStart' : 'briefcase'}>
+                {p.cta}
+              </Brush>
+            </article>
           ))}
-        </ol>
+        </div>
       </section>
 
-      {occasions.length > 0 && (
-        <section className="section l-for" aria-labelledby="l-for">
-          <SectionHead icon="heart" id="l-for">
-            {c.forTitle}
-          </SectionHead>
-          <ul className="l-occasions">
-            {occasions.map((o) => (
-              <li key={o.key}>
-                <Doodle name={decorSet(o.decor)[0]} className="l-occ-doodle" />
-                <span>{o.label}</span>
-              </li>
-            ))}
-            <li>
-              <Link href="/companies" className="l-occ-link">
-                <Doodle name="briefcase" className="l-occ-doodle" />
-                <span>{c.forCompanies}</span>
-              </Link>
-            </li>
-          </ul>
-        </section>
-      )}
-
-      <div className="l-pair">
-        <TornPaper tilt="r">
-          <h2 className="sub section-head">
-            <Icon name="gift" size={40} tilt={-6} />
-            <span>{c.getTitle}</span>
-          </h2>
-          <ul className="l-get">
-            {c.get.map((g) => (
-              <li key={g}>
-                <Icon name="check" size={26} />
-                <span>{g}</span>
-              </li>
-            ))}
-          </ul>
-        </TornPaper>
-
-        {route && route.tastings.length > 0 && (
-          <TornPaper tilt="l">
-            <h2 className="sub section-head">
-              <Icon name="basket" size={40} tilt={-6} />
-              <span>{c.peekTitle}</span>
-            </h2>
-            <ul className="l-peek" data-testid="tastings-peek">
-              {route.tastings.slice(0, PEEK).map((t, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: stops are positional
-                <li key={i}>
-                  {t.icon && <img src={t.icon} alt="" loading="lazy" />}
-                  <span>{t.teaser || copy.home.tastingFallback}</span>
-                </li>
-              ))}
-            </ul>
-            <Sketch href="/tastings" small icon="basket">
-              {c.peekMore}
-            </Sketch>
-          </TornPaper>
-        )}
-      </div>
-
-      {priced.length > 0 && (
-        <section className="section l-prices" aria-labelledby="l-prices" data-testid="landing-prices">
-          <SectionHead icon="ticket" id="l-prices">
-            {c.pricesTitle}
-          </SectionHead>
-          <ul>
-            {priced.map((o) => {
-              const p = shop.prices[o.key]
-              const parts = [
-                p.base > 0 ? c.priceBase(formatShekels(p.base)) : null,
-                p.perPerson > 0 ? c.pricePer(formatShekels(p.perPerson)) : null,
-              ].filter(Boolean)
-              return (
-                <li key={o.key}>
-                  <span className="l-price-name">{o.label}</span>
-                  <span className="l-price">{parts.join(c.priceJoin)}</span>
-                </li>
-              )
-            })}
-          </ul>
-          <p className="hint">{c.pricesHint}</p>
-        </section>
-      )}
-
-      <section className="section l-faq" aria-labelledby="l-faq">
-        <SectionHead icon="question" id="l-faq">
-          {c.faqTitle}
-        </SectionHead>
+      <Fold title={c.faqTitle} icon="question" className="l-faq">
         <dl>
           <dt>{c.faq.validity.q}</dt>
           <dd>{c.faq.validity.a(shop.validYears)}</dd>
@@ -174,23 +126,7 @@ export function Landing({ shop }: { shop: Shop }) {
           <dt>{c.faq.people.q}</dt>
           <dd>{c.faq.people.a(shop.minPeople, shop.maxPeople)}</dd>
         </dl>
-      </section>
-
-      <section className="section l-closing">
-        <h2 className="sub">
-          {c.closingTitle}
-          <Underline />
-        </h2>
-        <p className="lead">{c.closingText}</p>
-        <Brush href="/order" icon="flagStart">
-          {c.ctaOrder}
-        </Brush>
-      </section>
-      <Deco
-        icon="spices"
-        className="bob"
-        style={{ bottom: 10, left: -24, width: 90, ['--r' as string]: '10deg' }}
-      />
+      </Fold>
     </main>
   )
 }

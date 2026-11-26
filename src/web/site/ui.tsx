@@ -1,5 +1,5 @@
 // Hand-drawn building blocks, SVG paths taken from docs/mockup.
-import type { CSSProperties, ReactNode } from 'react'
+import { type CSSProperties, type ReactNode, useId, useState } from 'react'
 import { themeVars } from '../../server/domain/look.ts'
 import type { Palette } from '../../server/domain/types.ts'
 import { type DoodleName, Icon, SketchShape } from '../shared/decor.tsx'
@@ -594,5 +594,30 @@ export function SiteNav({ current }: { current: 'about' | 'tastings' | 'order' }
         ),
       )}
     </nav>
+  )
+}
+
+/**
+ * An expandable section, closed until opened: a handwritten heading on a button (aria-expanded),
+ * the content opening in place under it.
+ */
+export function Fold(props: { title: string; icon: DoodleName; children: ReactNode; className?: string }) {
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  return (
+    <section className={`section fold${open ? ' open' : ''} ${props.className ?? ''}`}>
+      <h2 className="fold-head">
+        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+          <Icon name={props.icon} size={40} tilt={-6} />
+          <span>{props.title}</span>
+          <svg className="fold-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 9 C 9 12, 11 14, 12 16 C 14 13, 16 11, 19 8" />
+          </svg>
+        </button>
+      </h2>
+      <div className="fold-body" id={id} hidden={!open}>
+        {open && props.children}
+      </div>
+    </section>
   )
 }
