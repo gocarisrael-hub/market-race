@@ -40,12 +40,15 @@ import {
   type Question,
   RECIPIENTS,
   type RouteStop,
+  STYLE_COLORS,
+  THEME_FONTS,
 } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
 import { iconNames } from '../lib/icons.ts'
 import { randomToken } from '../lib/tokens.ts'
 
 const builtinMapsDir = fileURLToPath(new URL('../../../assets/maps', import.meta.url))
+const builtinIconsDir = fileURLToPath(new URL('../../../assets/icons', import.meta.url))
 const MAP_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -199,6 +202,21 @@ const palette = z.object({
   mapTint: color.optional(),
 })
 const pct = z.number().min(0).max(100)
+const themeStyle = z
+  .object({
+    font: z.enum(THEME_FONTS).optional(),
+    serifBody: z.boolean().optional(),
+    mode: z.enum(['light', 'dark']).optional(),
+    treatment: z.enum(['brush', 'neon', 'foil']).optional(),
+    sheetLine: z.boolean().optional(),
+    riddleTop: z.enum(['trail', 'banner']).optional(),
+    icons: z
+      .string()
+      .regex(/^[a-z0-9-]*$/)
+      .optional(),
+    colors: z.partialRecord(z.enum(STYLE_COLORS), color).optional(),
+  })
+  .strict()
 const themeBase = z.object({
   name: str.min(1),
   marketId: id,
@@ -207,6 +225,10 @@ const themeBase = z.object({
   active: z.boolean(),
   mapFile: z.string().refine((v) => UPLOADED_MAP.test(v) || BUILTIN_MAP.test(v), 'invalid map'),
   pins: z.record(z.string().regex(/^\d+$/), z.object({ x: pct, y: pct })),
+  style: themeStyle,
+  // The occasion keys and recipients it is offered for; empty: every one.
+  occasionKeys: z.array(str.min(1)),
+  recipients: z.array(z.enum(RECIPIENTS)),
 })
 const themeCreate = themeBase.partial().extend({
   name: themeBase.shape.name,
@@ -719,8 +741,26 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
         await db.insert(uploads).values({ kind: 'map', originalPath: rel, path: rel })
         return reply.code(201).send({ mapFile: rel, url: `/uploads/${rel}` })
       })
-      const checkTheme = async (t: { marketId: number; mapFile: string; pins?: Record<string, unknown> }) => {
-        const issues: Issue[] = []
+      const checkTheme = async (t: {
+        marketId: number
+        mapFile: string
+        pins?: Record<string, unknown>
+        palette: z.infer<typeof palette>
+        style?: z.infer<typeof themeStyle>
+        occasionKeys?: string[]
+      }) => {
+        // The look must read everywhere in the game, with its fixed colors.
+        const issues: Issue[] = paletteIssues(t.palette, t.style ?? {}).map((i) => ({
+          path: 'palette',
+          message: `ניגודיות נמוכה מדי: ${i.check} (${i.ratio}:1, צריך ${i.min}:1)`,
+        }))
+        if (t.style?.icons && !existsSync(path.join(builtinIconsDir, t.style.icons)))
+          issues.push({ path: 'style.icons', message: 'icon set not found' })
+        if (t.occasionKeys?.length) {
+          const known = new Set((await db.select({ key: occasions.key }).from(occasions)).map((o) => o.key))
+          for (const k of t.occasionKeys)
+            if (!known.has(k)) issues.push({ path: 'occasionKeys', message: `unknown occasion ${k}` })
+        }
         if (!(await checkMarket(t.marketId))) issues.push({ path: 'marketId', message: 'market not found' })
         else if (t.pins) issues.push(...(await validatePins(db, t.marketId, t.pins)))
         if (!(await mapExists(ctx, t.mapFile)))

@@ -36,6 +36,7 @@ import {
   saveAction,
   step1Error,
   step2Error,
+  withOfferedTheme,
   withRecipient,
 } from '../logic.ts'
 import { PayLayer, usePay } from '../pay.tsx'
@@ -193,7 +194,8 @@ export function Build(props: {
   const set = (patch: Partial<Draft>) => {
     setError(null)
     setFieldErrors({})
-    setDraft({ ...d, ...patch })
+    // A new occasion or recipient may not offer the chosen style: the first one offered instead.
+    setDraft(withOfferedTheme(shop, { ...d, ...patch }))
   }
 
   /** Creates or updates the order on the server; returns its token. */

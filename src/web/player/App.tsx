@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import type { Palette, ThemeStyle } from '../../server/domain/types.ts'
 import { DecorDefs } from '../shared/decor.tsx'
 import { Desk } from '../shared/desk.tsx'
+import { loadThemeFont } from '../shared/look.ts'
 import { tokenFromPath } from './api.ts'
 import { makeT } from './copy.ts'
 import { setIconSet } from './logic.ts'
@@ -14,7 +15,7 @@ import { Redeem } from './screens/Redeem.tsx'
 import { Reveal } from './screens/Reveal.tsx'
 import { Riddle } from './screens/Riddle.tsx'
 import { screenKey } from './sync.ts'
-import { DEFAULT_PALETTE, fontHref, themeVars } from './theme.ts'
+import { DEFAULT_PALETTE, themeVars } from './theme.ts'
 import { useGame } from './useGame.ts'
 
 const NO_STYLE: ThemeStyle = {}
@@ -38,7 +39,7 @@ function useTheme(palette: Palette, style: ThemeStyle, map: string | null | unde
     root.style.colorScheme = style.mode === 'dark' ? 'dark' : 'light'
     if (map) root.style.setProperty('--map', `url("${map}")`)
     else root.style.removeProperty('--map')
-    loadFont(fontHref(style))
+    loadThemeFont(style)
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     if (!meta) {
       meta = document.createElement('meta')
@@ -47,16 +48,6 @@ function useTheme(palette: Palette, style: ThemeStyle, map: string | null | unde
     }
     meta.content = palette.background
   }, [palette, style, map])
-}
-
-/** Adds the display font's stylesheet once; the theme in play is the only one ever loaded. */
-function loadFont(href: string) {
-  if (document.querySelector(`link[data-font="${CSS.escape(href)}"]`)) return
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = href
-  link.dataset.font = href
-  document.head.appendChild(link)
 }
 
 export function App() {

@@ -1,8 +1,16 @@
 // Routes (ordered stops, the last one is the finale), themes (map, palette, stall pins) and the
 // palettes buyers can play a map in.
 import { useEffect, useState } from 'react'
-import { CONTRAST_RULES, contrast, paletteIssues, themeVars } from '../../../server/domain/look.ts'
-import type { Palette, RouteStop } from '../../../server/domain/types.ts'
+import { CONTRAST_RULES, contrast, FONTS, paletteIssues, themeVars } from '../../../server/domain/look.ts'
+import {
+  type Palette,
+  RECIPIENTS,
+  type RouteStop,
+  STYLE_COLORS,
+  type StyleColor,
+  THEME_FONTS,
+  type ThemeStyle,
+} from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
 import {
   Check,
@@ -12,7 +20,9 @@ import {
   type Market,
   mapUrl,
   NumberInput,
+  type Occasion,
   type PaletteRow,
+  RECIPIENT_LABELS,
   type Riddle,
   type Route,
   Select,
@@ -379,6 +389,7 @@ function ThemeEditor({ value, set }: EditorProps<Theme>) {
         </label>
         {uploadError && <p className="error">{uploadError}</p>}
       </fieldset>
+      <StyleFields value={value} set={set} />
       {value.mapFile && (
         <MapPins
           mapFile={value.mapFile}
@@ -387,6 +398,165 @@ function ThemeEditor({ value, set }: EditorProps<Theme>) {
           onChange={(pins) => set({ pins })}
         />
       )}
+    </>
+  )
+}
+
+const STYLE_COLOR_LABELS: Record<StyleColor, string> = {
+  onBg: 'טקסט על הרקע',
+  ribbon: 'סרט',
+  ribbonTail: 'זנבות הסרט',
+  ribbonLine: 'קו הסרט',
+  onRibbon: 'טקסט על הסרט',
+  button: 'כפתור',
+  onButton: 'טקסט על הכפתור',
+  buttonLine: 'קו הכפתור',
+  paperLine: 'קו הפתקים',
+  sheetLine: 'קו הדף בפתיחה',
+  kicker: 'כותרת החידה',
+  slot: 'טקסט אישי',
+  hint: 'רמז',
+  label: 'תוויות',
+  mark: 'סימונים (עיגול, חץ)',
+  brand: 'רקע שם המותג',
+  onBrand: 'שם המותג',
+}
+
+/** The style: fonts, treatment, illustrations, fixed colors, and who it is offered to. */
+function StyleFields({ value, set }: Pick<EditorProps<Theme>, 'value' | 'set'>) {
+  const occasions = useList<Occasion>('/catalog/occasions').items ?? []
+  const style = value.style ?? {}
+  const setStyle = (p: Partial<ThemeStyle>) => set({ style: { ...style, ...p } })
+  const colors = style.colors ?? {}
+  const setColor = (k: StyleColor, c: string | undefined) => {
+    const next = { ...colors }
+    if (c) next[k] = c
+    else delete next[k]
+    setStyle({ colors: next })
+  }
+  const palette = value.palette ?? BLANK_PALETTE
+  const v = themeVars(palette, style)
+  const occ = value.occasionKeys ?? []
+  const rec = value.recipients ?? []
+  return (
+    <>
+      <fieldset>
+        <legend>סגנון</legend>
+        <div className="row">
+          <Select
+            label="גופן תצוגה"
+            value={style.font ?? 'amatic'}
+            options={THEME_FONTS.map((f) => ({ value: f, label: FONTS[f].label }))}
+            onChange={(font) => setStyle({ font })}
+          />
+          <Select
+            label="ציור הכפתור והסרט"
+            value={style.treatment ?? 'brush'}
+            options={[
+              { value: 'brush', label: 'מכחול ודיו' },
+              { value: 'neon', label: 'ניאון זוהר' },
+              { value: 'foil', label: 'הטבעת זהב' },
+            ]}
+            onChange={(treatment) => setStyle({ treatment })}
+          />
+          <Select
+            label="מצב"
+            value={style.mode ?? 'light'}
+            options={[
+              { value: 'light', label: 'בהיר' },
+              { value: 'dark', label: 'כהה (גם הפתקים)' },
+            ]}
+            onChange={(mode) => setStyle({ mode })}
+          />
+          <Select
+            label="ראש מסך החידה"
+            value={style.riddleTop ?? 'trail'}
+            options={[
+              { value: 'trail', label: 'שביל איורים' },
+              { value: 'banner', label: 'רצועת מפה ושביל' },
+            ]}
+            onChange={(riddleTop) => setStyle({ riddleTop })}
+          />
+          <Text
+            label="סט איורים (תיקייה ב-assets/icons, ריק: המקור)"
+            value={style.icons ?? ''}
+            onChange={(icons) => setStyle({ icons: icons.trim() || undefined })}
+          />
+          <Check
+            label="קו על קצה הדף בפתיחה"
+            checked={style.sheetLine !== false}
+            onChange={(on) => setStyle({ sheetLine: on ? undefined : false })}
+          />
+          <Check
+            label="טקסט החידה בגופן התצוגה"
+            checked={!!style.serifBody}
+            onChange={(on) => setStyle({ serifBody: on || undefined })}
+          />
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>צבעים קבועים (כשמשחקים בצבעי העיצוב עצמו; ריק: נגזר מהצבעים)</legend>
+        <div className="row">
+          {STYLE_COLORS.map((k) => (
+            <label key={k}>
+              <Check
+                label={STYLE_COLOR_LABELS[k]}
+                checked={!!colors[k]}
+                onChange={(on) => setColor(k, on ? '#000000' : undefined)}
+              />
+              {colors[k] && (
+                <input type="color" value={colors[k]} onChange={(e) => setColor(k, e.target.value)} />
+              )}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>בדיקת קריאוּת</legend>
+        <ul className="contrast">
+          {CONTRAST_RULES.map((r) => {
+            const ratio = contrast(r.fg(palette, v), r.bg(palette, v))
+            return (
+              <li key={r.check} className={ratio >= r.min ? 'ok' : 'bad'}>
+                <span className="swatches">
+                  <i style={{ background: r.bg(palette, v) }} />
+                  <i style={{ background: r.fg(palette, v) }} />
+                </span>{' '}
+                {r.check}: {ratio.toFixed(2)}:1 (צריך {r.min}:1)
+              </li>
+            )
+          })}
+        </ul>
+        {paletteIssues(palette, style).length > 0 && (
+          <p className="error">הצבעים לא קריאים מספיק ולא יישמרו. כהו או בהירו אותם.</p>
+        )}
+      </fieldset>
+      <fieldset>
+        <legend>מוצע לאירועים (בלי סימון: לכולם)</legend>
+        {occasions.map((o) => (
+          <Check
+            key={o.key}
+            label={o.label}
+            checked={occ.includes(o.key)}
+            onChange={(on) =>
+              set({ occasionKeys: on ? [...new Set([...occ, o.key])] : occ.filter((x) => x !== o.key) })
+            }
+          />
+        ))}
+      </fieldset>
+      <fieldset>
+        <legend>למי (בלי סימון: לכולם)</legend>
+        {RECIPIENTS.map((r) => (
+          <Check
+            key={r}
+            label={RECIPIENT_LABELS[r]}
+            checked={rec.includes(r)}
+            onChange={(on) =>
+              set({ recipients: on ? [...new Set([...rec, r])] : rec.filter((x) => x !== r) })
+            }
+          />
+        ))}
+      </fieldset>
     </>
   )
 }
@@ -405,12 +575,19 @@ export function ThemesPage() {
         mapFile: '',
         palette: { background: '#ffffff', accent: '#000000', ink: '#000000', paper: '#ffffff' },
         pins: {},
+        style: {},
+        occasionKeys: [],
+        recipients: [],
         sort: 0,
         active: true,
       })}
       columns={[
         { label: 'שם', render: (t) => t.name },
         { label: 'שוק', render: (t) => mk.name(t.marketId) },
+        {
+          label: 'מוצע ל',
+          render: (t) => (t.occasionKeys?.length ? t.occasionKeys.join(', ') : 'כל האירועים'),
+        },
         {
           label: 'צבעים',
           render: (t) => (

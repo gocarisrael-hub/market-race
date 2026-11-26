@@ -1107,35 +1107,138 @@ ol.howto {
 }
 .pv-ribbon .main {
   fill: var(--pv-ribbon);
-  stroke: var(--pv-ink);
+  stroke: var(--pv-ribbon-line, var(--pv-ink));
   stroke-width: 2;
 }
 .pv-ribbon .tail {
   fill: var(--pv-ribbon-tail);
-  stroke: var(--pv-ink);
+  stroke: var(--pv-ribbon-line, var(--pv-ink));
   stroke-width: 2;
 }
 .pv-button path {
   fill: var(--pv-accent);
-  stroke: var(--pv-ink);
+  stroke: var(--pv-button-line, var(--pv-ink));
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 .pv-ribbon span,
 .pv-button span {
   position: relative;
-  font-family: var(--display);
-  font-weight: 700;
+  font-family: var(--pv-font, var(--display));
+  font-weight: var(--pv-weight, 700);
   line-height: 1;
 }
 .pv-ribbon span {
   margin-top: -6px;
-  font-size: 30px;
+  font-size: calc(30px * var(--pv-hs, 1));
   color: var(--pv-on-ribbon);
 }
 .pv-button span {
-  font-size: 24px;
+  font-size: calc(24px * var(--pv-hs, 1));
   color: var(--pv-on-accent);
+}
+
+/* The style's treatment, small: neon glows, gold is foil lettering. */
+[data-treat="neon"] .pv-ribbon svg,
+[data-treat="neon"] .tt-ribbon {
+  filter: drop-shadow(0 0 2px var(--pv-ribbon-line)) drop-shadow(0 0 6px var(--pv-ribbon-line));
+}
+[data-treat="neon"] .pv-button svg {
+  filter: drop-shadow(0 0 2px var(--pv-button-line)) drop-shadow(0 0 6px var(--pv-button-line));
+}
+[data-treat="neon"] .pv-ribbon span,
+[data-treat="neon"] .pv-button span {
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px var(--pv-ribbon-line);
+}
+[data-treat="foil"] .pv-ribbon span,
+[data-treat="foil"] .pv-button span {
+  background: linear-gradient(
+    115deg,
+    #b0843a 0%,
+    #d9b45e 25%,
+    #f1dc9c 42%,
+    #c39a4c 60%,
+    #e6c77e 78%,
+    #a97b2e 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* An illustrated style thumbnail: its map, the page below a torn edge, its ribbon and button. */
+.theme .thumb {
+  background: var(--pv-bg, var(--paper));
+}
+.tt-sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 34%;
+  padding-top: 2px;
+  background: var(--pv-bg);
+}
+.tt-sheet::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: calc(100% - 1px);
+  left: 0;
+  height: 12px;
+  background: var(--pv-bg);
+  clip-path: polygon(
+    0 60%,
+    12% 20%,
+    28% 70%,
+    44% 30%,
+    60% 80%,
+    76% 25%,
+    90% 65%,
+    100% 35%,
+    100% 100%,
+    0 100%
+  );
+}
+.tt-ribbon,
+.tt-button {
+  position: relative;
+  display: block;
+  overflow: visible;
+}
+.tt-ribbon {
+  width: 72%;
+  margin-top: -14px;
+  aspect-ratio: 330 / 92;
+}
+.tt-button {
+  width: 58%;
+  height: 16px;
+}
+.tt-ribbon .main {
+  fill: var(--pv-ribbon);
+  stroke: var(--pv-ribbon-line);
+  stroke-width: 3;
+}
+.tt-ribbon .tail {
+  fill: var(--pv-ribbon-tail);
+  stroke: var(--pv-ribbon-line);
+  stroke-width: 3;
+}
+.tt-button path {
+  fill: var(--pv-accent);
+  stroke: var(--pv-button-line);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+[data-treat="neon"] .tt-button {
+  filter: drop-shadow(0 0 3px var(--pv-button-line));
 }
 
 /* Questions on torn paper notes. */

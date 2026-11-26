@@ -1,5 +1,5 @@
 // The manage page's edit mode: the buyer changes the name, the answers, the letter notes, the
-// personal questions for hints and the color (palette, with a live preview), and reaches the
+// personal questions for hints, the style and its color (with a live preview), and reaches the
 // photos, any number of times until the game starts. Same fields as the order flow.
 
 import { useState } from 'react'
@@ -17,7 +17,19 @@ import {
   nameLabel,
 } from '../logic.ts'
 import { PhotoDrop } from '../photo-background.tsx'
-import { Cta, Daub, LookPreview, QField, QNote, Ring, SectionHead, Sketch, Tick, TornPaper } from '../ui.tsx'
+import {
+  Cta,
+  Daub,
+  LookPreview,
+  QField,
+  QNote,
+  Ring,
+  SectionHead,
+  Sketch,
+  ThemeThumb,
+  Tick,
+  TornPaper,
+} from '../ui.tsx'
 
 // A notebook page: straight top (torn off the pad), ragged bottom.
 const NOTEBOOK =
@@ -43,11 +55,22 @@ export function ManageEdit(props: {
   )
   const [hintQuestions, setHintQuestions] = useState<HintQuestion[]>(m.hintQuestions ?? [])
   const look = m.look ?? null
-  const pals = look?.palettes ?? []
+  // The style: the ones offered for this occasion on the same market (older servers: just this one).
+  const styles = look?.themes ?? []
+  const [themeId, setThemeId] = useState<number | null>(look?.themeId ?? null)
+  const chosen = styles.find((t) => t.id === themeId) ?? null
+  const pals = chosen ? chosen.palettes : (look?.palettes ?? [])
   const [paletteId, setPaletteId] = useState<number | null>(
     pals.find((p) => p.id === look?.paletteId)?.id ?? pals[0]?.id ?? null,
   )
   const pal = pals.find((p) => p.id === paletteId) ?? null
+  const chooseStyle = (id: number) => {
+    const next = styles.find((t) => t.id === id)
+    if (!next) return
+    setError(null)
+    setThemeId(id)
+    setPaletteId(next.palettes.some((p) => p.id === paletteId) ? paletteId : (next.palettes[0]?.id ?? null))
+  }
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -63,6 +86,9 @@ export function ManageEdit(props: {
         answers: sent,
         letterNotes: cleanNotes(notes),
         hintQuestions: cleanHintQuestions(hintQuestions),
+        ...(themeId != null && themeId !== look?.themeId
+          ? { themeId, paletteId: pals.length ? paletteId : null }
+          : {}),
         ...(pals.length ? { paletteId } : {}),
       })
       props.onDone()
@@ -169,6 +195,57 @@ export function ManageEdit(props: {
           />
         </div>
         <div className="m-page m-page-look">
+          {look && styles.length > 1 && (
+            <section className="section m-styles" aria-labelledby="l-edit-style">
+              <div className="palette-head">
+                <Icon name="map" size={46} tilt={-8} />
+                <QNote id="l-edit-style" tilt={-1.2}>
+                  {copy.manage.styleTitle}
+                </QNote>
+              </div>
+              <fieldset className="themes plain-set" aria-labelledby="l-edit-style">
+                {styles.map((t) => {
+                  const on = themeId === t.id
+                  return (
+                    <button
+                      type="button"
+                      key={t.id}
+                      className="theme"
+                      aria-pressed={on}
+                      onClick={() => chooseStyle(t.id)}
+                    >
+                      <ThemeThumb
+                        map={t.map}
+                        palette={on && pal ? pal.palette : t.palette}
+                        style={on && pal ? { ...t.style, colors: undefined } : t.style}
+                        tint={on ? pal?.palette.mapTint : undefined}
+                      />
+                      <span className="name">
+                        {t.name}
+                        {on && (
+                          <Ring
+                            style={{
+                              inset: '-4px -8px',
+                              width: 'calc(100% + 16px)',
+                              height: 'calc(100% + 8px)',
+                            }}
+                          />
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </fieldset>
+              {chosen && !pal && (
+                <LookPreview
+                  map={chosen.map}
+                  palette={chosen.palette}
+                  style={chosen.style}
+                  name={chosen.name}
+                />
+              )}
+            </section>
+          )}
           {look && pals.length > 1 && (
             <section className="section m-palette" aria-labelledby="l-edit-palette">
               <div className="palette-head">
@@ -207,7 +284,14 @@ export function ManageEdit(props: {
                   {pal.name}
                 </p>
               )}
-              {pal && <LookPreview map={look.map} palette={pal.palette} name={pal.name} />}
+              {pal && (
+                <LookPreview
+                  map={chosen?.map ?? look.map}
+                  palette={pal.palette}
+                  style={chosen ? { ...chosen.style, colors: undefined } : undefined}
+                  name={pal.name}
+                />
+              )}
             </section>
           )}
           {m.photos.editable && (
