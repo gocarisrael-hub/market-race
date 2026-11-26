@@ -1,0 +1,6 @@
+/* The player's plain font. The display font is the theme's, loaded for the game in play only
+   (see shared/look.ts). */
+@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap");
+body {
+  margin: 0;
+}

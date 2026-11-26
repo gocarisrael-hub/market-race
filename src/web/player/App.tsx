@@ -25,7 +25,7 @@ const NO_STYLE: ThemeStyle = {}
  * treatment and mode as data attributes (player.css draws by them), the map for the riddle banner,
  * and the display font, loaded only for the theme in play.
  */
-function useTheme(palette: Palette, style: ThemeStyle, map: string | null | undefined) {
+function useTheme(palette: Palette, style: ThemeStyle, map: string | null | undefined, loaded: boolean) {
   useEffect(() => {
     const vars = themeVars(palette, style)
     const root = document.documentElement
@@ -39,7 +39,8 @@ function useTheme(palette: Palette, style: ThemeStyle, map: string | null | unde
     root.style.colorScheme = style.mode === 'dark' ? 'dark' : 'light'
     if (map) root.style.setProperty('--map', `url("${map}")`)
     else root.style.removeProperty('--map')
-    loadThemeFont(style)
+    // Before the game arrives nothing is loaded: the waiting screen reads in the plain font.
+    if (loaded) loadThemeFont(style)
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     if (!meta) {
       meta = document.createElement('meta')
@@ -47,7 +48,7 @@ function useTheme(palette: Palette, style: ThemeStyle, map: string | null | unde
       document.head.appendChild(meta)
     }
     meta.content = palette.background
-  }, [palette, style, map])
+  }, [palette, style, map, loaded])
 }
 
 export function App() {
@@ -56,7 +57,7 @@ export function App() {
   const view = state.phase === 'view' ? state.view : null
   const palette = view?.theme?.palette ?? DEFAULT_PALETTE
   const style = view?.theme?.style ?? NO_STYLE
-  useTheme(palette, style, view?.theme?.map)
+  useTheme(palette, style, view?.theme?.map, !!view)
   // The food illustrations in the theme's colors (read while the screens render).
   setIconSet(style.icons)
   // The players' grammar (feminine plural only for an occasion like a bachelorette).
