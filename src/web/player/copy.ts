@@ -79,6 +79,9 @@ export const COPY = {
   'game.zoomOut': 'להתרחק קצת',
   'game.photoAlt': 'תמונה שלכם, מקרוב',
   'game.cipherLabel': 'הצופן',
+  // The cipher's two answers, labelled apart: what the hidden word is, and what gives the key.
+  'game.cipherWhat': 'המילה המוצפנת היא:',
+  'game.cipherKey': 'המפתח:',
   'game.alefbet': 'האלף-בית, מימין לשמאל',
   'game.answerLabel': { default: 'הפתרון שלכם', she: 'הפתרון שלכן' },
   'game.empty': 'קודם כותבים פתרון',

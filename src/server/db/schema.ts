@@ -31,6 +31,13 @@ import type {
 } from '../domain/types.ts'
 
 const now = () => timestamp({ withTimezone: true }).notNull().defaultNow()
+// When a row last changed (set on every ORM update): the demo refresh leaves rows the admin
+// edited after it alone.
+const updatedAt = () =>
+  timestamp({ withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date())
 const textArray = () => text().array().notNull().default(sql`'{}'::text[]`)
 
 // ---------- Admin ----------
@@ -111,6 +118,7 @@ export const riddles = pgTable('riddles', {
   afterText: text().notNull().default(''),
   active: boolean().notNull().default(true),
   createdAt: now(),
+  updatedAt: updatedAt(),
 })
 
 export const questionSets = pgTable('question_sets', {
@@ -118,6 +126,7 @@ export const questionSets = pgTable('question_sets', {
   name: text().notNull(),
   questions: jsonb().$type<Question[]>().notNull().default([]),
   createdAt: now(),
+  updatedAt: updatedAt(),
 })
 
 // An occasion (private) or company type. Admin can add more.
@@ -137,6 +146,7 @@ export const occasions = pgTable('occasions', {
   decor: text().$type<Decor>().notNull().default('generic'),
   sort: integer().notNull().default(0),
   active: boolean().notNull().default(true),
+  updatedAt: updatedAt(),
 })
 
 export const routes = pgTable('routes', {

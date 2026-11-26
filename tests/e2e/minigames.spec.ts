@@ -86,6 +86,9 @@ async function solve(p: Page, m: Mini) {
         .click()
     await p.getByRole('button', { name: 'בודקות!' }).click()
   } else {
+    // The hidden word and the key are labelled apart.
+    await expect(p.getByTestId('game-prompt')).toContainText('המילה המוצפנת היא:')
+    await expect(p.getByTestId('cipher-key')).toContainText('המפתח:')
     await p.getByLabel('הפתרון שלכן').fill('סתם')
     await p.getByRole('button', { name: 'בודקות!' }).click()
     await expect(p.getByText('כמעט! נסו שוב')).toBeVisible()

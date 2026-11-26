@@ -3,6 +3,7 @@ import { loadConfig } from './config.ts'
 import { openDb } from './db/index.ts'
 import { ensureBootstrapOwner } from './lib/auth.ts'
 import { servicesFromEnv } from './services/context.ts'
+import { demoSeedingEnabled, refreshDemoContent } from './services/demo-refresh.ts'
 import { createErrorAlerter, expireOrders } from './services/jobs.ts'
 import { createPaymentSweeper } from './services/payments.ts'
 import { seedDemo } from './services/seed-demo.ts'
@@ -11,8 +12,11 @@ const config = loadConfig()
 const { db } = await openDb(config.databaseUrl)
 await ensureBootstrapOwner(db, config.bootstrapOwner)
 // Demo catalog for empty non-production databases only.
-if ((process.env.SEED_DEMO === '1' || process.env.E2E_SEED === '1') && config.env !== 'production') {
+if (demoSeedingEnabled(process.env, config.env)) {
   await seedDemo(db)
+  // A database seeded by an older version gets the current demo content (never in production).
+  const r = await refreshDemoContent(db)
+  if (r.ran) console.info(`[demo] refreshed demo content from v${r.from}: ${JSON.stringify(r)}`)
 }
 const services = servicesFromEnv()
 if (services.paymentProvider === 'mock' && !services.mockAllowed) {
