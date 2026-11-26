@@ -1835,7 +1835,8 @@ h2 {
     font-size: 38px;
   }
   .riddle-text {
-    font-size: clamp(21px, 1.7vw, 26px);
+    font-size: clamp(21px, 1.7vw, 25px);
+    line-height: 1.55;
   }
   .riddle-q {
     font-size: clamp(60px, 5vw, 76px);
@@ -1844,7 +1845,7 @@ h2 {
     width: min(40%, 220px);
   }
   .answer-block {
-    padding-top: 40px;
+    padding-top: 22px;
   }
   .answer input {
     font-size: 22px;

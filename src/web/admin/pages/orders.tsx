@@ -9,6 +9,7 @@ import {
   type Form,
   type GameSnapshot,
   type LetterNote,
+  type MinigameType,
   type OrderFlag,
   type OrderStatus,
   type Palette,
@@ -56,6 +57,7 @@ const STEP_LABELS: Record<string, string> = {
   riddle: 'חידה',
   revealed: 'בדרך לדוכן',
   redeem: 'בדוכן',
+  minigame: 'משחק אישי',
   done: 'סיום',
 }
 const KIND_LABELS = { private: 'פרטי', company: 'חברה' }
@@ -429,6 +431,101 @@ export function GameView({ game }: { game: GameSnapshot }) {
         </div>
       )}
     </div>
+  )
+}
+
+const MINIGAME_LABELS: Record<MinigameType, string> = {
+  who_said: 'מי אמר את זה?',
+  true_false: 'נכון או לא נכון',
+  photo: 'מה בתמונה?',
+  cipher: 'צופן אישי',
+}
+
+/** The order's mini-games with their solutions (the owner's eyes only), and "regenerate" per game. */
+export function MinigamesView({
+  game,
+  onRegenerate,
+}: {
+  game: GameSnapshot
+  onRegenerate?: (index: number) => Promise<void>
+}) {
+  const [busy, setBusy] = useState<number | null>(null)
+  const [error, setError] = useState('')
+  const games = game.minigames ?? []
+  if (!games.length)
+    return (
+      <p className="muted" data-testid="minigames-none">
+        אין משחקים אישיים: אין מספיק תשובות אישיות (או שהמשחק נבנה לפני שהיו).
+      </p>
+    )
+  return (
+    <ol className="stops" data-testid="minigames">
+      {games.map((g, i) => (
+        <li key={`${g.afterStop}-${g.type}`} className="stop" data-testid={`minigame-${i}`}>
+          <div>
+            <strong>{MINIGAME_LABELS[g.type]}</strong>
+            <span className="muted"> · אחרי תחנה {g.afterStop}</span>
+            <span className="muted small"> · מתשובות: {g.slots.join(', ')}</span>
+          </div>
+          <RiddleText parts={g.prompt} />
+          {g.options && (
+            <ul>
+              {g.options.map((opt, j) => (
+                <li key={opt} className={j === g.solution.option ? 'ok' : ''}>
+                  {opt}
+                  {j === g.solution.option && ' ✓'}
+                </li>
+              ))}
+            </ul>
+          )}
+          {g.statements && (
+            <ul>
+              {g.statements.map((st, j) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: statements are positional
+                <li key={j}>
+                  {st.map((p) => p.v).join('')}{' '}
+                  <strong className={g.solution.truths?.[j] ? 'ok' : 'error'}>
+                    {g.solution.truths?.[j] ? 'נכון' : 'לא נכון'}
+                  </strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          {g.photo && <p className="muted small">תמונה: {g.photo}</p>}
+          {g.cipher && (
+            <p>
+              צופן: <strong>{g.cipher}</strong> · פתרון: <strong>{g.solution.text}</strong> · הזזה:{' '}
+              {g.solution.shift}
+              <br />
+              <span className="muted small">{(g.keyHint ?? []).map((p) => p.v).join('')}</span>
+            </p>
+          )}
+          <p className="muted small">
+            פרס: "{g.reward.text}"{g.reward.signature && ` (${g.reward.signature})`}
+          </p>
+          {onRegenerate && (
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={async () => {
+                setBusy(i)
+                setError('')
+                try {
+                  await onRegenerate(i)
+                } catch (e) {
+                  setError(errorText(e))
+                } finally {
+                  setBusy(null)
+                }
+              }}
+            >
+              {busy === i ? 'מייצר...' : 'לייצר מחדש'}
+            </button>
+          )}
+        </li>
+      ))}
+      {error && <p className="error">{error}</p>}
+    </ol>
   )
 }
 
@@ -1061,6 +1158,18 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
       <Section title="המשחק">
         {o.game ? <GameView game={o.game} /> : <p className="muted">המשחק עוד לא נבנה.</p>}
       </Section>
+
+      {o.game && (
+        <Section title="משחקים אישיים">
+          <MinigamesView
+            game={o.game}
+            onRegenerate={async (i) => {
+              await api(`/orders/${id}/minigames/${i}/regenerate`, { method: 'POST' })
+              await reload()
+            }}
+          />
+        </Section>
+      )}
 
       <Section title="תשלומים">
         {d.paySessions.length === 0 ? (
