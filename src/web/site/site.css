@@ -1913,3 +1913,21 @@ ol.howto.drawn li {
 .lost-link .thanks .sketch + .sketch {
   margin-top: 10px;
 }
+
+/* Tablets and computers: the page as a sheet on the desk (shared/desk.css). */
+@media (min-width: 768px) {
+  :root {
+    --sheet-w: 560px;
+    --desk-tint: var(--ink);
+  }
+  .page {
+    padding: 40px 48px 44px;
+  }
+  /* The main button sits right under the content, not at the bottom of the window. */
+  .cta-wrap {
+    position: static;
+    margin-top: 36px;
+    padding: 0;
+    background: none;
+  }
+}

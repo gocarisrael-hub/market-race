@@ -1736,3 +1736,42 @@ h2 {
   font-weight: 700;
   line-height: 1.1;
 }
+
+/* ---------- Tablets and computers: the screen as a sheet on the desk (shared/desk.css) ---------- */
+
+@media (min-width: 768px) {
+  :root {
+    --sheet-w: 540px;
+    --desk-tint: var(--on-bg);
+    --gutter: 34px;
+  }
+  /* Room at the top for the help scrawl in the sheet's corner. */
+  .scr {
+    padding-top: 56px;
+    padding-bottom: 34px;
+    overflow-x: visible;
+  }
+  /* The main button sits right under the content, not at the bottom of the window. */
+  .foot {
+    position: static;
+    margin-top: 20px;
+    padding: 0 4px;
+    background: none;
+  }
+  .answer-form {
+    flex: none;
+  }
+  .answer-block {
+    margin: 0;
+    padding-top: 34px;
+  }
+  /* Help in the sheet's corner, scrolling with it. */
+  .help-btn {
+    position: absolute;
+    top: calc(var(--sheet-top) + 14px);
+    left: calc(50% - min(var(--sheet-w), 100% - 48px) / 2 + 16px);
+  }
+  .help-layer {
+    align-items: center;
+  }
+}
