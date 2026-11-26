@@ -1,5 +1,5 @@
 // Builds the Fastify app. Used by the server entry and by tests (app.inject).
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,6 +11,7 @@ import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
 import type { Config } from './config.ts'
 import type { DB } from './db/index.ts'
+import { markSite, siteForHost } from './lib/site.ts'
 import { adminAuthRoutes } from './routes/admin-auth.ts'
 import { adminCatalogRoutes } from './routes/admin-catalog.ts'
 import { adminCompanyRoutes } from './routes/admin-companies.ts'
@@ -84,6 +85,12 @@ export async function buildApp(ctx: AppContext) {
   // Built web bundles (player, site, admin), with SPA fallbacks.
   if (existsSync(webDist)) {
     await app.register(fastifyStatic, { root: webDist, prefix: '/', wildcard: false })
+    // The companies site (Host in COMPANY_HOSTS) gets the same page, marked as that site.
+    let siteHtml: string | null = null
+    const companiesHtml = () => {
+      siteHtml ??= readFileSync(path.join(webDist, 'site/index.html'), 'utf8')
+      return markSite(siteHtml, 'companies', ctx.config.publicBaseUrl)
+    }
     app.setNotFoundHandler((req, reply) => {
       const url = req.url
       if (url.startsWith('/api/') || url.startsWith('/admin/api/')) {
@@ -92,6 +99,12 @@ export async function buildApp(ctx: AppContext) {
       if (req.method !== 'GET') return reply.code(404).send({ error: 'not_found' })
       if (url.startsWith('/admin')) return reply.sendFile('admin/index.html')
       if (url.startsWith('/g/')) return reply.sendFile('player/index.html')
+      if (siteForHost(req.host, ctx.config.companyHosts) === 'companies') {
+        return reply
+          .header('content-type', 'text/html; charset=utf-8')
+          .header('cache-control', 'no-cache')
+          .send(companiesHtml())
+      }
       return reply.sendFile('site/index.html')
     })
   }

@@ -1,17 +1,14 @@
-// /: what the product is, in a few lines, then one choice between the two games. The tastings
-// and the FAQ open in place. Prices, group size, validity and duration come from the settings.
+// /: the private site's landing, only about celebrating a person. What the product is in a few
+// lines beside the route teaser (the map with the tasting route, the stalls blurred), one call to
+// action into the order, then how it works, the tastings and the FAQ folded. Companies have their
+// own site; a quiet footer line links to it. Prices, group size, validity and duration come from
+// the settings.
 import { Doodles } from '../../shared/decor.tsx'
 import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
-import {
-  companyOccasions,
-  formatShekels,
-  fromPerPerson,
-  orderableThemes,
-  privateOccasions,
-  routeForTheme,
-} from '../logic.ts'
-import { Brush, Deco, Fold } from '../ui.tsx'
+import { formatShekels, fromPerPerson, orderableThemes, privateOccasions, routeForTheme } from '../logic.ts'
+import { RouteTeaser } from '../RouteTeaser.tsx'
+import { Brush, Deco, Fold, Link } from '../ui.tsx'
 import { TastingsExplorer } from './Tastings.tsx'
 
 // One food illustration (assets/icons) per step of "how it works".
@@ -24,47 +21,40 @@ export function Landing({ shop }: { shop: Shop }) {
   const market = shop.markets.find((m) => m.id === theme?.marketId)?.name ?? ''
   const [t1, t2] = copy.home.title(market)
   const route = routeForTheme(shop, theme?.id)
-  const products = [
-    {
-      key: 'private',
-      ...c.products.private,
-      href: '/order',
-      from: fromPerPerson(shop, privateOccasions(shop)),
-    },
-    {
-      key: 'company',
-      ...c.products.company,
-      href: '/companies',
-      from: fromPerPerson(shop, companyOccasions(shop)),
-    },
-  ] as const
+  const from = fromPerPerson(shop, privateOccasions(shop))
 
   return (
     <main className="page landing" data-decor="generic">
       <Deco icon="awning" className="sway" style={{ top: -30, left: -36, width: 210 }} />
 
       <header className="l-hero">
-        <div className="l-hero-text">
+        <div className="l-hero-head">
           <p className="eyebrow">{c.eyebrow}</p>
           <h1 className="title rise">
             {t1}
             <br />
             {t2}
           </h1>
-          <p className="lead">{c.lead}</p>
         </div>
-        {theme?.map && (
-          <figure className="l-hero-map">
-            <Doodles
-              decor="generic"
-              spots={[
-                { top: -20, right: '8%', size: 54, rot: 12 },
-                { bottom: '12%', left: -26, size: 48, rot: -10 },
-              ]}
-            />
-            <img src={theme.map} alt={c.mapAlt(theme.name)} />
-          </figure>
-        )}
+        <div className="l-hero-map">
+          <Doodles
+            decor="generic"
+            spots={[
+              { top: -26, right: '4%', size: 50, rot: 12 },
+              { bottom: '18%', left: -30, size: 44, rot: -10 },
+            ]}
+          />
+          <RouteTeaser shop={shop} themeId={theme?.id ?? null} />
+        </div>
+        <div className="l-hero-body">
+          <p className="lead">{c.lead}</p>
+          <div className="l-cta">
+            <Brush href="/order" icon="flagStart">
+              {c.cta}
+            </Brush>
+            {from !== null && <p className="l-price">{c.from(formatShekels(from))}</p>}
+          </div>
+        </div>
       </header>
 
       <ol className="l-strip" aria-label={c.howLabel}>
@@ -85,36 +75,6 @@ export function Landing({ shop }: { shop: Shop }) {
         <TastingsExplorer shop={shop} />
       </Fold>
 
-      <section className="section l-choice" aria-labelledby="l-choice">
-        <h2 className="sub" id="l-choice">
-          {c.choiceTitle}
-        </h2>
-        <div className="l-products">
-          {products.map((p) => (
-            <article key={p.key} className={`l-product l-product-${p.key}`} aria-labelledby={`p-${p.key}`}>
-              <Doodles decor="generic" spots={[{ top: -22, left: 14, size: 52, rot: -10 }]} />
-              <svg
-                className="l-product-paper"
-                viewBox="0 0 300 300"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M6 10 L 80 4 L 160 9 L 240 3 L 294 8 L 297 90 L 292 170 L 297 250 L 291 294 L 210 297 L 130 291 L 50 297 L 4 292 L 8 200 L 3 120 Z"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              <h3 id={`p-${p.key}`}>{p.title}</h3>
-              <p className="l-product-text">{p.text}</p>
-              {p.from !== null && <p className="l-product-price">{c.from(formatShekels(p.from))}</p>}
-              <Brush href={p.href} icon={p.key === 'private' ? 'flagStart' : 'briefcase'}>
-                {p.cta}
-              </Brush>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <Fold title={c.faqTitle} icon="question" className="l-faq">
         <dl>
           <dt>{c.faq.validity.q}</dt>
@@ -127,6 +87,13 @@ export function Landing({ shop }: { shop: Shop }) {
           <dd>{c.faq.people.a(shop.minPeople, shop.maxPeople)}</dd>
         </dl>
       </Fold>
+
+      <footer className="l-footer">
+        {c.footer.text}{' '}
+        <Link href="/companies" className="l-footer-link">
+          {c.footer.link}
+        </Link>
+      </footer>
     </main>
   )
 }

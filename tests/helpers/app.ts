@@ -20,6 +20,7 @@ export async function makeTestApp(
     databaseUrl: 'pglite:memory',
     uploadDir: mkdtempSync(path.join(tmpdir(), 'mr-uploads-')),
     publicBaseUrl: 'http://localhost',
+    companyHosts: [],
     bootstrapOwner: null,
     ...overrides,
   }

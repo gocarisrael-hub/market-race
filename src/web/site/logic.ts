@@ -393,8 +393,20 @@ export type Route =
   | { page: 'lostLink' }
   | { page: 'notFound' }
 
-export function parseRoute(pathname: string): Route {
+/**
+ * Which of the two sites this page is: the server marks the companies site (a Host in
+ * COMPANY_HOSTS) on <html data-site>, with the private site's origin in data-home.
+ */
+export type Site = { kind: 'private' | 'companies'; privateHome: string }
+export function siteOf(root: { dataset: DOMStringMap } | null | undefined): Site {
+  if (root?.dataset.site === 'companies') return { kind: 'companies', privateHome: root.dataset.home || '/' }
+  return { kind: 'private', privateHome: '/' }
+}
+
+export function parseRoute(pathname: string, site: Site['kind'] = 'private'): Route {
   const p = pathname.replace(/\/+$/, '') || '/'
+  // On the companies site, its landing is the home page.
+  if (site === 'companies' && p === '/') return { page: 'companies' }
   // The landing page explains the product; the order starts at /order (old links to /order/... keep
   // working).
   if (p === '/') return { page: 'landing' }
