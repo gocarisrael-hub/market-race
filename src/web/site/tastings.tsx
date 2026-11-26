@@ -73,7 +73,6 @@ export function RouteTastings(props: {
                 )}
               </span>
               <span className="teaser">{s.teaser || copy.home.tastingFallback}</span>
-              {s.status === 'swapped' && <span className="note">{copy.home.swapped}</span>}
               {s.status === 'blocked' && <span className="warn">{copy.home.blocked}</span>}
             </span>
           </li>
