@@ -113,7 +113,29 @@ for (const [name, opts] of [
 
       // The FAQ is folded too; group size comes from the settings.
       await page.getByRole('button', { name: 'שאלות' }).click()
-      await expect(page.getByText(`מ־${shop.minPeople} עד ${shop.maxPeople} משתתפים`)).toBeVisible()
+      // Each question is its own button; its answer opens right beneath it, one at a time.
+      const faq = page.locator('.l-faq')
+      const peopleQ = faq.getByRole('button', { name: 'כמה אנשים יכולים לשחק?' })
+      const validityQ = faq.getByRole('button', { name: 'עד מתי אפשר לשחק?' })
+      await expect(peopleQ).toHaveAttribute('aria-expanded', 'false')
+      await peopleQ.click()
+      await expect(peopleQ).toHaveAttribute('aria-expanded', 'true')
+      const answer = page.locator(`#${await peopleQ.getAttribute('aria-controls')}`)
+      await expect(answer).toContainText(`מ־${shop.minPeople} עד ${shop.maxPeople} משתתפים`)
+      // The answer is the element right after its question, and sits below it in the same column.
+      const next = await peopleQ.evaluate((b) => b.closest('.faq-q')?.nextElementSibling?.id)
+      expect(next).toBe(await answer.getAttribute('id'))
+      const qBox = await peopleQ.boundingBox()
+      const aBox = await answer.boundingBox()
+      if (!qBox || !aBox) throw new Error('FAQ item not laid out')
+      expect(aBox.y).toBeGreaterThanOrEqual(qBox.y + qBox.height - 1)
+      expect(aBox.y - (qBox.y + qBox.height)).toBeLessThan(24)
+      expect(Math.abs(aBox.x + aBox.width - (qBox.x + qBox.width))).toBeLessThan(2)
+      // Opening another question closes the first.
+      await validityQ.click()
+      await expect(validityQ).toHaveAttribute('aria-expanded', 'true')
+      await expect(peopleQ).toHaveAttribute('aria-expanded', 'false')
+      await expect(answer).toBeHidden()
       // No underlined text links anywhere on the page, the footer's way to the companies included.
       await noBareLinks(page)
 

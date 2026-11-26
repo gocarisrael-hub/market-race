@@ -627,3 +627,40 @@ export function Fold(props: { title: string; icon: DoodleName; children: ReactNo
     </section>
   )
 }
+
+/**
+ * Questions and answers, one under the other: each question is a button (aria-expanded) with a
+ * hand-drawn plus, its answer opening right beneath it. One answer is open at a time.
+ */
+export function Faq({ items }: { items: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<number | null>(null)
+  const id = useId()
+  return (
+    <ul className="faq">
+      {items.map((item, i) => {
+        const isOpen = open === i
+        return (
+          <li key={item.q} className={`faq-item${isOpen ? ' open' : ''}`}>
+            <h3 className="faq-q">
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                aria-controls={`${id}-${i}`}
+                onClick={() => setOpen(isOpen ? null : i)}
+              >
+                <span>{item.q}</span>
+                <svg className="faq-mark" viewBox="0 0 24 24" aria-hidden="true">
+                  <path className="faq-mark-h" d="M4 12.5 C 9 11.5, 15 12.8, 20 11.6" />
+                  <path className="faq-mark-v" d="M12.4 4 C 11.6 9, 12.6 15, 11.7 20" />
+                </svg>
+              </button>
+            </h3>
+            <div className="faq-a" id={`${id}-${i}`} hidden={!isOpen}>
+              {isOpen && <p>{item.a}</p>}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
