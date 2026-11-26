@@ -47,7 +47,7 @@ export function CompanyPay({ token }: { token: string }) {
             <h2 className="sub">{copy.companyPay.for(m.honoree)}</h2>
             <dl className="summary">
               <dt>{copy.checkout.people}</dt>
-              <dd>{m.people}</dd>
+              <dd>{copy.peopleCount(m.people)}</dd>
             </dl>
             <div className="summary-total" data-testid="total">
               <span>{copy.companyPay.amount}</span>

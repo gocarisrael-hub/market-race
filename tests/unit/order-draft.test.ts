@@ -60,6 +60,15 @@ describe('order draft (site flow)', () => {
     expect(pay.statusCode).toBe(200)
   })
 
+  it('takes a single participant by default, priced per person', async () => {
+    const shop = (await t.app.inject({ method: 'GET', url: '/api/shop' })).json()
+    expect(shop.minPeople).toBe(1)
+    const res = await t.app.inject({ method: 'POST', url: '/api/orders', payload: draft({ people: 1 }) })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().amountAgorot).toBe(9900)
+    expect((await row(res.json().manageToken)).people).toBe(1)
+  })
+
   it('updates only the buyer when the body has just the buyer', async () => {
     const { manageToken } = (
       await t.app.inject({ method: 'POST', url: '/api/orders', payload: draft() })
@@ -85,9 +94,15 @@ describe('order draft (site flow)', () => {
     const bad = await t.app.inject({
       method: 'PUT',
       url: `/api/orders/${manageToken}`,
-      payload: draft({ people: 1 }),
+      payload: draft({ people: 21 }),
     })
     expect(bad.json().error).toBe('bad_people')
+    const zero = await t.app.inject({
+      method: 'PUT',
+      url: `/api/orders/${manageToken}`,
+      payload: draft({ people: 0 }),
+    })
+    expect(zero.statusCode).toBe(400)
     const missing = await t.app.inject({ method: 'PUT', url: '/api/orders/nope-nope-nope', payload: draft() })
     expect(missing.statusCode).toBe(404)
     await t.db.update(orders).set({ paidAt: new Date() }).where(eq(orders.manageToken, manageToken))

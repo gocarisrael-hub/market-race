@@ -114,6 +114,15 @@ test('buyer orders a game up to the pay step', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'להשלמת התשלום' })).toBeVisible()
 })
 
+test('one participant is enough: the stepper goes down to one, priced per person', async ({ page }) => {
+  await stepOne(page)
+  const less = page.getByRole('button', { name: 'פחות משתתפים' })
+  for (let i = 0; i < 3; i++) await less.click()
+  await expect(page.locator('.stepper .unit')).toHaveText('משתתף אחד')
+  await expect(less).toBeDisabled()
+  await expect(page.getByTestId('price')).toContainText('99 ₪')
+})
+
 test('step 1 shows what is tasted on the way and follows the allergens', async ({ page }) => {
   await stepOne(page)
   const list = page.getByTestId('tastings')

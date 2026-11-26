@@ -54,7 +54,7 @@ export type Draft = {
   savedKey: string | null
 }
 
-export function emptyDraft(minPeople = 2): Draft {
+export function emptyDraft(minPeople = 1): Draft {
   return {
     occasionKey: null,
     recipient: null,
@@ -190,7 +190,7 @@ export function step1Error(d: Draft, shop: Shop): string | null {
   if (!orderableThemes(shop).some((t) => t.id === d.themeId)) return copy.home.pickTheme
   const pals = palettesFor(shop, d.themeId)
   if (pals.length && !pals.some((p) => p.id === d.paletteId)) return copy.home.pickPalette
-  if (d.people < shop.minPeople || d.people > shop.maxPeople) return copy.errors.bad_people
+  if (d.people < Math.max(1, shop.minPeople) || d.people > shop.maxPeople) return copy.errors.bad_people
   if (priceAgorot(shop, d.occasionKey, d.people) === null) return copy.errors.no_price
   return null
 }

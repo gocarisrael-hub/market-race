@@ -68,7 +68,7 @@ describe('order and payment flow', () => {
 
   it('validates orders', async () => {
     for (const bad of [
-      { people: 1 },
+      { people: 0 },
       { people: 99 },
       { form: 'couple' },
       { occasionKey: 'team_day' },
