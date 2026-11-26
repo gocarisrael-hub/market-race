@@ -47,7 +47,7 @@ export const copy = {
       group: 'לקבוצה',
       family: 'למשפחה',
     } as Record<SiteRecipient, string>,
-    recipientHint: 'רוב המשחקים הם מתנה לאדם אחד, והחידות נכתבות עליו.',
+    recipientHint: 'רוב המשחקים הם מתנה לאדם אחד: החידות נכתבות עליה או עליו.',
     pickRecipient: 'בחרו למי המשחק',
     theme: 'איך זה ייראה?',
     palette: 'ובאיזה צבע?',

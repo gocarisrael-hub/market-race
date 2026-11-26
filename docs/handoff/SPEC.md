@@ -6,7 +6,7 @@ Status: decisions taken with the owner on 2026-11-16/17. Anything not decided is
 
 A group walks a fixed route of food stalls in one market. At each stop they solve a riddle; the answer reveals the next stall; they show the screen at the stall and get a tasting. The riddles are personalized for one person being celebrated (the honoree) or for a company.
 
-- Occasions (private): bachelorette, couple, birthday for a parent, birthday for a friend. More can be added from the admin.
+- Occasions (private): bachelorette, love and couples, birthday for a parent, birthday, family, friends, generic. More can be added from the admin. Each lists who it can be for (see Questions).
 - Companies: team day, retirement, new employee. Sold by quote (see Companies).
 - One game per order, played together on any number of phones with one shared progress. No teams, no competition, no splitting into groups.
 - Valid any day within a year of purchase. Stall availability is checked on the day it is played.
@@ -26,7 +26,10 @@ Rules:
 - The fixed lines alone must lead to the answer. Slots add personal color, never the clue.
 - The answer can be the stall, its dish, the street it is on, or a landmark next to it.
 - Each riddle has a version per grammatical form: she / he / couple (and company).
-- Group games (family, friends or a unit, generic) use the `group` form: plural, about a group named by `{group_name}`. The site asks the group's name in the name field. The order flow's first choice is "which game" (the occasion); each occasion lists its forms, and she/he is asked next to the name only when an occasion allows both.
+- Group games (family, friends or a unit, generic) use the `group` form: plural, about a group named by `{group_name}`. The site asks the group's name in the name field.
+- Recipient first (decided 2026-11-25). Most orders are a gift for one specific person, so right after "which game" (the occasion) the order asks who it is for: למישהי (she), למישהו (he), לזוג (couple), לקבוצה (group), למשפחה (family). Only the recipients the occasion offers are shown, one person first and drawn larger, and the first one offered is picked by default. An occasion that offers one recipient (bachelorette: her; family) shows no choice; gender is never asked for a couple, a group or a family. On the questions step a small she/he switch next to the name corrects the choice for a gift to one person.
+- Occasion × recipient picks the question set (`occasions.recipients`: each offered recipient with its set, empty = the occasion's default set) and the form: she → she, he → he, couple → couple, group and family → group. So a birthday for her asks about her; a love game for him asks about him from the giver's side (where it started between you, what he always orders, a nickname or line he says only to you); a couple's questions are about the two of them; a group gets "who is the most…" questions; a family its family questions. Every set fills the same riddle slots, so one template per form serves every occasion. The order stores `recipient`; orders placed before it are mapped from their form (a group on a family occasion is the family).
+- Players' grammar: the player addresses the players in the feminine plural only when the occasion says so (`occasions.players_feminine`, a bachelorette). A game for her from a mixed group reads in the plain plural. Riddles, the letter and emails follow the recipient's form.
 - A question can be marked hidden ("not asked"): the buyer never sees it and riddles get its fallback. This lets one group template use slots that only some question sets ask.
 - Every slot has a fallback phrase used when its question was left empty.
 - One question can feed several riddles.
@@ -38,7 +41,7 @@ Personal text is shown in the riddle in the theme's accent color, in the handwri
 ## Questions
 
 - One person answers. There is no link for friends to add answers.
-- A question set per occasion (and one per company type). Each question: slot key, Hebrew text per form, required or not, fallback, max length.
+- A question set per occasion × recipient (and one per company type), all editable in the admin. Demo sets: birthday for her, birthday for him, love for her, love for him (both from the giver's side), couple (about the two of them), "who is the most…" for a group, family, friends, and the general personal set. Each question: slot key, Hebrew text per form, required or not, fallback, max length.
 - Example slots: name, first_love, favorite_food, catchphrase, favorite_place, one_word, dream; for companies: company_name, company_catchphrase, memorable_project, kitchen_favorite, last_offsite.
 - Optional sentences for the final letter (from the buyer).
 - Optional personal questions for hints (decided 2026-11-18): in the order flow and on the edit page the buyer can add questions about the honoree, each with its answer ("we'll ask these during the game to unlock hints"). When an order has them, tapping a riddle's hint asks one of them (one per stop, in turn); a right answer (the same forgiving matcher as riddles) opens the hint for everyone, a wrong one lets the group try again or skip with the hint still hidden. Without them, hints open on a tap as before. The answers stay on the server; the game client only ever gets the question.
@@ -63,7 +66,7 @@ The buyer picks a look. Each theme = a market map illustration + a palette appli
 
 Themes are rows in the database (admin can add one: upload map, set colors). The map's market and the route's market must match.
 
-Palettes are separate from maps (`palettes` table, admin "צבעים"): each palette lists the themes (maps) it is offered on, and the buyer picks one on step 1 from paint daubs, with a live preview (the map tinted toward the palette's `mapTint`, the ribbon and button in its colors). The first palette of a map is the default. The order stores `palette_id`; the game snapshot freezes the resolved palette (company palette > chosen palette > theme palette). Every palette must pass the contrast checks in `src/server/domain/look.ts` (the same derivation the player uses); the admin refuses one that does not. Demo palettes: classic red, sea blue, olive green, sunset orange, berry pink (watercolor maps), blue-pink (riso), night (Mahane Yehuda night).
+Palettes are separate from maps (`palettes` table, admin "צבעים"): each palette lists the themes (maps) it is offered on, and the buyer picks one on step 1 from paint daubs (each a single clean smear of the accent; the chosen one circled by hand, its name below), with a live preview (the map tinted toward the palette's `mapTint`, the ribbon and button in its colors). The first palette of a map is the default. The order stores `palette_id`; the game snapshot freezes the resolved palette (company palette > chosen palette > theme palette). Every palette must pass the contrast checks in `src/server/domain/look.ts` (the same derivation the player uses); the admin refuses one that does not. Demo palettes: classic red, sea blue, olive green, sunset orange, berry pink (watercolor maps), blue-pink (riso), night (Mahane Yehuda night).
 
 Occasion doodles: each occasion has a `decor` set (birthday, love, family, friends, company, generic), chosen in the admin. Hand-drawn inline SVG doodles of that set appear around the opening ribbon, as confetti on each reveal, on the final letter and through the order flow once the occasion is picked (`src/web/shared/decor.tsx`). Food illustrations stay.
 
@@ -81,7 +84,8 @@ Occasion doodles: each occasion has a `decor` set (birthday, love, family, frien
 | stalls | id, market_id, name, location_hint, phone, active, closed_today, closed_note |
 | tastings | id, stall_id, name, allergens[], diets[], fee_per_portion (₪), active |
 | riddles | id, stall_id, answer, accepted[], hint, templates {she, he, couple, company}, slots[] |
-| question_sets | id, kind (occasion or company type), questions[] {slot, text per form, required, fallback, max_len} |
+| question_sets | id, name, questions[] {slot, text per form, required, fallback, max_len, hidden} |
+| occasions | key, label, audience, question_set_id (default), recipients {she/he/couple/group/family: set id or null}, forms (kept in step), players_feminine, decor |
 | routes | id, market_id, name, stops[] {stall_id, tasting_id, riddle_id, backup_stall_id}; the last stop is the finale |
 | themes | id, name, market_id, map file, palette |
 | settings | prices, texts, odd-answer rules, everything else business-side |
@@ -94,7 +98,8 @@ Stall closed on the day: market hours are global; a stall can be switched "close
 
 ```
 orders: id, order_no, kind (private|company), created_at, paid_at, price, payment_ref,
-        buyer {name, phone, email}, occasion, form (she|he|couple|company), honoree_name,
+        buyer {name, phone, email}, occasion, recipient (she|he|couple|group|family, null for companies),
+        form (she|he|couple|group|company, from the recipient), honoree_name,
         theme_id, route_id, people, allergens[], diets[],
         answers {slot: value}, letter_notes[], photos[], company {name, logo, palette},
         status, valid_until, game (frozen snapshot), flags[]
