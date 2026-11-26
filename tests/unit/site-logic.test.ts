@@ -84,6 +84,8 @@ const shop: Shop = {
   prices: { bachelorette: { base: 5000, perPerson: 9900 }, birthday: { base: 0, perPerson: 0 } },
   minPeople: 2,
   maxPeople: 20,
+  validYears: 1,
+  gameDuration: '',
   allergens: ['בוטנים'],
   diets: ['vegan'],
   cardEnabled: false,
@@ -297,7 +299,10 @@ describe('site logic', () => {
 
   it('parses routes', () => {
     const t = 'abcDEF123_-xyz'
-    expect(parseRoute('/')).toEqual({ page: 'home' })
+    expect(parseRoute('/')).toEqual({ page: 'landing' })
+    expect(parseRoute('/tastings')).toEqual({ page: 'tastings' })
+    expect(parseRoute('/order')).toEqual({ page: 'home' })
+    expect(parseRoute('/order/')).toEqual({ page: 'home' })
     expect(parseRoute('/order/questions')).toEqual({ page: 'questions' })
     expect(parseRoute(`/order/${t}/photos`)).toEqual({ page: 'photos', token: t })
     expect(parseRoute(`/order/${t}/pay/`)).toEqual({ page: 'checkout', token: t })

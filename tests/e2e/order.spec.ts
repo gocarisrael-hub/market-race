@@ -8,7 +8,7 @@ const shot = (page: Page, name: string) =>
   page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true, animations: 'disabled' })
 
 async function stepOne(page: Page) {
-  await page.goto('/')
+  await page.goto('/order')
   await expect(page.getByRole('heading', { name: /מירוץ טעימות/ })).toBeVisible()
   await page.getByRole('radio', { name: 'רווקות' }).click()
   // A bachelorette is for her only: picked for the buyer, no "who is it for" or she/he question.
@@ -23,7 +23,7 @@ async function toToken(page: Page) {
 }
 
 test('buyer orders a game up to the pay step', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/order')
   // Nothing picked yet: the button says what is missing.
   await page.getByRole('button', { name: /ממשיכים לשאלות/ }).click()
   await expect(page.getByText('בחרו איזה משחק')).toBeVisible()
@@ -254,7 +254,7 @@ test('company payment link shows the amount and the payment state', async ({ pag
 })
 
 test('companies leave a lead', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('link', { name: 'לחברות וצוותים' }).click()
   await expect(page).toHaveURL(/\/companies$/)
   await page.getByRole('button', { name: 'שלחו לנו' }).click()
@@ -295,7 +295,7 @@ test('a mock payment settles the order and the manage page offers the captain’
 test('a family game: no she/he choice, the name field is the family name, family questions', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/order')
   await expect(page.getByText('איזה משחק?')).toBeVisible()
   await page.getByRole('radio', { name: 'משפחתי' }).click()
   // A family game is for a family only: no "who is it for" choice, no she/he.

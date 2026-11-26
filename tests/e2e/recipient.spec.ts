@@ -30,7 +30,7 @@ test('a birthday for her: she is picked first, her questions, her grammar in the
   request,
 }) => {
   test.setTimeout(90_000)
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   const who = page.getByRole('radiogroup', { name: 'ולמי המשחק?' })
   // One person first, and picked by default; no couple or family for a birthday.
@@ -85,7 +85,7 @@ test('a love game for him: his questions from the giver, his grammar in the game
   request,
 }) => {
   test.setTimeout(90_000)
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('radio', { name: 'אהבה וזוגיות' }).click()
   const who = page.getByRole('radiogroup', { name: 'ולמי המשחק?' })
   await expect(who.getByRole('radio')).toHaveText(['למישהי', 'למישהו', 'לזוג'])

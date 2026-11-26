@@ -97,7 +97,7 @@ test('game at 1440: help and the main button sit inside the sheet, the button un
 })
 
 test('site at 1440: the order button sits inside the sheet', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/order')
   const sheet = page.locator('main.page')
   await expect(page.getByTestId('desk')).toBeVisible()
   const cta = page.locator('.cta-wrap .brush')
@@ -159,7 +159,7 @@ test.describe('phone', () => {
   })
 
   test('the order page keeps one column with the preview inline', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/order')
     await expect(page.locator('.order-side')).toHaveCount(0)
     await expect(page.getByTestId('look-preview')).toHaveCount(1)
   })

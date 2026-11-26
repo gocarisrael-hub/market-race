@@ -34,6 +34,7 @@ import {
   Opt,
   QNote,
   Ring,
+  SiteNav,
   Sketch,
   StepTrail,
   Tick,
@@ -99,8 +100,9 @@ export function Home(props: { shop: Shop; draft: Draft; setDraft: (d: Draft) => 
       )}
 
       <OrderSide shop={shop} draft={d} />
+      <SiteNav current="order" />
 
-      <div className="page-head" style={{ marginTop: 74, marginLeft: 50 }}>
+      <div className="page-head" style={{ marginTop: 22, marginLeft: 50 }}>
         <StepTrail step={1} total={STEPS} />
         <div className="title-row">
           <h1 className="title rise">

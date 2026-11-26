@@ -2087,3 +2087,390 @@ ol.howto.drawn li {
     scale: 1.5;
   }
 }
+
+/* ---------- The links between the landing page, the tastings and the order ---------- */
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0 16px;
+  margin: 0;
+  /* Clear of the awning in the top corner. */
+  padding-inline-end: 110px;
+}
+.site-nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.site-nav-item[aria-current="page"] {
+  color: var(--accent);
+}
+.site-nav-item .underline {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  left: 0;
+  width: 100%;
+}
+
+/* ---------- Landing page (/) ---------- */
+.l-hero {
+  margin-top: 40px;
+}
+.l-hero .eyebrow {
+  margin: 0 0 6px;
+}
+.l-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  margin-top: 22px;
+}
+.l-ctas .brush.inline {
+  width: min(100%, 300px);
+}
+.l-hero-map {
+  position: relative;
+  margin: 30px 0 0;
+  transform: rotate(-1.5deg);
+}
+.l-hero-map img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  clip-path: polygon(2% 3%, 30% 0, 64% 2%, 98% 0, 100% 40%, 98% 97%, 64% 100%, 30% 98%, 0 100%, 1% 50%);
+}
+.l-hero-map .doodles {
+  z-index: 2;
+}
+.l-steps {
+  display: grid;
+  gap: 22px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.l-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  column-gap: 14px;
+  align-items: start;
+}
+.l-step-art {
+  grid-row: 1 / span 3;
+  width: 76px;
+  --r: -6deg;
+}
+.l-step:nth-child(even) .l-step-art {
+  --r: 6deg;
+}
+.l-step-no {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+.l-step h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 32px;
+  line-height: 1;
+}
+.l-step p {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.l-occasions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px 18px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.l-occasions li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+.l-occasions a {
+  color: var(--accent);
+}
+.l-occ-doodle {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+.l-pair {
+  display: grid;
+  gap: 26px;
+  margin-top: 34px;
+}
+.l-get,
+.l-peek {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.l-get li,
+.l-peek li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.l-peek img {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+.l-peek + .sketch {
+  margin-top: 10px;
+}
+.l-prices ul {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.l-prices li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 8px 0;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.l-price-name {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 700;
+}
+.l-price {
+  font-size: 16px;
+  font-weight: 500;
+}
+.l-faq dl {
+  margin: 14px 0 0;
+}
+.l-faq dt {
+  margin-top: 16px;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+.l-faq dd {
+  margin: 4px 0 0;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.l-closing {
+  margin-top: 44px;
+  text-align: center;
+}
+.l-closing h2 {
+  position: relative;
+  display: inline-block;
+  font-size: 48px;
+}
+.l-closing .brush.inline {
+  width: min(100%, 320px);
+  margin: 18px auto 0;
+}
+
+/* ---------- Tastings page (/tastings) ---------- */
+.t-head {
+  margin-top: 40px;
+}
+.t-filter {
+  margin-top: 26px;
+}
+.t-swaps {
+  margin-top: 18px;
+}
+.t-swaps .label {
+  margin: 0;
+  font-weight: 500;
+}
+.t-route {
+  margin-top: 30px;
+}
+.t-route .tastings {
+  margin-top: 6px;
+}
+.t-cta {
+  margin-top: 36px;
+  text-align: center;
+}
+.t-cta .brush.inline {
+  width: min(100%, 320px);
+  margin: 0 auto;
+}
+
+/* Tablets: the landing and tastings pages are wider sheets. */
+@media (min-width: 768px) {
+  :root:has(.landing, .tastings-page) {
+    --sheet-w: min(900px, 100% - 64px);
+  }
+  .l-steps {
+    grid-template-columns: 1fr 1fr;
+    gap: 30px 34px;
+  }
+  .l-pair {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+/* Computers: real multi-column layouts with scaled illustrations. */
+@media (min-width: 1024px) {
+  .site-nav {
+    gap: 0 28px;
+    padding-inline-end: 260px;
+  }
+  .site-nav-item {
+    font-size: 30px;
+  }
+  :root:has(.landing, .tastings-page) {
+    --sheet-w: min(1200px, 100% - 160px);
+  }
+  html .page:is(.landing, .tastings-page) {
+    padding: 48px clamp(48px, 5vw, 96px) 64px;
+  }
+  .l-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(40px, 5vw, 96px);
+  }
+  .l-hero-map {
+    margin: 0;
+  }
+  .l-hero .lead,
+  .t-head .lead {
+    font-size: clamp(17px, 1.4vw, 21px);
+  }
+  .l-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .l-step {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .l-step-art {
+    grid-row: auto;
+    width: clamp(96px, 9vw, 140px);
+    height: clamp(96px, 9vw, 140px);
+    margin-bottom: 8px;
+    object-fit: contain;
+  }
+  .l-how {
+    margin-top: 64px;
+  }
+  .l-step h3 {
+    font-size: clamp(32px, 2.6vw, 40px);
+  }
+  .l-occasions {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .l-occ-doodle {
+    width: 58px;
+    height: 58px;
+  }
+  .l-pair {
+    column-gap: clamp(40px, 5vw, 96px);
+  }
+  .l-prices,
+  .l-faq {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.6fr) minmax(0, 1.4fr);
+    column-gap: clamp(40px, 5vw, 96px);
+    align-items: start;
+  }
+  .l-prices > .hint {
+    grid-column: 2;
+  }
+  .l-faq dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 40px;
+    margin: 0;
+  }
+  .l-faq dl > dt:nth-of-type(odd),
+  .l-faq dl > dd:nth-of-type(odd) {
+    grid-column: 1;
+  }
+  .l-faq dl > dt:nth-of-type(even),
+  .l-faq dl > dd:nth-of-type(even) {
+    grid-column: 2;
+  }
+  .l-faq dt:nth-of-type(1),
+  .l-faq dt:nth-of-type(2) {
+    grid-row: 1;
+  }
+  .l-faq dd:nth-of-type(1),
+  .l-faq dd:nth-of-type(2) {
+    grid-row: 2;
+  }
+  .l-faq dt:nth-of-type(3),
+  .l-faq dt:nth-of-type(4) {
+    grid-row: 3;
+  }
+  .l-faq dd:nth-of-type(3),
+  .l-faq dd:nth-of-type(4) {
+    grid-row: 4;
+  }
+
+  .t-body {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.6fr);
+    align-items: start;
+    column-gap: clamp(40px, 5vw, 96px);
+  }
+  .t-filter {
+    position: sticky;
+    top: 24px;
+  }
+  .t-routes .stops {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 18px 26px;
+  }
+  .t-routes .stops::before {
+    display: none;
+  }
+  .t-routes .stop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .t-routes .stop .dot,
+  .t-routes .stop .dot img {
+    width: 84px;
+    height: 84px;
+  }
+  .t-routes .stop .teaser {
+    font-size: 17px;
+  }
+}

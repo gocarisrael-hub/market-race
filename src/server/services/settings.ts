@@ -11,6 +11,9 @@ export interface SettingsShape {
   min_people: number
   max_people: number
   valid_years: number
+  // How long a game takes, as the landing page's FAQ says it ("כשעתיים"). Empty: the FAQ speaks of
+  // the number of stops instead.
+  game_duration: string
   hint_after_seconds: number
   poll_seconds: number
   brand_name: string
@@ -49,6 +52,7 @@ export const SETTING_DEFAULTS: SettingsShape = {
   min_people: 1,
   max_people: 20,
   valid_years: 1,
+  game_duration: '',
   hint_after_seconds: 0,
   poll_seconds: 4,
   brand_name: '[שם המותג]',

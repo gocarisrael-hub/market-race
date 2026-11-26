@@ -11,7 +11,7 @@ test('a photo without background, cut in the browser, and switched back on the m
   page,
 }) => {
   test.setTimeout(120_000)
-  await page.goto('/')
+  await page.goto('/order')
   await page.getByRole('radio', { name: 'רווקות' }).click()
   await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
   await page.getByLabel(/איך קוראים לה/).fill('מיכל')
