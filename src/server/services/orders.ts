@@ -2,6 +2,7 @@
 import { and, eq, inArray, notInArray } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import {
+  gameStates,
   markets,
   occasions,
   orders,
@@ -13,8 +14,9 @@ import {
   tastings,
   themes,
 } from '../db/schema.ts'
-import { buildGame, defaultAnswers } from '../domain/builder.ts'
+import { attachPhotos, buildGame, defaultAnswers } from '../domain/builder.ts'
 import { addYears, israelDate } from '../domain/dates.ts'
+import { regenerateMinigame } from '../domain/minigames.ts'
 import { checkAnswers } from '../domain/oddcheck.ts'
 import { orderRecipient, questionSetIdFor } from '../domain/recipient.ts'
 import type {
@@ -27,7 +29,7 @@ import type {
   Recipient,
 } from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
-import { getSetting } from './settings.ts'
+import { getSetting, minigameContent } from './settings.ts'
 
 export type Order = typeof orders.$inferSelect
 
@@ -166,6 +168,8 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
     tastings: marketTastings,
     riddles: marketRiddles,
     questions,
+    minigames: await minigameContent(db),
+    seed: order.orderNo,
     order: {
       form: order.form,
       recipient,
@@ -263,4 +267,50 @@ export async function updateAnswersAndRebuild(
     })
     .where(eq(orders.id, orderId))
   return buildOrderGame(db, orderId)
+}
+
+/**
+ * The owner rebuilds one mini-game of an order (another type or other choices), from the order's
+ * own answers and the current mini-game content. Allowed until the group reaches that game.
+ */
+export async function regenerateOrderMinigame(db: DB, orderId: number, index: number, now = new Date()) {
+  const order = await getOrder(db, orderId)
+  if (!order?.game) throw new BuildError('order has no game')
+  const games = order.game.minigames ?? []
+  const current = games[index]
+  if (!current) throw new BuildError('no such mini-game')
+  if (['done', 'expired', 'cancelled'].includes(order.status))
+    throw new BuildError(`order is ${order.status}`)
+  const [state] = await db.select().from(gameStates).where(eq(gameStates.orderId, orderId))
+  if (state && state.step !== 'opening' && state.stopIndex >= current.afterStop)
+    throw new BuildError('the group already reached this mini-game')
+  const [occ] = await db.select().from(occasions).where(eq(occasions.key, order.occasionKey))
+  const questions = await questionsForOccasion(db, order.occasionKey, orderRecipient(order, occ))
+  const company = order.kind === 'company' && order.companyName ? { name: order.companyName } : null
+  const game = order.game
+  const seed = `${order.orderNo}:${now.getTime()}`
+  const next = regenerateMinigame(
+    {
+      form: order.form,
+      answers: defaultAnswers({ ...order, company }),
+      questions,
+      photos: game.letter.photos,
+      letterNotes: order.letterNotes,
+      content: await minigameContent(db),
+      stopCount: game.stops.length,
+      riddleSlots: game.stops.map((s) => s.riddle.parts.flatMap((p) => (p.t === 'slot' ? [p.slot] : []))),
+      seed,
+    },
+    games,
+    index,
+    seed,
+  )
+  if (!next) throw new BuildError('not enough personal answers for another mini-game')
+  const minigames = games.map((g, i) => (i === index ? next : g))
+  const [row] = await db
+    .update(orders)
+    .set({ game: attachPhotos({ ...game, minigames }, game.letter.photos) })
+    .where(eq(orders.id, orderId))
+    .returning()
+  return row
 }

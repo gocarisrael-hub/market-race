@@ -579,3 +579,13 @@ label.color input[type="color"] {
 .crud .editor {
   overflow-x: auto;
 }
+
+/* Riddles and mini-games are written in lines. */
+p.riddle,
+.riddle-lines {
+  white-space: pre-line;
+}
+table.lines {
+  margin-top: 6px;
+  font-size: 13px;
+}

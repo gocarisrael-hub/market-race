@@ -2,6 +2,7 @@
 import { eq } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import { settings } from '../db/schema.ts'
+import { DEFAULT_MINIGAMES, type MinigameContent } from '../domain/minigames.ts'
 import { DEFAULT_ODD_RULES, type OddRules } from '../domain/oddcheck.ts'
 
 export interface SettingsShape {
@@ -35,6 +36,10 @@ export interface SettingsShape {
   support_whatsapp: string
   // Optional prefilled WhatsApp text; {name} = honoree, {n} = current stop. Empty uses the default copy.
   support_message: string
+  // Personal mini-games between stops: placement ("after": after how many stops, e.g. [2, 4]),
+  // the types the builder may use, and the curated lists they are built from. A stored value
+  // without a key keeps that key's default (see minigameContent).
+  minigames: MinigameContent
 }
 
 export type MessageKey =
@@ -90,6 +95,7 @@ export const SETTING_DEFAULTS: SettingsShape = {
   player_texts: {},
   support_whatsapp: '',
   support_message: '',
+  minigames: DEFAULT_MINIGAMES,
 }
 
 export async function getSetting<K extends keyof SettingsShape>(db: DB, key: K): Promise<SettingsShape[K]> {
@@ -108,4 +114,11 @@ export async function setSetting<K extends keyof SettingsShape>(db: DB, key: K, 
     .insert(settings)
     .values({ key, value })
     .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } })
+}
+
+/** The mini-game content: the stored setting over the defaults, key by key. */
+export async function minigameContent(db: DB): Promise<MinigameContent> {
+  const stored = (await getSetting(db, 'minigames')) as Partial<MinigameContent> | null
+  const merged = { ...DEFAULT_MINIGAMES, ...(stored && typeof stored === 'object' ? stored : {}) }
+  return { ...merged, swaps: { ...DEFAULT_MINIGAMES.swaps, ...(stored?.swaps ?? {}) } }
 }

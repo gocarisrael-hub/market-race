@@ -9,12 +9,14 @@ import {
   questionSets,
   riddles,
   routes,
+  settings,
   stalls,
   tastings,
   themes,
 } from '../db/schema.ts'
+import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
 import { formsOfRecipients, occasionRecipients } from '../domain/recipient.ts'
-import type { Decor, OccasionRecipients, Palette, Question } from '../domain/types.ts'
+import type { Decor, Form, OccasionRecipients, Palette, Question, RiddleTemplates } from '../domain/types.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { setSetting } from './settings.ts'
 
@@ -28,6 +30,9 @@ const hours = {
 }
 
 const ALL_DIETS = ['vegan', 'vegetarian', 'gluten_free']
+
+// Optional, for the "מה בתמונה?" mini-game: asked about the first photo the buyer adds.
+const PHOTO_WHERE = 'אם תוסיפו תמונות: איפה צולמה הראשונה? (נשאל על זה במשחק)'
 
 const privateQuestions: Question[] = [
   {
@@ -72,6 +77,17 @@ const privateQuestions: Question[] = [
     fallback: 'כל החלומות',
     maxLen: 60,
   },
+  {
+    slot: 'photo_where',
+    text: {
+      she: PHOTO_WHERE,
+      he: PHOTO_WHERE,
+      couple: PHOTO_WHERE,
+    },
+    required: false,
+    fallback: '',
+    maxLen: 40,
+  },
 ]
 
 // ---------- Question sets per occasion × recipient ----------
@@ -95,6 +111,7 @@ export const birthdaySheQuestions: Question[] = [
   pq('she', 'catchphrase', 'משפט שכל מי שמכיר אותה שמע ממנה אלף פעם', 'יאללה, זזים', 60),
   pq('she', 'favorite_place', 'המקום שהכי עושה לה טוב', 'הים'),
   pq('she', 'dream', 'חלום שאתם מאחלים לה להגשים השנה', 'כל החלומות', 60),
+  pq('she', 'photo_where', PHOTO_WHERE, ''),
 ]
 
 export const birthdayHeQuestions: Question[] = [
@@ -109,6 +126,7 @@ export const birthdayHeQuestions: Question[] = [
   pq('he', 'catchphrase', 'משפט שכל מי שמכיר אותו שמע ממנו אלף פעם', 'יאללה, זזים', 60),
   pq('he', 'favorite_place', 'המקום שהכי עושה לו טוב', 'הים'),
   pq('he', 'dream', 'חלום שאתם מאחלים לו להגשים השנה', 'כל החלומות', 60),
+  pq('he', 'photo_where', PHOTO_WHERE, ''),
 ]
 
 // A love game is a gift to her or to him, written from the giver's side.
@@ -119,6 +137,7 @@ export const loveSheQuestions: Question[] = [
   pq('she', 'catchphrase', 'כינוי או משפט שהיא אומרת רק לך', 'אני אוהבת אותך', 60),
   pq('she', 'favorite_place', 'המקום שלכם (חוף, בית קפה, עיר)', 'הים'),
   pq('she', 'dream', 'חלום שאתם עוד רוצים להגשים ביחד', 'כל מה שעוד מחכה לנו', 60),
+  pq('she', 'photo_where', PHOTO_WHERE, ''),
 ]
 
 export const loveHeQuestions: Question[] = [
@@ -128,6 +147,7 @@ export const loveHeQuestions: Question[] = [
   pq('he', 'catchphrase', 'כינוי או משפט שהוא אומר רק לך', 'אני אוהב אותך', 60),
   pq('he', 'favorite_place', 'המקום שלכם (חוף, בית קפה, עיר)', 'הים'),
   pq('he', 'dream', 'חלום שאתם עוד רוצים להגשים ביחד', 'כל מה שעוד מחכה לנו', 60),
+  pq('he', 'photo_where', PHOTO_WHERE, ''),
 ]
 
 // A couple: questions about the two of them.
@@ -138,6 +158,7 @@ export const coupleQuestions: Question[] = [
   pq('couple', 'catchphrase', 'משפט ששניהם אומרים כל הזמן', 'יאללה, זזים', 60),
   pq('couple', 'favorite_place', 'המקום שלהם', 'הים'),
   pq('couple', 'dream', 'חלום משותף שעוד מחכה להם', 'כל מה שעוד מחכה להם', 60),
+  pq('couple', 'photo_where', PHOTO_WHERE, ''),
 ]
 
 /** The demo question sets per recipient, by name (each editable in the admin). */
@@ -179,6 +200,7 @@ const companyQuestions: Question[] = [
     fallback: 'הים',
     maxLen: 40,
   },
+  { slot: 'photo_where', text: { company: PHOTO_WHERE }, required: false, fallback: '', maxLen: 40 },
 ]
 
 const WATERCOLOR = ['כרמל בצבעי מים', 'מחנה יהודה בצבעי מים']
@@ -329,6 +351,7 @@ export const familyQuestions: Question[] = [
   gq('family_tradition', 'מסורת משפחתית?', 'הקידוש של שישי בערב', 50),
   gq('who_late', 'מי הכי מאחר/ת במשפחה?', 'מישהו מהמשפחה', 30),
   gq('group_wish', 'משאלה למשפחה?', 'עוד הרבה שנים ביחד', 60),
+  gq('photo_where', PHOTO_WHERE, ''),
   hidden('group_moment', 'היום הראשון'),
   hidden('group_legend', 'סבא וסבתא'),
   hidden('group_years', 'כל השנים האלה'),
@@ -350,6 +373,7 @@ export const friendsQuestions: Question[] = [
   gq('who_late', 'מי תמיד מגיע/ה אחרון/ה?', "מישהו מהחבר'ה", 30),
   gq('who_hungry', 'מי הראשון/ה לשאול "מה אוכלים"?', 'הרעבים של החבורה', 30),
   gq('who_laugh', 'מי צוחק/ת הכי חזק?', 'הצחקנים של החבורה', 30),
+  gq('photo_where', PHOTO_WHERE, ''),
   hidden('family_tradition', 'הקפה של הבוקר'),
   hidden('who_cheeky', 'החוצפן של החבורה'),
   hidden('who_phone', 'מכורי הטלפון'),
@@ -363,6 +387,7 @@ export const genericQuestions: Question[] = [
   gq('who_hungry', 'מי תמיד רעב/ה?', 'הרעבים של החבורה', 30),
   gq('who_phone', 'מי לא מוריד/ה את העיניים מהטלפון?', 'מכורי הטלפון', 30),
   gq('who_laugh', 'מי צוחק/ת הכי חזק?', 'הצחקנים של החבורה', 30),
+  gq('photo_where', PHOTO_WHERE, ''),
   hidden('group_food', 'ארוחת שישי'),
   hidden('group_place', 'המקום שבו הכול התחיל'),
   hidden('family_tradition', 'הקפה של הבוקר'),
@@ -379,25 +404,288 @@ export const GROUP_OCCASIONS = [
   { key: 'generic', label: 'כללי', setName: 'שאלות כלליות לקבוצה', questions: genericQuestions },
 ]
 
+/** A riddle, one line per entry (see templateLines: "?" marks a personal line, "||" its fallbacks). */
+const L = (...lines: string[]) => lines.join('\n')
+
 /**
- * The group version of each demo riddle, by answer. The fixed lines still lead to the answer;
- * the slots add color. Across the five route stops every set's asked slots appear at least once.
+ * The demo riddles, by answer, in every form. Three or four lines, rhymed where it reads naturally:
+ * the fixed lines lead to the answer on their own, and the personal lines ("?") weave in the
+ * buyer's answers, skipped (or swapped for their plain alternative) when the answer is empty.
  */
-export const GROUP_TEMPLATES: Record<string, string> = {
-  תקווה:
-    '{who_late} עוד בדרך, אבל {group_name} כבר יודעים: לא מוותרים עליה. מאז {group_moment}, היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
-  מיץ: 'סוחטים אותי עד הטיפה האחרונה, כמו ש{group_name} סוחטים כל רגע ביחד. כתום, קר ומתוק. מה אני?',
-  "ג'חנון":
-    '{group_food}? אצל {group_name} מחכים לזה כמו שאני מחכה בתנור: כל הלילה. אני מסורת, בדיוק כמו {family_tradition}: נכנסים ביום שישי, יוצאים בשבת בבוקר, מגולגלים, עם ביצה חומה ורסק עגבניות לידי. ו{who_hungry}? כבר עם מזלג ביד. מה אני?',
-  בוריק:
-    'אני קצת כמו {group_name} אחרי {group_years} ביחד: מבחוץ פריך, ומבפנים לב גדול. לפי {who_cheeky}, אני המאפה הכי טוב בשוק. באתי מתוניסיה, דק כמו נייר ומטוגן, ובביס הראשון נשברת לי ביצה בפנים. מה אני?',
-  פלאפל:
-    'אצל {group_name} תמיד אומרים: "{group_saying}". ככה גם אני: קטן, עגול ומתפוצץ מטעם. ירוק מבפנים, חום מבחוץ, עשוי מחומוס אבל אני לא חומוס, ואני נכנס לפיתה עם סלטים. בשבילי שווה אפילו להניח את הטלפון, נכון, {who_phone}? מה אני?',
-  קבב: 'אצל {group_name} תמיד אומרים: "{group_saying}". אני בשר טחון על שיפוד, מעל גחלים, בתוך פיתה עם טחינה. מה אני?',
-  לחיים:
-    'הגעתם לסוף. לכבוד {group_name}, לכבוד {group_place}, לכבוד {group_legend} ולכבוד {group_wish}, מרימים כוסות. כשהן נפגשות, כולם אומרים מילה אחת, ו{who_laugh} הכי חזק. מה היא?',
-  קפה: 'שחור או הפוך, {group_name} לא מתחילים בלעדיי בוקר. מה אני?',
+export const DEMO_RIDDLES: Record<string, RiddleTemplates> = {
+  תקווה: {
+    she: L(
+      'בסוף כל טקס שרים אותה כשכולם עומדים,',
+      'היא עוד לא אבדה, גם בימים הקשים.',
+      '? ומאז {first_love}, {name} יודעת: עליה לא מוותרים. || ו{name} יודעת: עליה אף פעם לא מוותרים.',
+      'מה היא?',
+    ),
+    he: L(
+      'בסוף כל טקס שרים אותה כשכולם עומדים,',
+      'היא עוד לא אבדה, גם בימים הקשים.',
+      '? ומאז {first_love}, {name} יודע: עליה לא מוותרים. || ו{name} יודע: עליה אף פעם לא מוותרים.',
+      'מה היא?',
+    ),
+    couple: L(
+      'בסוף כל טקס שרים אותה כשכולם עומדים,',
+      'היא עוד לא אבדה, גם בימים הקשים.',
+      '? ומאז {first_love}, {name} יודעים: עליה לא מוותרים. || ו{name} יודעים: עליה אף פעם לא מוותרים.',
+      'מה היא?',
+    ),
+    group: L(
+      'בסוף כל טקס שרים אותה כשכולם עומדים,',
+      'היא עוד לא אבדה, גם בימים הקשים.',
+      '? ומאז {group_moment}, {group_name} יודעים: עליה לא מוותרים. || ו{group_name} יודעים: עליה אף פעם לא מוותרים.',
+      '? כן, גם {who_late}, שעוד בדרך.',
+      'מה היא?',
+    ),
+    company: L(
+      'בסוף כל טקס שרים אותה כשכולם עומדים,',
+      'היא עוד לא אבדה, גם בימים הקשים.',
+      '? ומאז {memorable_project}, ב{company_name} יודעים: עליה לא מוותרים. || וב{company_name} יודעים: עליה אף פעם לא מוותרים.',
+      'מה היא?',
+    ),
+  },
+  מיץ: {
+    she: L(
+      'מפרי אותי סוחטים, עד הטיפה, בלי רחמים,',
+      'כתום, קר ומתוק, בכוס, בימים החמים.',
+      '? ו{name} לוקחת אותי בדרך אל {favorite_place}, בלי לחשוב פעמיים. || ו{name} שותה אותי בלי לחשוב פעמיים.',
+      'מה אני?',
+    ),
+    he: L(
+      'מפרי אותי סוחטים, עד הטיפה, בלי רחמים,',
+      'כתום, קר ומתוק, בכוס, בימים החמים.',
+      '? ו{name} לוקח אותי בדרך אל {favorite_place}, בלי לחשוב פעמיים. || ו{name} שותה אותי בלי לחשוב פעמיים.',
+      'מה אני?',
+    ),
+    couple: L(
+      'מפרי אותי סוחטים, עד הטיפה, בלי רחמים,',
+      'כתום, קר ומתוק, בכוס, בימים החמים.',
+      '? ו{name} לוקחים אותי בדרך אל {favorite_place}, בלי לחשוב פעמיים. || ו{name} שותים אותי בלי לחשוב פעמיים.',
+      'מה אני?',
+    ),
+    group: L(
+      'מפרי אותי סוחטים, עד הטיפה, בלי רחמים,',
+      'כתום, קר ומתוק, בכוס, בימים החמים.',
+      '? ו{group_name} לוקחים אותי בדרך אל {group_place}, בלי לחשוב פעמיים. || ו{group_name} שותים אותי בלי לחשוב פעמיים.',
+      'מה אני?',
+    ),
+    company: L(
+      'מפרי אותי סוחטים, עד הטיפה, בלי רחמים,',
+      'כתום, קר ומתוק, בכוס, בימים החמים.',
+      '? וב{company_name} לקחו אותי גם אל {last_offsite}, בלי לחשוב פעמיים. || וב{company_name} שותים אותי בלי לחשוב פעמיים.',
+      'מה אני?',
+    ),
+  },
+  "ג'חנון": {
+    she: L(
+      'תימני, ישן בתנור כל הלילה, מגולגל בשכבות,',
+      'עם ביצה חומה ורסק עגבניות, ככה מתחילות שבתות.',
+      '? וכמו ש{name} לא מוותרת על {favorite_food}, גם אני לא מוותר על אף שבת. || ו{name} יודעת: בשבת בבוקר, אותי לא מפספסים.',
+      'מה אני?',
+    ),
+    he: L(
+      'תימני, ישן בתנור כל הלילה, מגולגל בשכבות,',
+      'עם ביצה חומה ורסק עגבניות, ככה מתחילות שבתות.',
+      '? וכמו ש{name} לא מוותר על {favorite_food}, גם אני לא מוותר על אף שבת. || ו{name} יודע: בשבת בבוקר, אותי לא מפספסים.',
+      'מה אני?',
+    ),
+    couple: L(
+      'תימני, ישן בתנור כל הלילה, מגולגל בשכבות,',
+      'עם ביצה חומה ורסק עגבניות, ככה מתחילות שבתות.',
+      '? וכמו ש{name} לא מוותרים על {favorite_food}, גם אני לא מוותר על אף שבת. || ו{name} יודעים: בשבת בבוקר, אותי לא מפספסים.',
+      'מה אני?',
+    ),
+    group: L(
+      'תימני, ישן בתנור כל הלילה, מגולגל בשכבות,',
+      'עם ביצה חומה ורסק עגבניות, ככה מתחילות שבתות.',
+      '? וכמו ש{group_name} לא מוותרים על {group_food}, גם אני לא מוותר על אף שבת. || ו{group_name} יודעים: בשבת בבוקר, אותי לא מפספסים.',
+      '? ואם תשאלו את {who_hungry}, אני מסורת טובה כמו {family_tradition}.',
+      'מה אני?',
+    ),
+    company: L(
+      'תימני, ישן בתנור כל הלילה, מגולגל בשכבות,',
+      'עם ביצה חומה ורסק עגבניות, ככה מתחילות שבתות.',
+      '? וכמו שב{company_name} לא מוותרים על {kitchen_favorite}, גם אני לא מוותר על אף שבת. || ובשבת בבוקר, גם ב{company_name} יודעים: אותי לא מפספסים.',
+      'מה אני?',
+    ),
+  },
+  בוריק: {
+    she: L(
+      'דק כמו נייר, מטוגן, מתוניסיה הגעתי,',
+      'ובביס הראשון, עם הביצה שבפנים, הפתעתי!',
+      '? אני קצת כמו {name}: מבחוץ פריכה, ומבפנים {one_word}. || אני קצת כמו {name}: מבחוץ פריכה, ומבפנים לב רך.',
+      'מה אני?',
+    ),
+    he: L(
+      'דק כמו נייר, מטוגן, מתוניסיה הגעתי,',
+      'ובביס הראשון, עם הביצה שבפנים, הפתעתי!',
+      '? אני קצת כמו {name}: מבחוץ פריך, ומבפנים {one_word}. || אני קצת כמו {name}: מבחוץ פריך, ומבפנים לב רך.',
+      'מה אני?',
+    ),
+    couple: L(
+      'דק כמו נייר, מטוגן, מתוניסיה הגעתי,',
+      'ובביס הראשון, עם הביצה שבפנים, הפתעתי!',
+      '? אני קצת כמו {name}: מבחוץ פריכים, ומבפנים {one_word}. || אני קצת כמו {name}: מבחוץ פריכים, ומבפנים לב רך.',
+      'מה אני?',
+    ),
+    group: L(
+      'דק כמו נייר, מטוגן, מתוניסיה הגעתי,',
+      'ובביס הראשון, עם הביצה שבפנים, הפתעתי!',
+      '? אני קצת כמו {group_name} אחרי {group_years}: מבחוץ פריכים, ומבפנים לב גדול. || אני קצת כמו {group_name}: מבחוץ פריכים, ומבפנים לב גדול.',
+      '? ולפי {who_cheeky}, אני המאפה הכי טוב בשוק.',
+      'מה אני?',
+    ),
+    company: L(
+      'דק כמו נייר, מטוגן, מתוניסיה הגעתי,',
+      'ובביס הראשון, עם הביצה שבפנים, הפתעתי!',
+      'אני קצת כמו {company_name}: מבחוץ רציני, ומבפנים לב גדול.',
+      '? ומי שזוכר את {memorable_project} יודע: הכי טוב יוצא בלחץ.',
+      'מה אני?',
+    ),
+  },
+  פלאפל: {
+    she: L(
+      'קטן ועגול, חום מבחוץ וירוק בפנים,',
+      'עשוי מחומוס אבל לא חומוס, ונכנס לפיתה עם סלטים.',
+      '? בדרך אל {favorite_place}, {name} תמיד עוצרת בשבילי, בלי תירוצים. || {name} תמיד עוצרת בשבילי, בלי תירוצים.',
+      'מה אני?',
+    ),
+    he: L(
+      'קטן ועגול, חום מבחוץ וירוק בפנים,',
+      'עשוי מחומוס אבל לא חומוס, ונכנס לפיתה עם סלטים.',
+      '? בדרך אל {favorite_place}, {name} תמיד עוצר בשבילי, בלי תירוצים. || {name} תמיד עוצר בשבילי, בלי תירוצים.',
+      'מה אני?',
+    ),
+    couple: L(
+      'קטן ועגול, חום מבחוץ וירוק בפנים,',
+      'עשוי מחומוס אבל לא חומוס, ונכנס לפיתה עם סלטים.',
+      '? בדרך אל {favorite_place}, {name} תמיד עוצרים בשבילי, בלי תירוצים. || {name} תמיד עוצרים בשבילי, בלי תירוצים.',
+      'מה אני?',
+    ),
+    group: L(
+      'קטן ועגול, חום מבחוץ וירוק בפנים,',
+      'עשוי מחומוס אבל לא חומוס, ונכנס לפיתה עם סלטים.',
+      '? בדרך אל {group_place}, {group_name} תמיד עוצרים בשבילי, בלי תירוצים. || {group_name} תמיד עוצרים בשבילי, בלי תירוצים.',
+      '? בשבילי שווה אפילו להניח את הטלפון, נכון, {who_phone}?',
+      'מה אני?',
+    ),
+    company: L(
+      'קטן ועגול, חום מבחוץ וירוק בפנים,',
+      'עשוי מחומוס אבל לא חומוס, ונכנס לפיתה עם סלטים.',
+      '? גם אחרי {last_offsite}, ב{company_name} חוזרים אליי, בלי תירוצים. || ב{company_name} תמיד חוזרים אליי, בלי תירוצים.',
+      'מה אני?',
+    ),
+  },
+  קבב: {
+    she: L(
+      'בשר טחון על שיפוד, מעל גחלים בוערות,',
+      'בפיתה עם טחינה, והריח ממלא את הסמטאות.',
+      '? {name} הייתה מחליפה בשבילי אפילו את {favorite_food}, בלי שום שאלות. || {name} הייתה אוכלת אותי בלי שום שאלות.',
+      'מה אני?',
+    ),
+    he: L(
+      'בשר טחון על שיפוד, מעל גחלים בוערות,',
+      'בפיתה עם טחינה, והריח ממלא את הסמטאות.',
+      '? {name} היה מחליף בשבילי אפילו את {favorite_food}, בלי שום שאלות. || {name} היה אוכל אותי בלי שום שאלות.',
+      'מה אני?',
+    ),
+    couple: L(
+      'בשר טחון על שיפוד, מעל גחלים בוערות,',
+      'בפיתה עם טחינה, והריח ממלא את הסמטאות.',
+      '? {name} היו מחליפים בשבילי אפילו את {favorite_food}, בלי שום שאלות. || {name} היו אוכלים אותי בלי שום שאלות.',
+      'מה אני?',
+    ),
+    group: L(
+      'בשר טחון על שיפוד, מעל גחלים בוערות,',
+      'בפיתה עם טחינה, והריח ממלא את הסמטאות.',
+      '? {group_name} היו מחליפים בשבילי אפילו את {group_food}, בלי שום שאלות. || {group_name} היו אוכלים אותי בלי שום שאלות.',
+      'מה אני?',
+    ),
+    company: L(
+      'בשר טחון על שיפוד, מעל גחלים בוערות,',
+      'בפיתה עם טחינה, והריח ממלא את הסמטאות.',
+      '? ב{company_name} היו מחליפים בשבילי אפילו את {kitchen_favorite}, בלי שום שאלות. || ב{company_name} היו אוכלים אותי בלי שום שאלות.',
+      'מה אני?',
+    ),
+  },
+  לחיים: {
+    she: L(
+      'הגעתם לסוף! מרימים כוסות גבוה,',
+      'וכשהן נפגשות, כולם אומרים מילה אחת, באהבה.',
+      '? לכבוד {name}, לכבוד {favorite_place}, || לכבוד {name},',
+      '? ולכבוד החלום שעוד יתגשם: {dream}. || ולכבוד כל מה שעוד יבוא.',
+      'מה היא?',
+    ),
+    he: L(
+      'הגעתם לסוף! מרימים כוסות גבוה,',
+      'וכשהן נפגשות, כולם אומרים מילה אחת, באהבה.',
+      '? לכבוד {name}, לכבוד {favorite_place}, || לכבוד {name},',
+      '? ולכבוד החלום שעוד יתגשם: {dream}. || ולכבוד כל מה שעוד יבוא.',
+      'מה היא?',
+    ),
+    couple: L(
+      'הגעתם לסוף! מרימים כוסות גבוה,',
+      'וכשהן נפגשות, כולם אומרים מילה אחת, באהבה.',
+      '? לכבוד {name}, לכבוד {favorite_place}, || לכבוד {name},',
+      '? ולכבוד החלום המשותף: {dream}. || ולכבוד כל מה שעוד יבוא.',
+      'מה היא?',
+    ),
+    group: L(
+      'הגעתם לסוף! מרימים כוסות גבוה,',
+      'וכשהן נפגשות, כולם אומרים מילה אחת, באהבה.',
+      '? לכבוד {group_name}, לכבוד {group_place} ו{group_legend}, || לכבוד {group_name},',
+      '? ולכבוד המשאלה: {group_wish}. || ולכבוד עוד הרבה שנים ביחד.',
+      '? ואת הצחוק של {who_laugh} שומעים עד הים.',
+      'מה היא?',
+    ),
+    company: L(
+      'הגעתם לסוף! מרימים כוסות גבוה,',
+      'וכשהן נפגשות, כולם אומרים מילה אחת, באהבה.',
+      '? לכבוד {company_name}, לכבוד {last_offsite}, || לכבוד {company_name},',
+      'ולכבוד כל מה שעוד נבנה ביחד.',
+      'מה היא?',
+    ),
+  },
+  קפה: {
+    she: L(
+      'שחור או הפוך, חם ומריר קצת,',
+      'בלעדיי שום בוקר לא מתחיל באמת.',
+      '? וכמו ש{name} לא מוותרת על {favorite_food}, ככה היא לא מוותרת עליי בבוקר. || ו{name}? בלעדיי היא לא מתחילה אף בוקר.',
+      'מה אני?',
+    ),
+    he: L(
+      'שחור או הפוך, חם ומריר קצת,',
+      'בלעדיי שום בוקר לא מתחיל באמת.',
+      '? וכמו ש{name} לא מוותר על {favorite_food}, ככה הוא לא מוותר עליי בבוקר. || ו{name}? בלעדיי הוא לא מתחיל אף בוקר.',
+      'מה אני?',
+    ),
+    couple: L(
+      'שחור או הפוך, חם ומריר קצת,',
+      'בלעדיי שום בוקר לא מתחיל באמת.',
+      '? וכמו ש{name} לא מוותרים על {favorite_food}, ככה הם לא מוותרים עליי בבוקר. || ו{name}? בלעדיי הם לא מתחילים אף בוקר.',
+      'מה אני?',
+    ),
+    group: L(
+      'שחור או הפוך, חם ומריר קצת,',
+      'בלעדיי שום בוקר לא מתחיל באמת.',
+      '? ואחרי {group_moment}, {group_name} היו צריכים אותי כפול. || ו{group_name}? בלעדיי הם לא מתחילים אף בוקר.',
+      'מה אני?',
+    ),
+    company: L(
+      'שחור או הפוך, חם ומריר קצת,',
+      'בלעדיי שום בוקר לא מתחיל באמת.',
+      '? ומאז {memorable_project}, ב{company_name} צריכים אותי כפול. || וב{company_name}? בלעדיי לא מתחילים אף בוקר.',
+      'מה אני?',
+    ),
+  },
 }
+
+/** The group version of each demo riddle, by answer. */
+export const GROUP_TEMPLATES: Record<string, string> = Object.fromEntries(
+  Object.entries(DEMO_RIDDLES).map(([answer, t]) => [answer, t.group ?? '']),
+)
 
 /** Demo price of the group occasions (same as the private ones). */
 export const GROUP_PRICE = { base: 0, perPerson: 9900 }
@@ -499,10 +787,34 @@ export async function ensureRecipientSets(db: DB): Promise<number> {
   return n
 }
 
+/**
+ * Tops up a database seeded before the mini-games: the optional photo question on every set that
+ * lacks it, and the `minigames` setting (so the owner sees and edits it). Idempotent.
+ */
+export async function ensureMinigameSeed(db: DB): Promise<void> {
+  for (const qs of await db.select().from(questionSets)) {
+    if (qs.questions.some((q) => q.slot === 'photo_where')) continue
+    const forms = [...new Set(qs.questions.flatMap((q) => Object.keys(q.text)))] as Form[]
+    const text = Object.fromEntries(forms.map((f) => [f, PHOTO_WHERE]))
+    await db
+      .update(questionSets)
+      .set({
+        questions: [
+          ...qs.questions,
+          { slot: 'photo_where', text, required: false, fallback: '', maxLen: 40 },
+        ],
+      })
+      .where(eq(questionSets.id, qs.id))
+  }
+  const [row] = await db.select().from(settings).where(eq(settings.key, 'minigames'))
+  if (!row) await setSetting(db, 'minigames', DEFAULT_MINIGAMES)
+}
+
 export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelThemeId: number }> {
   const existing = await db.select().from(markets).limit(1)
   if (existing.length) {
     await ensureRecipientSets(db)
+    await ensureMinigameSeed(db)
     const [route] = await db.select().from(routes).limit(1)
     const [theme] = await db.select().from(themes).where(eq(themes.marketId, route.marketId)).limit(1)
     return { carmelRouteId: route.id, carmelThemeId: theme.id }
@@ -627,9 +939,8 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     'coffee',
   )
 
-  const r = async (v: typeof riddles.$inferInsert) => {
-    const group = GROUP_TEMPLATES[v.answer]
-    const templates = group ? { ...v.templates, group } : v.templates
+  const r = async (v: Omit<typeof riddles.$inferInsert, 'templates'>) => {
+    const templates = DEMO_RIDDLES[v.answer] ?? {}
     return (
       await db
         .insert(riddles)
@@ -644,14 +955,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['התקווה', 'תיקווה'],
     hint: 'זה גם שם של המנון',
     afterText: 'עכשיו מצאו את תקווה בשוק.',
-    templates: {
-      she: 'מאז {first_love}, {name} יודעת שאסור לוותר עליה. היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
-      he: 'מאז {first_love}, {name} יודע שאסור לוותר עליה. היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
-      couple:
-        'מאז {first_love}, {name} יודעים שאסור לוותר עליה. היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
-      company:
-        'מאז {memorable_project}, כולם ב{company_name} יודעים שאסור לוותר עליה. היא עוד לא אבדה, ושרים עליה בסוף כל טקס. מה היא?',
-    },
   })
   const rJuice2 = await r({
     stallId: juice2.id,
@@ -660,12 +963,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['מיצים'],
     hint: 'שותים אותו מכוס, סוחטים אותו מפרי',
     afterText: '',
-    templates: {
-      she: 'סוחטים אותי עד הטיפה האחרונה, כמו ש{name} סוחטת כל רגע. כתום, קר ומתוק. מה אני?',
-      he: 'סוחטים אותי עד הטיפה האחרונה, כמו ש{name} סוחט כל רגע. כתום, קר ומתוק. מה אני?',
-      couple: 'סוחטים אותי עד הטיפה האחרונה, כמו ש{name} סוחטים כל רגע. כתום, קר ומתוק. מה אני?',
-      company: 'סוחטים אותי עד הטיפה האחרונה, כמו שב{company_name} סוחטים כל ספרינט. כתום, קר ומתוק. מה אני?',
-    },
   })
   const rJachnun = await r({
     stallId: bakery.id,
@@ -674,14 +971,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['ג׳חנון', 'גחנון', 'jachnun'],
     hint: 'תימני, מגולגל, ישן בתנור',
     afterText: '',
-    templates: {
-      she: '{name} מחכה ל{favorite_food} כמו שאני מחכה בתנור: כל הלילה. נכנסים ביום שישי, יוצאים בשבת בבוקר, מגולגלים, עם ביצה חומה ורסק עגבניות לידי. מה אני?',
-      he: '{name} מחכה ל{favorite_food} כמו שאני מחכה בתנור: כל הלילה. נכנסים ביום שישי, יוצאים בשבת בבוקר, מגולגלים, עם ביצה חומה ורסק עגבניות לידי. מה אני?',
-      couple:
-        '{name} מחכים ל{favorite_food} כמו שאני מחכה בתנור: כל הלילה. נכנסים ביום שישי, יוצאים בשבת בבוקר, מגולגלים, עם ביצה חומה ורסק עגבניות לידי. מה אני?',
-      company:
-        'ב{company_name} מחכים ל{kitchen_favorite} כמו שאני מחכה בתנור: כל הלילה. נכנסים ביום שישי, יוצאים בשבת בבוקר, מגולגלים, עם ביצה חומה ורסק עגבניות לידי. מה אני?',
-    },
   })
   const rBurik = await r({
     stallId: burik.id,
@@ -690,14 +979,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['בריק', 'בורק טוניסאי'],
     hint: 'המאפה הטוניסאי עם הביצה',
     afterText: '',
-    templates: {
-      she: 'אני קצת כמו {name}: מבחוץ פריך, ומבפנים {one_word}. באתי מתוניסיה, דק כמו נייר ומטוגן, ובביס הראשון נשברת לי ביצה בפנים. מה אני?',
-      he: 'אני קצת כמו {name}: מבחוץ פריך, ומבפנים {one_word}. באתי מתוניסיה, דק כמו נייר ומטוגן, ובביס הראשון נשברת לי ביצה בפנים. מה אני?',
-      couple:
-        'אני קצת כמו {name}: מבחוץ פריכים, ומבפנים {one_word}. באתי מתוניסיה, דק כמו נייר ומטוגן, ובביס הראשון נשברת לי ביצה בפנים. מה אני?',
-      company:
-        'אני קצת כמו {company_name}: מבחוץ פריך, ומבפנים לב גדול. באתי מתוניסיה, דק כמו נייר ומטוגן, ובביס הראשון נשברת לי ביצה בפנים. מה אני?',
-    },
   })
   const rFalafel = await r({
     stallId: falafel.id,
@@ -706,14 +987,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['פלאפל בפיתה', 'falafel'],
     hint: 'כדורים בפיתה',
     afterText: '',
-    templates: {
-      she: '{name} תמיד אומרת: "{catchphrase}". ככה גם אני: קטן, עגול ומתפוצץ מטעם. ירוק מבפנים, חום מבחוץ, עשוי מחומוס אבל אני לא חומוס, ואני נכנס לפיתה עם סלטים. מה אני?',
-      he: '{name} תמיד אומר: "{catchphrase}". ככה גם אני: קטן, עגול ומתפוצץ מטעם. ירוק מבפנים, חום מבחוץ, עשוי מחומוס אבל אני לא חומוס, ואני נכנס לפיתה עם סלטים. מה אני?',
-      couple:
-        '{name} תמיד אומרים: "{catchphrase}". ככה גם אני: קטן, עגול ומתפוצץ מטעם. ירוק מבפנים, חום מבחוץ, עשוי מחומוס אבל אני לא חומוס, ואני נכנס לפיתה עם סלטים. מה אני?',
-      company:
-        'ב{company_name} תמיד אומרים: "{company_catchphrase}". ככה גם אני: קטן, עגול ומתפוצץ מטעם. ירוק מבפנים, חום מבחוץ, עשוי מחומוס אבל אני לא חומוס, ואני נכנס לפיתה עם סלטים. מה אני?',
-    },
   })
   const rKebab = await r({
     stallId: kebab.id,
@@ -722,14 +995,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['קבאב', 'שיפוד קבב'],
     hint: 'בשר על שיפוד',
     afterText: '',
-    templates: {
-      she: '{name} תמיד אומרת: "{catchphrase}". אני בשר טחון על שיפוד, מעל גחלים, בתוך פיתה עם טחינה. מה אני?',
-      he: '{name} תמיד אומר: "{catchphrase}". אני בשר טחון על שיפוד, מעל גחלים, בתוך פיתה עם טחינה. מה אני?',
-      couple:
-        '{name} תמיד אומרים: "{catchphrase}". אני בשר טחון על שיפוד, מעל גחלים, בתוך פיתה עם טחינה. מה אני?',
-      company:
-        'ב{company_name} תמיד אומרים: "{company_catchphrase}". אני בשר טחון על שיפוד, מעל גחלים, בתוך פיתה עם טחינה. מה אני?',
-    },
   })
   const rBeer = await r({
     stallId: beer.id,
@@ -738,14 +1003,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['cheers'],
     hint: 'מה אומרים כשמרימים כוס?',
     afterText: '',
-    templates: {
-      she: 'הגעתם לסוף. לכבוד {name}, לכבוד {favorite_place} ולכבוד {dream} שעוד יתגשם, מרימים כוסות. כשהן נפגשות, כולם אומרים מילה אחת. מה היא?',
-      he: 'הגעתם לסוף. לכבוד {name}, לכבוד {favorite_place} ולכבוד {dream} שעוד יתגשם, מרימים כוסות. כשהן נפגשות, כולם אומרים מילה אחת. מה היא?',
-      couple:
-        'הגעתם לסוף. לכבוד {name}, לכבוד {favorite_place} ולכבוד {dream} שעוד יתגשם, מרימים כוסות. כשהן נפגשות, כולם אומרים מילה אחת. מה היא?',
-      company:
-        'הגעתם לסוף. לכבוד {company_name}, לכבוד {last_offsite} ולכבוד כל מה שעוד נבנה ביחד, מרימים כוסות. כשהן נפגשות, כולם אומרים מילה אחת. מה היא?',
-    },
   })
   const rCoffee = await r({
     stallId: coffee.id,
@@ -754,12 +1011,6 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     accepted: ['הפוך', 'אספרסו'],
     hint: 'שותים אותו בבוקר',
     afterText: '',
-    templates: {
-      she: 'שחור או הפוך, {name} לא מתחילה בלעדיי בוקר. מה אני?',
-      he: 'שחור או הפוך, {name} לא מתחיל בלעדיי בוקר. מה אני?',
-      couple: 'שחור או הפוך, {name} לא מתחילים בלעדיי בוקר. מה אני?',
-      company: 'שחור או הפוך, ב{company_name} לא מתחילים בלעדיי בוקר. מה אני?',
-    },
   })
 
   const [route] = await db
@@ -939,6 +1190,7 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     birthday_friend: { base: 0, perPerson: 9900 },
     ...Object.fromEntries(GROUP_OCCASIONS.map((g) => [g.key, GROUP_PRICE])),
   })
+  await setSetting(db, 'minigames', DEFAULT_MINIGAMES)
   await setSetting(db, 'odd_rules', { profanity: ['זונה', 'מניאק', 'קוקסינל'], maxRepeatedChars: 4 })
 
   return { carmelRouteId: route.id, carmelThemeId: watercolor.id }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { occasionRecipients } from '../../../server/domain/recipient.ts'
-import { extractSlots, nameSlots } from '../../../server/domain/template.ts'
+import { extractSlots, nameSlots, type TemplateLine } from '../../../server/domain/template.ts'
 import type { RiddleTemplates } from '../../../server/domain/types.ts'
 import { FORMS, type Form, type Question, type TextPart } from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
@@ -203,7 +203,25 @@ export function QuestionSetsPage() {
 
 // ---------- Riddles ----------
 
-type Preview = { parts: TextPart[]; missing: string[] }
+type Preview = { parts: TextPart[]; missing: string[]; bare?: TextPart[]; lines?: TemplateLine[] }
+
+function PartsText({ parts, testId }: { parts: TextPart[]; testId?: string }) {
+  return (
+    <p data-testid={testId} className="riddle-lines">
+      {parts.map((p, i) =>
+        p.t === 'slot' ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
+          <span key={i} className="slot" title={p.slot}>
+            {p.v}
+          </span>
+        ) : (
+          // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
+          <span key={i}>{p.v}</span>
+        ),
+      )}
+    </p>
+  )
+}
 type Match = { ok: true; via: 'exact' | 'fuzzy'; matched: string } | { ok: false }
 
 function RiddlePreview({
@@ -231,19 +249,38 @@ function RiddlePreview({
       <div className="muted">
         תצוגה מקדימה ({FORM_LABELS[form]}), עם תשובות לדוגמה מברירות המחדל של השאלון:
       </div>
-      <p data-testid="riddle-preview">
-        {preview?.parts.map((p, i) =>
-          p.t === 'slot' ? (
-            // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
-            <span key={i} className="slot" title={p.slot}>
-              {p.v}
-            </span>
-          ) : (
-            // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional
-            <span key={i}>{p.v}</span>
-          ),
-        )}
-      </p>
+      <PartsText parts={preview?.parts ?? []} testId="riddle-preview" />
+      {preview?.bare && preview.lines?.some((l) => l.personal) && (
+        <>
+          <div className="muted">ובלי תשובות (שורות אישיות מתחלפות בחלופה או נעלמות):</div>
+          <PartsText parts={preview.bare} testId="riddle-preview-bare" />
+        </>
+      )}
+      {!!preview?.lines?.length && (
+        <table className="lines" data-testid="riddle-lines">
+          <thead>
+            <tr>
+              <th>שורה</th>
+              <th>סוג</th>
+              <th>משבצות</th>
+            </tr>
+          </thead>
+          <tbody>
+            {preview.lines.map((l, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: lines are positional
+              <tr key={i}>
+                <td>{i + 1}</td>
+                <td>{l.personal ? (l.alternatives.length > 1 ? 'אישית, עם חלופה' : 'אישית') : 'קבועה'}</td>
+                <td dir="ltr">
+                  {l.alternatives
+                    .map((a) => (a.slots.length ? a.slots.map((x) => `{${x}}`).join(' ') : '—'))
+                    .join('  ||  ')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {!!preview?.missing.length && (
         <p className="error">ריק בתצוגה (אין תשובה וגם אין ברירת מחדל): {preview.missing.join(', ')}</p>
       )}
@@ -365,12 +402,19 @@ function RiddleEditor({ value, set, isNew }: EditorProps<Riddle>) {
         <label>
           נוסח ({FORM_LABELS[form]})
           <textarea
-            rows={4}
+            rows={8}
             value={templates[form] ?? ''}
             onChange={(e) => set({ templates: { ...templates, [form]: e.target.value } })}
-            placeholder="לדוגמה: מאז {first_love}, {name} יודעת ש..."
+            placeholder={
+              'בסוף כל טקס שרים אותה כשכולם עומדים,\nהיא עוד לא אבדה, גם בימים הקשים.\n? ומאז {first_love}, {name} יודעת: עליה לא מוותרים. || ו{name} יודעת: עליה לא מוותרים.\nמה היא?'
+            }
           />
         </label>
+        <p className="muted small" data-testid="template-help">
+          שורה לכל שורה בחידה. השורות הקבועות לבדן צריכות להוביל לתשובה. שורה שמתחילה ב-? היא שורה אישית: היא
+          מופיעה רק כשיש תשובה לכל המשבצות שבה (בלי ברירות מחדל). || מפריד בין חלופות: הראשונה שיש לה תשובות
+          נכנסת, וחלופה בלי משבצות שומרת על החרוז כשאין תשובה. בלי אף חלופה מתאימה, השורה מדלגת.
+        </p>
         <Select
           label="שאלון לתצוגה"
           value={qsId}

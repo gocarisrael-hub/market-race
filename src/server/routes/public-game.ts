@@ -28,6 +28,27 @@ const actionSchema = z.discriminatedUnion('type', [
     stopIndex: z.number().int().min(0),
     stallId: z.number().int().optional(),
   }),
+  z.object({
+    type: z.literal('minigame'),
+    stopIndex: z.number().int().min(0),
+    game: z.number().int().min(0),
+    answer: z.object({
+      option: z.number().int().min(0).max(10).optional(),
+      truths: z.array(z.boolean()).max(10).optional(),
+      text: z.string().max(200).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('minigame_continue'),
+    stopIndex: z.number().int().min(0),
+    game: z.number().int().min(0),
+  }),
+  // The captain's only: the route checks the captain token.
+  z.object({
+    type: z.literal('minigame_skip'),
+    stopIndex: z.number().int().min(0),
+    game: z.number().int().min(0),
+  }),
 ])
 
 export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -75,6 +96,11 @@ export async function publicGameRoutes(app: FastifyInstance, ctx: AppContext) {
       const body = actionSchema.safeParse(req.body)
       if (!p.success) return reply.code(404).send({ error: 'not_found' })
       if (!body.success) return reply.code(400).send({ error: 'invalid' })
+      if (
+        body.data.type === 'minigame_skip' &&
+        !(await captainOrder(p.data.token, req.headers[CAPTAIN_HEADER]))
+      )
+        return reply.code(403).send({ error: 'not_captain' })
       const res = await act(
         ctx.db,
         p.data.token,

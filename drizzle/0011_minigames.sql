@@ -1,0 +1,2 @@
+ALTER TABLE "game_states" ADD COLUMN "minigames_solved" integer[] DEFAULT '{}'::integer[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "game_states" ADD COLUMN "minigames_skipped" integer[] DEFAULT '{}'::integer[] NOT NULL;

@@ -7,6 +7,7 @@ import { makeT } from './copy.ts'
 import { Help } from './screens/Help.tsx'
 import { Letter } from './screens/Letter.tsx'
 import { Message } from './screens/Message.tsx'
+import { MiniGame } from './screens/MiniGame.tsx'
 import { Opening } from './screens/Opening.tsx'
 import { Redeem } from './screens/Redeem.tsx'
 import { Reveal } from './screens/Reveal.tsx'
@@ -53,6 +54,8 @@ export function App() {
     else if (v.step === 'done') screen = <Letter key={key} view={v} t={t} />
     else if (v.step === 'opening') screen = <Opening key={key} view={v} t={t} />
     else if (v.status === 'paused') screen = <Opening key={key} view={v} t={t} paused />
+    else if (v.step === 'minigame' && v.minigame)
+      screen = <MiniGame key={key} view={v} t={t} act={act} captain={captain} />
     else if (v.step === 'riddle') screen = <Riddle key={key} view={v} t={t} act={act} />
     else if (v.step === 'revealed') screen = <Reveal key={key} view={v} t={t} act={act} />
     else screen = <Redeem key={key} view={v} t={t} act={act} />

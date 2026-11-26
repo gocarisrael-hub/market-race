@@ -64,6 +64,8 @@ describe('group form: templates and answers', () => {
   })
 })
 
+const MINIGAME_ONLY = ['group_saying', 'photo_where']
+
 describe('group games in the demo catalog', () => {
   let t: Awaited<ReturnType<typeof makeTestApp>>
   let ids: Awaited<ReturnType<typeof seedDemo>>
@@ -83,9 +85,10 @@ describe('group games in the demo catalog', () => {
     for (const g of GROUP_OCCASIONS) {
       const slots = new Set(g.questions.map((q) => q.slot))
       for (const s of anySlots) expect(slots.has(s), `${g.key} defines ${s}`).toBe(true)
-      for (const q of g.questions.filter((x) => !x.hidden))
+      // The saying and the photo question feed the mini-games, never a riddle (it would give them away).
+      for (const q of g.questions.filter((x) => !x.hidden && !MINIGAME_ONLY.includes(x.slot)))
         expect(routeSlots.has(q.slot), `${g.key}: {${q.slot}} on the route`).toBe(true)
-      for (const q of g.questions.filter((x) => x.slot !== 'group_name'))
+      for (const q of g.questions.filter((x) => !['group_name', 'photo_where'].includes(x.slot)))
         expect(fallbackFor(q, 'group'), `${g.key}: fallback for ${q.slot}`).not.toBe('')
     }
   })
@@ -109,6 +112,7 @@ describe('group games in the demo catalog', () => {
       'family_tradition',
       'who_late',
       'group_wish',
+      'photo_where',
     ])
     expect(res.json().questions[0]).toMatchObject({ text: 'שם המשפחה?', required: true })
   })
@@ -139,8 +143,8 @@ describe('group games in the demo catalog', () => {
     expect(built.flags).toEqual([])
     expect(built.status).toBe('ready')
     const first = partsToString(built.game!.stops[0].riddle.parts)
-    expect(first).toMatch(/^דוד שמעון עוד בדרך, אבל משפחת כהן כבר יודעים/)
-    expect(first).toContain('מאז היום הראשון') // the family set's fallback for a slot it doesn't ask
+    expect(first).toContain('ומאז היום הראשון, משפחת כהן יודעים') // the family set's phrase for a slot it doesn't ask
+    expect(first).toContain('כן, גם דוד שמעון, שעוד בדרך.')
     expect(built.game!.honoree).toBe('משפחת כהן')
     expect(built.game!.form).toBe('group')
   })

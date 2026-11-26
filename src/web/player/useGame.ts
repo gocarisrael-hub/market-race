@@ -79,11 +79,11 @@ export function useGame(token: string) {
 
   const act = useCallback(
     async (action: PlayAction): Promise<Loaded> => {
-      const r = await sendAction(token, action)
+      const r = await sendAction(token, action, captainToken)
       apply(r)
       return r
     },
-    [token, apply],
+    [token, captainToken, apply],
   )
 
   const pause = useCallback(async (): Promise<Loaded> => {

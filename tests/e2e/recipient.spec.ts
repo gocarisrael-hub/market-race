@@ -71,7 +71,7 @@ test('a birthday for her: she is picked first, her questions, her grammar in the
   const gameUrl = await payAndStart(request, token)
   await page.goto(gameUrl)
   await expect(page.getByRole('heading', { name: 'חידה ראשונה', exact: true })).toBeVisible()
-  await expect(page.getByText('מאז הספייס גירלז, מיכל יודעת שאסור לוותר עליה')).toBeVisible()
+  await expect(page.getByText('ומאז הספייס גירלז, מיכל יודעת: עליה לא מוותרים.')).toBeVisible()
   // The players are a mixed group: the plain plural, not the bachelorette's feminine one.
   await expect(page.getByLabel('התשובה שלכם')).toBeVisible()
   await expect(page.getByRole('button', { name: 'בודקים!' })).toBeVisible()
@@ -141,6 +141,6 @@ test('a love game for him: his questions from the giver, his grammar in the game
 
   const gameUrl = await payAndStart(request, token)
   await page.goto(gameUrl)
-  await expect(page.getByText('מאז הדייט הראשון ביפו, יואב יודע שאסור לוותר עליה')).toBeVisible()
+  await expect(page.getByText('ומאז הדייט הראשון ביפו, יואב יודע: עליה לא מוותרים.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'בודקים!' })).toBeVisible()
 })

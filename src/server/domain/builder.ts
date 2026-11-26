@@ -1,5 +1,6 @@
 // Builds the frozen game snapshot for an order. Pure: the catalog is passed in.
 // SPEC "Building the game": safety swap → backup stall → block and flag. Never silently shorten.
+import { buildMinigames, type MinigameContent } from './minigames.ts'
 import { fillTemplate } from './template.ts'
 import type {
   Decor,
@@ -63,6 +64,10 @@ export interface BuildInput {
   tastings: CatalogTasting[]
   riddles: CatalogRiddle[]
   questions: Question[]
+  /** The `minigames` setting. Absent: the game has no mini-games. */
+  minigames?: MinigameContent
+  /** Makes the random choices of a sold game reproducible (the order number). */
+  seed?: string
   order: {
     form: Form
     /** Who the game is for; null for a company game. */
@@ -309,6 +314,18 @@ export function buildGame(input: BuildInput): BuildResult {
     stops,
     letter: { notes: order.letterNotes.map((n) => ({ ...n })), photos: [] },
   }
+  if (input.minigames)
+    game.minigames = buildMinigames({
+      form: order.form,
+      answers,
+      questions: input.questions,
+      photos: [...new Set(order.photos.filter((p) => typeof p === 'string' && p.trim()))],
+      letterNotes: order.letterNotes,
+      content: input.minigames,
+      stopCount: stops.length,
+      riddleSlots: stops.map((s) => s.riddle.parts.flatMap((p) => (p.t === 'slot' ? [p.slot] : []))),
+      seed: input.seed ?? game.builtAt,
+    })
   return { game: attachPhotos(game, order.photos), flags }
 }
 
@@ -321,9 +338,14 @@ export const MAX_GAME_PHOTOS = 5
  */
 export function attachPhotos(game: GameSnapshot, photos: string[]): GameSnapshot {
   const list = [...new Set(photos.filter((p) => typeof p === 'string' && p.trim()))].slice(0, MAX_GAME_PHOTOS)
+  // The photo game asks about the first photo: it follows the list, and goes when there is none.
+  const minigames = game.minigames
+    ?.filter((g) => g.type !== 'photo' || list.length > 0)
+    .map((g) => (g.type === 'photo' ? { ...g, photo: list[0] } : g))
   return {
     ...game,
     stops: game.stops.map((s, i) => ({ ...s, photo: s.finale ? null : (list[i] ?? null) })),
     letter: { ...game.letter, photos: list },
+    ...(minigames ? { minigames } : {}),
   }
 }

@@ -5,10 +5,11 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
 import { useWide } from '../../shared/useWide.ts'
 import { riddleTitle } from '../copy.ts'
-import { Arrow, BrushButton, HandCircle, Paper, SketchButton, Tick, Trail } from '../draw.tsx'
+import { Arrow, BrushButton, HandCircle, Paper, SketchButton } from '../draw.tsx'
 import { splitQuestion, stopIcon } from '../logic.ts'
 import { TapedPhoto, useLightbox } from '../photo.tsx'
 import { GameSide } from './GameSide.tsx'
+import { StageTrail } from './Stages.tsx'
 import type { ScreenProps } from './types.ts'
 import { useBusy } from './useBusy.ts'
 
@@ -79,26 +80,7 @@ export function Riddle({ view, t, act }: ScreenProps) {
 
   return (
     <main className="scr riddle">
-      <header className="trail">
-        <Trail />
-        <ol
-          className="trail-stops"
-          aria-label={t('riddle.stopOf', { n: cur.index + 1, total: view.totalStops })}
-        >
-          {Array.from({ length: view.totalStops }, (_, i) => (
-            <li
-              // biome-ignore lint/suspicious/noArrayIndexKey: stops are positional
-              key={i}
-              className={i < cur.index ? 'done' : i === cur.index ? 'now' : 'later'}
-              aria-current={i === cur.index ? 'step' : undefined}
-            >
-              <img className={i === cur.index ? 'bob' : ''} src={stopIcon(i)} alt="" />
-              {i < cur.index && <Tick />}
-            </li>
-          ))}
-        </ol>
-        <div className="trail-label">{t('riddle.stopOf', { n: cur.index + 1, total: view.totalStops })}</div>
-      </header>
+      <StageTrail view={view} t={t} />
 
       {/* Wide screens: the riddle and the answer in one column, the map and route beside them. */}
       <div className="riddle-main">

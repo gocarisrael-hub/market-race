@@ -68,11 +68,16 @@ export async function fetchGame(token: string, captain: string | null = null): P
   }
 }
 
-export async function sendAction(token: string, action: PlayAction): Promise<Loaded> {
+/** One play action. The captain's phone sends its token too (skipping a mini-game needs it). */
+export async function sendAction(
+  token: string,
+  action: PlayAction,
+  captain: string | null = null,
+): Promise<Loaded> {
   try {
     const res = await fetch(`/api/game/${encodeURIComponent(token)}/action`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      headers: { 'content-type': 'application/json', accept: 'application/json', ...captainHeaders(captain) },
       body: JSON.stringify(action),
     })
     return await parse(res)

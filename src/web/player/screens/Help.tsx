@@ -11,9 +11,9 @@ import { useBusy } from './useBusy.ts'
 
 type Mode = 'menu' | 'confirm' | 'noBackup' | 'pause'
 
-/** The pause is offered on the captain's phone while a stop is being played. */
+/** The pause is offered on the captain's phone while a stop or a mini-game is being played. */
 export const canPause = (view: ScreenProps['view'], captain: boolean) =>
-  captain && view.status === 'active' && ['riddle', 'revealed', 'redeem'].includes(view.step)
+  captain && view.status === 'active' && ['riddle', 'revealed', 'redeem', 'minigame'].includes(view.step)
 
 export function Help({
   view,

@@ -29,7 +29,7 @@ import { israelDate } from '../domain/dates.ts'
 import { paletteIssues } from '../domain/look.ts'
 import { matchAnswer } from '../domain/matcher.ts'
 import { formsOfRecipients } from '../domain/recipient.ts'
-import { extractSlots, fallbackFor, fillTemplate } from '../domain/template.ts'
+import { extractSlots, fallbackFor, fillTemplate, nameSlots, templateLines } from '../domain/template.ts'
 import {
   ALLERGENS,
   DECORS,
@@ -540,13 +540,20 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
           if (!qs) return invalid(reply, [{ path: 'questionSetId', message: 'question set not found' }])
           questions = qs.questions
         }
-        const answers =
-          body.answers ??
-          Object.fromEntries(questions.map((q) => [q.slot, fallbackFor(q, body.form) || `[${q.slot}]`]))
+        // Sample answers: each question's fallback, and a placeholder for the name slots.
+        const keep = [...nameSlots(body.form), 'company_name']
+        const answers = body.answers ?? {
+          ...Object.fromEntries(keep.map((k) => [k, `[${k}]`])),
+          ...Object.fromEntries(questions.map((q) => [q.slot, fallbackFor(q, body.form) || `[${q.slot}]`])),
+        }
         const slots = extractSlots(body.template)
         const known = new Set(questions.map((q) => q.slot))
+        // The same riddle when the buyer answered nothing: personal lines fall back or are skipped.
+        const bareAnswers = Object.fromEntries(keep.map((k) => [k, answers[k] || `[${k}]`]))
         return {
           ...fillTemplate(body.template, answers, questions, body.form),
+          bare: fillTemplate(body.template, bareAnswers, questions, body.form).parts,
+          lines: templateLines(body.template),
           slots,
           unknownSlots: body.questionSetId ? slots.filter((s) => !known.has(s)) : [],
           answers,
