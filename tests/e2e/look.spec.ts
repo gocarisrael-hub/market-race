@@ -26,7 +26,7 @@ const cssVar = (page: Page, name: string) =>
 
 test('step 1 recolors the map preview live, in three palettes', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('radio', { name: 'יום הולדת לחבר/ה' }).click()
+  await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   // The occasion's doodles and a playful line appear once it is picked.
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
   await expect(page.locator('.doodles [data-doodle="balloons"]')).toHaveCount(1)
@@ -66,9 +66,9 @@ test('step 1 recolors the map preview live, in three palettes', async ({ page })
 
 test('the occasion and palette picked on the site open the game in that look', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('radio', { name: 'יום הולדת לחבר/ה' }).click()
+  await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   await page.getByRole('radio', { name: 'כחול ים' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות', exact: true }).click()
+  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
 
   // Steps 2 to 4 keep the drawn trail and the occasion's doodles.
   await expect(page.getByRole('navigation', { name: 'שלב 2 מתוך 4' })).toBeVisible()

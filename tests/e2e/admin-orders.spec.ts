@@ -66,7 +66,7 @@ test('owner builds a family test game (group form) and plays its first riddle', 
   await nav(page, 'משחק בדיקה')
   const form = page.locator('form.editor')
   await form.getByRole('combobox', { name: /^אירוע/ }).selectOption({ label: 'משפחתי' })
-  await expect(form.getByRole('combobox', { name: /^צורת פנייה/ })).toHaveValue('group')
+  await expect(form.getByRole('combobox', { name: /^למי המשחק/ })).toHaveValue('family')
   await form.getByRole('combobox', { name: /^עיצוב/ }).selectOption({ label: 'כרמל בצבעי מים' })
   await expect(form.getByRole('combobox', { name: /^מסלול/ })).not.toHaveValue('')
   await form.getByLabel('שם הקבוצה / המשפחה').fill(FAMILY)
