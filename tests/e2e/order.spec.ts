@@ -275,7 +275,7 @@ test('the diet stage shows what is tasted on the way and follows the allergens',
   await expect(stops.nth(1)).toContainText('אין כרגע טעימה מתאימה בתחנה הזו; ניצור קשר')
   await expect(stops.nth(3)).toHaveAttribute('data-status', 'swapped')
   await expect(stops.last()).toContainText('משהו קר ומתוק לסיום')
-  await expect(stops.last()).toContainText('מוחלף בטעימה מתאימה')
+  await expect(stops.last()).not.toContainText('מוחלף')
   await expect(list.getByRole('alert')).toBeVisible()
   await shot(page, 'build-07b-diet')
 
