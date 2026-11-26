@@ -99,9 +99,6 @@ export function OccasionStage({ shop, d, set }: StageProps) {
         </p>
       )}
       <div className="stage-links">
-        <Sketch href="/companies" icon="briefcase" small>
-          {copy.home.companies}
-        </Sketch>
         <Sketch href="/lost-link" icon="magnifier" small>
           {copy.lostLink.entry}
         </Sketch>

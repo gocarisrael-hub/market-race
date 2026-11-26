@@ -2020,27 +2020,322 @@ ol.howto.drawn li {
 }
 
 /* ---------- Landing page (/) ---------- */
+/* Phones: the title, then the route map, then the description with the one call to action. */
 .l-hero {
+  display: grid;
+  grid-template-areas: "head" "map" "body";
   margin-top: 64px;
+}
+.l-hero-head {
+  grid-area: head;
+}
+.l-hero-map {
+  grid-area: map;
+  position: relative;
+  margin: 18px -6px 0;
+}
+.l-hero-map > .doodles {
+  z-index: 3;
+}
+.l-hero-body {
+  grid-area: body;
 }
 .l-hero .eyebrow {
   margin: 0 0 6px;
 }
-.l-hero-map {
+.l-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  margin-top: 18px;
+}
+.l-cta .brush.inline {
+  min-width: 250px;
+}
+.l-price {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.l-footer {
+  margin-top: 44px;
+  padding-top: 14px;
+  border-top: 1.5px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+.l-footer-link {
+  color: var(--muted);
+  text-underline-offset: 3px;
+}
+
+/* The route teaser (RouteTeaser.tsx): the map blurred, the route and the food crisp on top. */
+.rt {
+  margin: 0;
+}
+.rt-paper {
   position: relative;
-  margin: 26px 0 0;
-  transform: rotate(-1.5deg);
-}
-.l-hero-map img {
-  display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  transform: rotate(-1.2deg);
+  clip-path: polygon(
+    1% 2%,
+    22% 0,
+    47% 1.5%,
+    74% 0,
+    99% 1%,
+    100% 30%,
+    98.6% 62%,
+    100% 98%,
+    76% 100%,
+    50% 98.5%,
+    24% 100%,
+    0 99%,
+    1.4% 66%,
+    0 34%
+  );
+  background: var(--paper);
+}
+.rt-map {
+  position: absolute;
+  inset: -4%;
+  width: 108%;
+  height: 108%;
   object-fit: cover;
-  clip-path: polygon(2% 3%, 30% 0, 64% 2%, 98% 0, 100% 40%, 98% 97%, 64% 100%, 30% 98%, 0 100%, 1% 50%);
+  object-position: 50% 52%;
+  filter: blur(2.6px) saturate(0.85);
 }
-.l-hero-map .doodles {
-  z-index: 2;
+/* A paper wash over the map: the stalls fade, the route reads. */
+.rt-fog {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in srgb, var(--paper) 18%, transparent),
+    color-mix(in srgb, var(--paper) 58%, transparent) 100%
+  );
 }
+.rt-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.rt-route path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rt-glow,
+.rt-line {
+  vector-effect: non-scaling-stroke;
+}
+.rt-glow {
+  stroke: var(--paper);
+  stroke-width: 11;
+  opacity: 0.85;
+}
+.rt-line {
+  stroke: var(--accent);
+  stroke-width: 3.2;
+  stroke-dasharray: 0.014 0.011;
+}
+.rt-reveal {
+  stroke: #fff;
+  stroke-width: 12;
+  stroke-dasharray: 1 1;
+  animation: rt-draw 1.8s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes rt-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.rt-stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rt-stop {
+  position: absolute;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  animation: rt-pop 0.45s var(--d, 0.5s) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.rt-stop.open {
+  z-index: 3;
+}
+@keyframes rt-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+.rt-stop button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+.rt-food {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 0.5px var(--ink)) drop-shadow(0 0 3px var(--paper))
+    drop-shadow(0 0 3px var(--paper));
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.rt-stop.open .rt-food {
+  transform: scale(1.14) rotate(-6deg);
+}
+.rt-no {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 2px solid var(--ink);
+  border-radius: 52% 48% 55% 45% / 48% 55% 45% 52%;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+}
+.rt-stop.finale .rt-no {
+  background: var(--ink);
+}
+/* The first stop breathes until someone opens a stop. */
+.rt-stop.cue .rt-no {
+  animation: rt-cue 1.6s 2.4s ease-in-out infinite;
+}
+@keyframes rt-cue {
+  50% {
+    transform: scale(1.22);
+  }
+}
+/* The stop's details: blurred handwriting until opened, then the teaser on a torn label. */
+.rt-tag {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  display: block;
+  max-width: 168px;
+  padding: 3px 8px;
+  transform: translateX(var(--tx, -50%)) rotate(-1.5deg);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  clip-path: polygon(0 6%, 30% 0, 62% 5%, 100% 0, 98% 52%, 100% 100%, 64% 95%, 30% 100%, 2% 96%, 0 50%);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.rt-stop.up .rt-tag {
+  top: auto;
+  bottom: 30px;
+}
+.rt-scribble {
+  display: block;
+  height: 12px;
+  filter: blur(1.6px);
+}
+.rt-scribble path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+.rt-teaser {
+  display: block;
+  width: max-content;
+  max-width: 152px;
+  padding: 2px 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: normal;
+  color: var(--ink);
+  animation: rt-unblur 0.35s ease-out both;
+}
+.rt-teaser strong {
+  color: var(--accent);
+}
+@keyframes rt-unblur {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+  }
+}
+.rt-stop.open .rt-tag {
+  padding: 6px 10px;
+  background: var(--paper);
+  box-shadow: none;
+}
+.rt-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-top: 8px;
+  padding-inline: 6px;
+}
+.rt-note {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 2px;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+.rt-note svg {
+  flex: none;
+  transform: scaleX(-1) rotate(-30deg) translateY(-6px);
+}
+.rt-note em {
+  font-style: normal;
+  color: var(--accent);
+}
+.rt-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-reveal,
+  .rt-stop,
+  .rt-stop.cue .rt-no,
+  .rt-teaser {
+    animation: none;
+  }
+  .rt-food {
+    transition: none;
+  }
+}
+
 /* How it works, as one compact strip: four small illustrations with a word or two each. */
 .l-strip {
   display: grid;
@@ -2133,70 +2428,6 @@ ol.howto.drawn li {
   }
 }
 
-/* The choice: two large drawn cards, one per product. */
-.l-choice {
-  margin-top: 38px;
-}
-.l-choice > h2 {
-  margin: 0;
-}
-.l-products {
-  display: grid;
-  gap: 30px;
-  margin-top: 22px;
-}
-.l-product {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 30px 24px 26px;
-}
-.l-product:nth-child(odd) {
-  transform: rotate(-0.8deg);
-}
-.l-product:nth-child(even) {
-  transform: rotate(0.8deg);
-}
-.l-product-paper {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-}
-.l-product-paper path {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 1.8;
-}
-.l-product .doodles {
-  z-index: 1;
-}
-.l-product h3 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 40px;
-  line-height: 1;
-}
-.l-product-text {
-  margin: 10px 0 0;
-  font-size: 16px;
-  line-height: 1.5;
-}
-.l-product-price {
-  margin: 10px 0 0;
-  font-family: var(--display);
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--accent);
-}
-.l-product .brush.inline {
-  width: min(100%, 300px);
-  margin-top: auto;
-  padding-top: 18px;
-  align-self: stretch;
-}
 .l-faq {
   margin-top: 40px;
 }
@@ -2253,9 +2484,6 @@ ol.howto.drawn li {
   .l-strip {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .l-products {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 /* Computers: real multi-column layouts with scaled illustrations. */
@@ -2274,13 +2502,50 @@ ol.howto.drawn li {
     padding: 48px clamp(48px, 5vw, 96px) 64px;
   }
   .l-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: center;
-    column-gap: clamp(40px, 5vw, 96px);
+    grid-template-areas: "head map" "body map";
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(40px, 5vw, 88px);
+    margin-top: 40px;
+  }
+  .l-hero-head {
+    align-self: end;
   }
   .l-hero-map {
     margin: 0;
+  }
+  .l-hero .title {
+    font-size: clamp(64px, 5.6vw, 92px);
+  }
+  .l-cta {
+    margin-top: 28px;
+  }
+  .rt-stop button {
+    width: 76px;
+    height: 76px;
+  }
+  .rt-food {
+    width: 70px;
+    height: 70px;
+  }
+  .rt-no {
+    width: 30px;
+    height: 30px;
+    font-size: 23px;
+  }
+  .rt-tag {
+    top: 40px;
+    max-width: 230px;
+  }
+  .rt-stop.up .rt-tag {
+    bottom: 40px;
+  }
+  .rt-teaser {
+    max-width: 200px;
+    font-size: 15px;
+  }
+  .rt-note {
+    font-size: 26px;
   }
   .l-hero .lead,
   .t-head .lead {
@@ -2302,18 +2567,6 @@ ol.howto.drawn li {
   }
   .fold-head button {
     font-size: clamp(36px, 3vw, 44px);
-  }
-  .l-products {
-    column-gap: clamp(40px, 5vw, 80px);
-  }
-  .l-product {
-    padding: 44px clamp(32px, 3.5vw, 56px) 36px;
-  }
-  .l-product h3 {
-    font-size: clamp(44px, 3.6vw, 56px);
-  }
-  .l-product-text {
-    font-size: 18px;
   }
   .l-faq dl {
     display: grid;

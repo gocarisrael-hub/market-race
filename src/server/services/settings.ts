@@ -11,6 +11,9 @@ export interface SettingsShape {
   prices: Record<string, { base: number; perPerson: number }>
   min_people: number
   max_people: number
+  // The group size the companies site quotes for team events (a lead may ask for any size).
+  company_min_people: number
+  company_max_people: number
   valid_years: number
   // How long a game takes, as the landing page's FAQ says it ("כשעתיים"). Empty: the FAQ speaks of
   // the number of stops instead.
@@ -56,6 +59,8 @@ export const SETTING_DEFAULTS: SettingsShape = {
   prices: {},
   min_people: 1,
   max_people: 20,
+  company_min_people: 10,
+  company_max_people: 120,
   valid_years: 1,
   game_duration: '',
   hint_after_seconds: 0,

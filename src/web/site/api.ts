@@ -42,6 +42,8 @@ export type Shop = {
   prices: Record<string, { base: number; perPerson: number }>
   minPeople: number
   maxPeople: number
+  /** The companies site's group size range. Missing from older servers. */
+  companyPeople?: { min: number; max: number }
   validYears: number
   /** How long a game takes, in the owner's words; empty when not set. */
   gameDuration: string

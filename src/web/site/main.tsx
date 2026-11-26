@@ -5,6 +5,7 @@ import '../shared/decor.css'
 import '../shared/desk.css'
 import './site.css'
 import './build/build.css'
+import './companies.css'
 import { DecorDefs } from '../shared/decor.tsx'
 import { Desk } from '../shared/desk.tsx'
 import { getShop, type Shop } from './api.ts'
@@ -19,6 +20,7 @@ import {
   orderableThemes,
   parseRoute,
   saveDraft,
+  siteOf,
 } from './logic.ts'
 import { Checkout } from './pages/Checkout.tsx'
 import { Companies } from './pages/Companies.tsx'
@@ -33,9 +35,12 @@ import { Tastings } from './pages/Tastings.tsx'
 import { useLocation } from './router.ts'
 import { Failed, Loading, Sketch } from './ui.tsx'
 
+// Which site this is (private, or companies on a COMPANY_HOSTS domain), as the server marked it.
+const site = siteOf(document.documentElement)
+
 function App() {
   const loc = useLocation()
-  const route = parseRoute(loc.path)
+  const route = parseRoute(loc.path, site.kind)
   const [shop, setShop] = useState<Shop | null>(null)
   const [shopError, setShopError] = useState(false)
   const [draft, setDraftState] = useState<Draft | null>(null)
@@ -119,8 +124,8 @@ function App() {
       page = <Build shop={shop} draft={draft} setDraft={setDraft} stage={route.stage} part={route.part} />
       break
     case 'companies':
-      page = <Companies shop={shop} />
-      break
+      // The companies site has its own layout: no desk, no private site look.
+      return <Companies shop={shop} site={site} />
   }
   // The desk behind the page on wide screens: the chosen map and the occasion's doodles.
   const themes = orderableThemes(shop)
