@@ -143,11 +143,13 @@ export function IconTreatDefs() {
           result="strength"
         />
         <feComposite in="strength" in2="SourceAlpha" operator="in" result="mask" />
-        <feComponentTransfer in="vivid" result="lit">
-          <feFuncR type="linear" slope="1.25" intercept="0.12" />
-          <feFuncG type="linear" slope="1.25" intercept="0.16" />
-          <feFuncB type="linear" slope="1.25" intercept="0.2" />
-        </feComponentTransfer>
+        {/* lit = vivid × 1.1 + cyan × (1 − luminance): ink lines turn cyan, colors stay bright. */}
+        <feColorMatrix
+          in="vivid"
+          type="matrix"
+          values="0.998 -0.2 -0.039 0 0.34  -0.281 0.548 -0.107 0 0.94  -0.299 -0.587 0.986 0 1  0 0 0 1 0"
+          result="lit"
+        />
         <feComposite in="lit" in2="mask" operator="in" result="lines" />
         <feGaussianBlur in="lines" stdDeviation="2.5" result="glow" />
         <feMerge>
