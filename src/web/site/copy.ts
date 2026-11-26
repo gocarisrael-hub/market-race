@@ -21,8 +21,67 @@ export const copy = {
   peopleCount,
   back: '→ חזרה',
   stepOf: (n: number, total: number) => `שלב ${n} מתוך ${total}`,
-  /** The drawn progress trail of the order flow, one word per step. */
-  trail: ['חוגגים', 'מספרים', 'תמונות', 'שולחים'],
+  /** The order as a guided build: one short stage per screen (see stages.ts). */
+  build: {
+    /** Each stage's name, for the progress map (screen readers) and the stage counter. */
+    names: {
+      occasion: 'המשחק',
+      for: 'למי',
+      name: 'השם',
+      look: 'המפה והצבע',
+      questions: 'השאלות',
+      photos: 'התמונות',
+      notes: 'המכתב',
+      hints: 'שאלות לרמזים',
+      people: 'כמה אתם',
+      diet: 'מה לא אוכלים',
+      details: 'הפרטים שלכם',
+      pay: 'סיכום ותשלום',
+    } as Record<string, string>,
+    count: (n: number, total: number) => `שלב ${n} מתוך ${total}`,
+    progress: (n: number, total: number, name: string) => `בונים את המשחק: שלב ${n} מתוך ${total}, ${name}`,
+    /** A short encouraging line above each stage's question. */
+    cheer: {
+      occasion: (market: string) => `מירוץ טעימות ${market ? `ב${market}` : 'בשוק'}`,
+      for: 'יופי, מתחילים לבנות.',
+      name: 'עכשיו השם. הוא יופיע על הסרט בפתיחה.',
+      look: 'יופי, עכשיו צובעים את המפה.',
+      questions: (form: SiteForm | null) =>
+        `יופי, עכשיו קצת ${byForm(form, 'עליה', 'עליו', 'עליהם', 'עליכם')}.`,
+      questionsMore: 'עוד כמה, וזהו. מזה נכתבות החידות.',
+      photos: 'יופי, עכשיו התמונות…',
+      notes: 'כמעט במכתב שבסוף.',
+      hints: 'רוצים להקשות עליהם קצת?',
+      people: 'המשחק כמעט בנוי. מי בא לשוק?',
+      diet: 'דואגים שכולם יטעמו.',
+      details: 'כמעט סיימנו.',
+      pay: 'הכול מוכן.',
+    },
+    title: {
+      occasion: 'איזה משחק בונים?',
+      for: 'למי המשחק?',
+      look: 'איך זה ייראה?',
+      details: 'לאן לשלוח את המשחק?',
+      pay: 'המשחק שלכם מוכן לבנייה',
+    },
+    questionsPart: (n: number, total: number) => `חלק ${n} מתוך ${total}`,
+    detailsLead: 'הקישור והאישור יגיעו למייל ולוואטסאפ.',
+    payLead: 'עוברים רגע על הכול, ומשלמים. הקישור למשחק יגיע אליכם במייל.',
+    /** The main button of a stage. */
+    next: 'ממשיכים',
+    skip: 'בינתיים בלי, ממשיכים',
+    toPhotos: 'ממשיכים לתמונות',
+    toSummary: 'לסיכום',
+    back: 'חזרה',
+    backLabel: 'חזרה לשלב הקודם',
+    /** The ribbon on the progress map, with the honoree's name once it is written. */
+    ribbon: (name: string) => `המירוץ של ${name}`,
+    ribbonEmpty: 'המירוץ של ...',
+    mapAlt: (name: string) => `המפה שנבנית: ${name}`,
+    photoAlt: (n: number) => `תמונה ${n} על המפה`,
+    photosCount: (n: number) => (n === 1 ? 'תמונה אחת' : `${n} תמונות`),
+    editDetails: 'לשנות פרטים',
+  },
   /** A playful line once an occasion is picked, by its doodle set. */
   cheer: {
     birthday: 'יאללה, נרות ועוגה! את השיר תשירו בשוק.',
@@ -77,8 +136,6 @@ export const copy = {
     dietLabels: { vegan: 'טבעוני', vegetarian: 'צמחוני', gluten_free: 'ללא גלוטן' } as Record<string, string>,
     total: 'סה״כ',
     perPerson: (p: string) => `${p} לאדם`,
-    next: (form: SiteForm | null) =>
-      form ? `ממשיכים לשאלות ${byForm(form, 'עליה', 'עליו', 'עליהם', 'עליכם')}` : 'ממשיכים לשאלות',
     pickOccasion: 'בחרו איזה משחק',
     pickTheme: 'בחרו איך זה ייראה',
     pickPalette: 'בחרו צבע',
@@ -108,8 +165,6 @@ export const copy = {
     noteSignature: 'חתימה',
     addNote: '+ עוד משפט',
     removeNote: 'הסרה',
-    next: 'ממשיכים לתמונות',
-    saving: 'שומרים...',
     missingName: (form: SiteForm | null) =>
       form
         ? byForm(
@@ -183,6 +238,7 @@ export const copy = {
     theme: 'עיצוב',
     palette: 'צבעים',
     allergens: 'בלי',
+    photos: 'תמונות',
     answersLater: 'השאלות: ימולאו אחרי התשלום',
     total: 'לתשלום',
     pay: (amount: string) => `לתשלום ${amount}`,

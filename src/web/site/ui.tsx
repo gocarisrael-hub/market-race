@@ -105,37 +105,6 @@ export function Tick({ className = 'tick' }: { className?: string }) {
   )
 }
 
-/**
- * The drawn progress trail of the order flow (like the riddle trail of the game): a dashed walk
- * from step to step, done steps ticked, the current one circled. The text stays for screen readers.
- */
-export function StepTrail({ step, total }: { step: number; total: number }) {
-  const labels = copy.trail
-  return (
-    <nav className="step-trail" aria-label={copy.stepOf(step, total)}>
-      <svg className="step-path" viewBox="0 0 400 64" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M384 26 C 340 6, 312 50, 268 30 S 190 6, 150 34 S 70 52, 16 28" />
-      </svg>
-      <ol>
-        {Array.from({ length: total }, (_, i) => {
-          const n = i + 1
-          const state = n < step ? 'done' : n === step ? 'now' : 'later'
-          return (
-            <li key={n} className={state} aria-current={state === 'now' ? 'step' : undefined}>
-              <span className="dot">
-                {state === 'done' ? <Tick className="dot-tick" /> : n}
-                {state === 'now' && <Ring />}
-              </span>
-              <span className="word">{labels[i] ?? ''}</span>
-            </li>
-          )
-        })}
-      </ol>
-      <span className="eyebrow sr-only">{copy.stepOf(step, total)}</span>
-    </nav>
-  )
-}
-
 // A torn-off note for a question: ragged top and bottom edges.
 const SCRAP =
   'M4 18 L 22 8 L 41 16 L 63 6 L 84 14 L 106 5 L 127 13 L 150 4 L 171 12 L 193 6 L 214 15 L 236 5 L 257 13 L 278 7 L 296 14 L 293 150 L 297 284 L 279 292 L 258 284 L 236 295 L 215 286 L 193 294 L 172 285 L 150 296 L 128 287 L 106 294 L 85 285 L 63 295 L 42 286 L 21 293 L 3 285 L 6 150 Z'

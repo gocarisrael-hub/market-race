@@ -1,6 +1,7 @@
 // Palettes and occasion doodles: chosen on the site, carried into the game. Saves screenshots for
 // the owner in docs/screens/look.
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test'
+import { answerQuestions, next, photosToPay, progress } from '../helpers/order.ts'
 
 test.use({ viewport: { width: 390, height: 844 } })
 
@@ -24,20 +25,26 @@ async function carmelWatercolor(request: APIRequestContext) {
 const cssVar = (page: Page, name: string) =>
   page.evaluate((n) => document.documentElement.style.getPropertyValue(n), name)
 
-test('step 1 recolors the map preview live, in three palettes', async ({ page }) => {
+test('the look stage recolors the map live, in three palettes', async ({ page }) => {
   await page.goto('/order')
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
   // The occasion's doodles and a playful line appear once it is picked.
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
   await expect(page.locator('main .doodles [data-doodle="balloons"]')).toHaveCount(1)
   await expect(page.getByText('יאללה, נרות ועוגה!')).toBeVisible()
+  await next(page, /\/order\/for$/)
+  await next(page, /\/order\/name$/)
+  await page.getByLabel(/איך קוראים לה/).fill('שירה')
+  await next(page, /\/order\/look$/)
 
   const daubs = page.getByRole('radiogroup', { name: 'ובאיזה צבע?' })
   // The map's first palette is chosen by default.
   await expect(daubs.getByRole('radio', { name: 'אדום קלאסי' })).toHaveAttribute('aria-checked', 'true')
   const preview = page.getByTestId('look-preview')
+  const map = page.getByTestId('build-map')
   await expect(preview).toHaveAttribute('data-bg', '#EADBC8')
-  await page.screenshot({ path: `${SHOTS}/site-1-home.png`, fullPage: true, animations: 'disabled' })
+  await expect(map).toHaveAttribute('data-painted', 'true')
+  await page.screenshot({ path: `${SHOTS}/site-1-look.png`, fullPage: true, animations: 'disabled' })
 
   for (const [i, name, bg] of [
     [1, 'כחול ים', '#DCE6EA'],
@@ -49,9 +56,12 @@ test('step 1 recolors the map preview live, in three palettes', async ({ page })
     await expect(preview).toHaveAttribute('data-bg', bg)
     await expect(preview.locator('.map-tint')).toHaveCount(1)
     await expect(page.locator('.theme[aria-pressed="true"] .map-tint')).toHaveCount(1)
-    // The map choice down to the preview, in page coordinates.
+    // The map being built takes the same colors.
+    await expect(map).toHaveAttribute('style', new RegExp(`--bm-bg: ${bg}`, 'i'))
+    await expect(map.locator('.map-tint')).toHaveCount(1)
+    // From the progress map down to the preview, in page coordinates.
     const clip = await page.evaluate(() => {
-      const top = document.getElementById('l-theme')!.getBoundingClientRect().top
+      const top = document.querySelector('[data-testid="build-map"]')!.getBoundingClientRect().top
       const end = document.querySelector('[data-testid="look-preview"]')!.getBoundingClientRect().bottom
       return { x: 0, y: top + window.scrollY - 16, width: 390, height: end - top + 40 }
     })
@@ -67,24 +77,22 @@ test('step 1 recolors the map preview live, in three palettes', async ({ page })
 test('the occasion and palette picked on the site open the game in that look', async ({ page }) => {
   await page.goto('/order')
   await page.getByRole('radio', { name: 'יום הולדת', exact: true }).click()
-  await page.getByRole('radio', { name: 'כחול ים' }).click()
-  await page.getByRole('button', { name: 'ממשיכים לשאלות עליה' }).click()
-
-  // Steps 2 to 4 keep the drawn trail and the occasion's doodles.
-  await expect(page.getByRole('navigation', { name: 'שלב 2 מתוך 4' })).toBeVisible()
+  await next(page, /\/order\/for$/)
+  await next(page, /\/order\/name$/)
+  // Every stage keeps the progress map and the occasion's doodles.
+  await expect(progress(page)).toHaveAttribute('aria-valuenow', '3')
   await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
   await page.getByRole('radiogroup', { name: 'המשחק' }).getByRole('radio', { name: 'עליה' }).click()
   await page.getByLabel(/איך קוראים לה/).fill('שירה')
+  await next(page, /\/order\/look$/)
+  await page.getByRole('radio', { name: 'כחול ים' }).click()
+  await next(page, /\/order\/questions$/)
   await page.screenshot({ path: `${SHOTS}/site-2-questions.png`, fullPage: true, animations: 'disabled' })
-  await page.getByRole('button', { name: 'ממשיכים לתמונות' }).click()
-  await page.waitForURL(/\/photos$/)
-  await page.getByRole('link', { name: 'לתשלום' }).click()
-  await expect(page.getByRole('navigation', { name: 'שלב 4 מתוך 4' })).toBeVisible()
+  await answerQuestions(page, {})
+  await photosToPay(page)
+  await expect(page.locator('main.page')).toHaveAttribute('data-decor', 'birthday')
   await expect(page.getByText('כחול ים')).toBeVisible()
-  await page.getByLabel('השם שלכם').fill('נועה')
-  await page.getByLabel('טלפון').fill('050-1234567')
-  await page.getByLabel('אימייל').fill('noa@example.com')
-  await page.screenshot({ path: `${SHOTS}/site-4-checkout.png`, fullPage: true, animations: 'disabled' })
+  await page.screenshot({ path: `${SHOTS}/site-4-pay.png`, fullPage: true, animations: 'disabled' })
   await page.getByRole('button', { name: /^לתשלום/ }).click()
   await page.frameLocator('iframe').getByRole('button', { name: 'לשלם (לדוגמה)' }).click()
 

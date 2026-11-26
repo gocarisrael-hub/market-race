@@ -4,9 +4,11 @@ import '../shared/fonts.css'
 import '../shared/decor.css'
 import '../shared/desk.css'
 import './site.css'
+import './build/build.css'
 import { DecorDefs } from '../shared/decor.tsx'
 import { Desk } from '../shared/desk.tsx'
 import { getShop, type Shop } from './api.ts'
+import { Build } from './build/Build.tsx'
 import { copy } from './copy.ts'
 import {
   chooseTheme,
@@ -21,14 +23,12 @@ import {
 import { Checkout } from './pages/Checkout.tsx'
 import { Companies } from './pages/Companies.tsx'
 import { CompanyPay } from './pages/CompanyPay.tsx'
-import { Home } from './pages/Home.tsx'
 import { Landing } from './pages/Landing.tsx'
 import { LostLink } from './pages/LostLink.tsx'
 import { Manage } from './pages/Manage.tsx'
 import { PayDone } from './pages/PayDone.tsx'
 import { PayMock } from './pages/PayMock.tsx'
 import { Photos } from './pages/Photos.tsx'
-import { Questions } from './pages/Questions.tsx'
 import { Tastings } from './pages/Tastings.tsx'
 import { useLocation } from './router.ts'
 import { Failed, Loading, Sketch } from './ui.tsx'
@@ -104,17 +104,19 @@ function App() {
     case 'tastings':
       page = <Tastings shop={shop} />
       break
-    case 'home':
-      page = <Home shop={shop} draft={draft} setDraft={setDraft} />
-      break
-    case 'questions':
-      page = <Questions shop={shop} draft={draft} setDraft={setDraft} />
-      break
-    case 'photos':
-      page = <Photos token={route.token} shop={shop} draft={draft} />
-      break
-    case 'checkout':
-      page = <Checkout token={route.token} shop={shop} draft={draft} setDraft={setDraft} />
+    case 'build':
+      // An order opened without this device's draft (from the manage page, or another device) gets
+      // the plain photos and payment pages; the buyer's own order continues the build.
+      if (route.token && route.token !== draft.manageToken) {
+        page =
+          route.stage === 'photos' ? (
+            <Photos token={route.token} shop={shop} />
+          ) : (
+            <Checkout token={route.token} shop={shop} />
+          )
+        break
+      }
+      page = <Build shop={shop} draft={draft} setDraft={setDraft} stage={route.stage} part={route.part} />
       break
     case 'companies':
       page = <Companies shop={shop} />
