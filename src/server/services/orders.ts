@@ -16,7 +16,16 @@ import {
 import { buildGame, defaultAnswers } from '../domain/builder.ts'
 import { addYears, israelDate } from '../domain/dates.ts'
 import { checkAnswers } from '../domain/oddcheck.ts'
-import type { Form, LetterNote, OrderFlag, OrderStatus, Palette, Question } from '../domain/types.ts'
+import type {
+  Form,
+  LetterNote,
+  OrderFlag,
+  OrderStatus,
+  Palette,
+  Question,
+  Recipient,
+} from '../domain/types.ts'
+import { orderRecipient, questionSetIdFor } from '../domain/recipient.ts'
 import { randomToken } from '../lib/tokens.ts'
 import { getSetting } from './settings.ts'
 
@@ -27,6 +36,7 @@ export interface NewOrder {
   status: OrderStatus
   occasionKey: string
   form: Form
+  recipient?: Recipient | null
   honoreeName?: string
   themeId: number
   paletteId?: number | null
@@ -78,11 +88,30 @@ export async function getOrder(db: DB, id: number): Promise<Order | undefined> {
   return row
 }
 
-export async function questionsForOccasion(db: DB, occasionKey: string): Promise<Question[]> {
+/**
+ * The questions of an occasion for a recipient: the recipient's question set on the occasion, else
+ * the occasion's own set (company games, or a recipient the occasion does not offer).
+ */
+export async function questionsForOccasion(
+  db: DB,
+  occasionKey: string,
+  recipient?: Recipient | null,
+): Promise<Question[]> {
   const [occ] = await db.select().from(occasions).where(eq(occasions.key, occasionKey))
-  if (!occ?.questionSetId) return []
-  const [qs] = await db.select().from(questionSets).where(eq(questionSets.id, occ.questionSetId))
+  if (!occ) return []
+  const setId = questionSetIdFor(occ, recipient)
+  if (!setId) return []
+  const [qs] = await db.select().from(questionSets).where(eq(questionSets.id, setId))
   return qs?.questions ?? []
+}
+
+/** The questions of an order: its occasion and recipient (old orders: mapped from the form). */
+export async function questionsForOrder(
+  db: DB,
+  order: { occasionKey: string; recipient?: string | null; form: Form; kind?: string },
+): Promise<Question[]> {
+  const [occ] = await db.select().from(occasions).where(eq(occasions.key, order.occasionKey))
+  return questionsForOccasion(db, order.occasionKey, orderRecipient(order, occ))
 }
 
 export class BuildError extends Error {}
@@ -108,8 +137,9 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
         db.select().from(riddles).where(inArray(riddles.stallId, stallIds)),
       ])
     : [[], []]
-  const questions = await questionsForOccasion(db, order.occasionKey)
   const [occasion] = await db.select().from(occasions).where(eq(occasions.key, order.occasionKey))
+  const recipient = orderRecipient(order, occasion)
+  const questions = await questionsForOccasion(db, order.occasionKey, recipient)
   // The chosen palette, if it still exists (a deleted palette falls back to the theme's own).
   const [palette] = order.paletteId
     ? await db.select().from(palettes).where(eq(palettes.id, order.paletteId))
@@ -131,12 +161,14 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
     },
     palette: palette ? { id: palette.id, palette: palette.palette } : null,
     decor: occasion?.decor ?? 'generic',
+    playersFeminine: occasion?.playersFeminine ?? false,
     stalls: marketStalls,
     tastings: marketTastings,
     riddles: marketRiddles,
     questions,
     order: {
       form: order.form,
+      recipient,
       honoreeName: order.honoreeName,
       people: order.people,
       allergens: order.allergens,

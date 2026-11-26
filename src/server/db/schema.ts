@@ -19,11 +19,13 @@ import type {
   HintQuestion,
   LetterNote,
   MarketHours,
+  OccasionRecipients,
   OrderFlag,
   OrderStatus,
   Palette,
   PhotoBackground,
   Question,
+  Recipient,
   RiddleTemplates,
   RouteStop,
 } from '../domain/types.ts'
@@ -126,6 +128,11 @@ export const occasions = pgTable('occasions', {
   audience: text().$type<'private' | 'company'>().notNull(),
   questionSetId: integer().references(() => questionSets.id),
   forms: text().array().$type<Form[]>().notNull(),
+  // Who a private game can be for, each with its question set (null: questionSetId). Kept in step
+  // with `forms`. Empty on rows saved before recipients existed: derived from `forms`.
+  recipients: jsonb().$type<OccasionRecipients>().notNull().default({}),
+  // The players are addressed in the feminine plural (a bachelorette), whoever the game is for.
+  playersFeminine: boolean().notNull().default(false),
   // Doodle set drawn around the game and the order flow (see DECORS).
   decor: text().$type<Decor>().notNull().default('generic'),
   sort: integer().notNull().default(0),
@@ -191,6 +198,9 @@ export const orders = pgTable('orders', {
   buyerEmail: text().notNull().default(''),
   occasionKey: text().notNull(),
   form: text().$type<Form>().notNull(),
+  // Who the game is for (she, he, couple, group, family); null for company games. Picks the
+  // question set with the occasion. Orders placed before it existed are mapped from `form`.
+  recipient: text().$type<Recipient>(),
   honoreeName: text().notNull().default(''),
   themeId: integer().references(() => themes.id),
   // The palette the buyer chose; null plays the theme's own palette. A company palette wins.

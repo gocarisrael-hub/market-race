@@ -9,6 +9,7 @@ import type {
   OrderFlag,
   Palette,
   Question,
+  Recipient,
   RiddleTemplates,
   RouteStop,
   SnapshotStall,
@@ -56,12 +57,16 @@ export interface BuildInput {
   palette?: { id: number; palette: Palette } | null
   /** The occasion's doodle set. */
   decor?: Decor
+  /** The occasion addresses its players in the feminine plural (a bachelorette). */
+  playersFeminine?: boolean
   stalls: CatalogStall[]
   tastings: CatalogTasting[]
   riddles: CatalogRiddle[]
   questions: Question[]
   order: {
     form: Form
+    /** Who the game is for; null for a company game. */
+    recipient?: Recipient | null
     honoreeName: string
     people: number
     allergens: string[]
@@ -295,6 +300,8 @@ export function buildGame(input: BuildInput): BuildResult {
     decor: input.decor ?? 'generic',
     company: order.company ? { name: order.company.name, logo: order.company.logo } : null,
     form: order.form,
+    recipient: order.recipient ?? null,
+    playersFeminine: input.playersFeminine ?? false,
     honoree: order.honoreeName,
     people: order.people,
     allergens: [...order.allergens],

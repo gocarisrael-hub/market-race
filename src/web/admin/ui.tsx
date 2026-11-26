@@ -4,8 +4,10 @@ import type {
   Decor,
   Form,
   MarketHours,
+  OccasionRecipients,
   Palette,
   Question,
+  Recipient,
   RiddleTemplates,
   RouteStop,
 } from '../../server/domain/types.ts'
@@ -64,6 +66,9 @@ export interface Occasion {
   audience: 'private' | 'company'
   questionSetId: number | null
   forms: Form[]
+  /** Who a private game can be for, each with its question set (null: questionSetId). */
+  recipients: OccasionRecipients
+  playersFeminine: boolean
   decor: Decor
   sort: number
   active: boolean
@@ -108,6 +113,13 @@ export const FORM_LABELS: Record<Form, string> = {
   couple: 'זוג',
   group: 'קבוצה',
   company: 'חברה',
+}
+export const RECIPIENT_LABELS: Record<Recipient, string> = {
+  she: 'למישהי (היא)',
+  he: 'למישהו (הוא)',
+  couple: 'לזוג',
+  group: 'לקבוצה',
+  family: 'למשפחה',
 }
 export const DIET_LABELS: Record<string, string> = {
   vegan: 'טבעוני',

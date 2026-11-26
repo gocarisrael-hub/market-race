@@ -1,11 +1,22 @@
 // Markets (with the printable daily-code sheet), stalls, tastings, occasions, settings.
 import { useEffect, useState } from 'react'
-import { ALLERGENS, DECORS, DIETS, FORMS, type Form, type MarketHours } from '../../../server/domain/types.ts'
+import { occasionRecipients } from '../../../server/domain/recipient.ts'
+import {
+  ALLERGENS,
+  DECORS,
+  DIETS,
+  FORMS,
+  type Form,
+  type MarketHours,
+  type OccasionRecipients,
+  RECIPIENTS,
+} from '../../../server/domain/types.ts'
 import { ApiError, api, type Issue } from '../api.ts'
 import {
   Check,
   CrudPage,
   DECOR_LABELS,
+  RECIPIENT_LABELS,
   DIET_LABELS,
   type EditorProps,
   errorText,
@@ -363,6 +374,17 @@ export function TastingsPage() {
 
 function OccasionEditor({ value, set }: EditorProps<Occasion>) {
   const qs = useList<QuestionSet>('/catalog/question-sets')
+  const setOptions = (qs.items ?? []).map((q) => ({ value: q.id, label: q.name }))
+  // Rows saved before recipients existed show the recipients derived from their forms.
+  const recipients: OccasionRecipients =
+    value.recipients && Object.keys(value.recipients).length
+      ? value.recipients
+      : Object.fromEntries(occasionRecipients({
+            audience: 'private',
+            forms: value.forms ?? [],
+            questionSetId: null,
+            decor: value.decor,
+          }).map((c) => [c.recipient, null]))
   return (
     <>
       <Text label="מפתח (באנגלית)" value={value.key} onChange={(key) => set({ key })} dir="ltr" required />
@@ -377,23 +399,63 @@ function OccasionEditor({ value, set }: EditorProps<Occasion>) {
         onChange={(audience) => set({ audience })}
       />
       <Select
-        label="שאלון"
+        label={value.audience === 'company' ? 'שאלון' : 'שאלון ברירת מחדל'}
         value={value.questionSetId}
         placeholder="ללא"
-        options={(qs.items ?? []).map((q) => ({ value: q.id, label: q.name }))}
+        options={setOptions}
         onChange={(v) => set({ questionSetId: v || null })}
       />
-      <fieldset>
-        <legend>צורות פנייה</legend>
-        {FORMS.map((f) => (
+      {value.audience === 'company' ? (
+        <fieldset>
+          <legend>צורות פנייה</legend>
+          {FORMS.map((f) => (
+            <Check
+              key={f}
+              label={FORM_LABELS[f]}
+              checked={value.forms?.includes(f)}
+              onChange={(on) => set({ forms: toggle<Form>(value.forms, f, on) })}
+            />
+          ))}
+        </fieldset>
+      ) : (
+        <fieldset className="recipients-editor">
+          <legend>למי המשחק, ואיזה שאלון לכל אחד</legend>
+          <p className="muted">
+            הקונה בוחר למי המשחק. הראשון שמסומן נבחר מראש. שאלון ריק = שאלון ברירת המחדל.
+          </p>
+          {RECIPIENTS.map((r) => {
+            const on = r in recipients
+            return (
+              <div className="row" key={r}>
+                <Check
+                  label={RECIPIENT_LABELS[r]}
+                  checked={on}
+                  onChange={(c) => {
+                    const next = { ...recipients }
+                    if (c) next[r] = null
+                    else delete next[r]
+                    set({ recipients: next })
+                  }}
+                />
+                {on && (
+                  <Select
+                    label="שאלון"
+                    value={recipients[r] ?? null}
+                    placeholder="ברירת מחדל"
+                    options={setOptions}
+                    onChange={(v) => set({ recipients: { ...recipients, [r]: v || null } })}
+                  />
+                )}
+              </div>
+            )
+          })}
           <Check
-            key={f}
-            label={FORM_LABELS[f]}
-            checked={value.forms?.includes(f)}
-            onChange={(on) => set({ forms: toggle<Form>(value.forms, f, on) })}
+            label="פונים לשחקניות בלשון נקבה (למשל רווקות)"
+            checked={value.playersFeminine ?? false}
+            onChange={(playersFeminine) => set({ playersFeminine })}
           />
-        ))}
-      </fieldset>
+        </fieldset>
+      )}
       <Select
         label="קישוטים (ציורים סביב המשחק והאתר)"
         value={value.decor ?? 'generic'}
@@ -418,7 +480,9 @@ export function OccasionsPage() {
         label: '',
         audience: 'private',
         questionSetId: null,
-        forms: ['she'],
+        forms: ['she', 'he'],
+        recipients: { she: null, he: null },
+        playersFeminine: false,
         decor: 'generic',
         sort: 0,
         active: true,

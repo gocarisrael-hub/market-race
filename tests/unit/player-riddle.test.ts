@@ -16,6 +16,7 @@ const riddleView = (over: { version?: number; hint?: string | null } = {}): Play
   company: null,
   honoree: 'מיכל',
   form: 'she',
+  voice: 'she',
   people: 4,
   players: 4,
   allergens: [],

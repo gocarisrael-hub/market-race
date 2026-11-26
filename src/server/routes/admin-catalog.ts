@@ -29,7 +29,18 @@ import { israelDate } from '../domain/dates.ts'
 import { paletteIssues } from '../domain/look.ts'
 import { matchAnswer } from '../domain/matcher.ts'
 import { extractSlots, fallbackFor, fillTemplate } from '../domain/template.ts'
-import { ALLERGENS, DECORS, DIETS, FORMS, type Question, type RouteStop } from '../domain/types.ts'
+import { formsOfRecipients } from '../domain/recipient.ts'
+import {
+  ALLERGENS,
+  DECORS,
+  DIETS,
+  FORMS,
+  type Form,
+  type OccasionRecipients,
+  type Question,
+  RECIPIENTS,
+  type RouteStop,
+} from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
 import { iconNames } from '../lib/icons.ts'
 import { randomToken } from '../lib/tokens.ts'
@@ -137,6 +148,9 @@ const occasionBase = z.object({
   audience: z.enum(['private', 'company']),
   questionSetId: id.nullable(),
   forms: z.array(z.enum(FORMS)).min(1),
+  // Who a private game can be for, each with its question set (null: the occasion's own).
+  recipients: z.partialRecord(z.enum(RECIPIENTS), id.nullable()),
+  playersFeminine: z.boolean(),
   decor: z.enum(DECORS),
   sort: z.number().int(),
   active: z.boolean(),
@@ -145,8 +159,23 @@ const occasionCreate = occasionBase.partial().extend({
   key: occasionBase.shape.key,
   label: occasionBase.shape.label,
   audience: occasionBase.shape.audience,
-  forms: occasionBase.shape.forms,
+  forms: occasionBase.shape.forms.optional(),
 })
+
+/**
+ * Keeps `forms` in step with the recipients of a private occasion (older readers use it). A
+ * company occasion has no recipients and the company form. Errors when nothing is offered.
+ */
+function withForms<T extends { audience?: string; forms?: Form[]; recipients?: OccasionRecipients }>(
+  body: T,
+  audience: string | undefined,
+): T | 'no_forms' {
+  if (audience === 'company') return { ...body, recipients: {}, forms: body.forms ?? ['company'] }
+  if (body.recipients && Object.keys(body.recipients).length)
+    return { ...body, forms: formsOfRecipients(body.recipients) }
+  if (body.recipients) return 'no_forms'
+  return body
+}
 
 const stop = z.object({
   stallId: id,
@@ -568,13 +597,23 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
       r.get('/occasions', async () => ({
         items: await db.select().from(occasions).orderBy(asc(occasions.sort), asc(occasions.id)),
       }))
+      const checkRecipientSets = async (rec: OccasionRecipients | undefined) => {
+        for (const qid of Object.values(rec ?? {})) if (!(await checkQuestionSet(qid))) return false
+        return true
+      }
       r.post('/occasions', async (req, reply) => {
-        const body = parse(occasionCreate, req.body, reply)
-        if (!body) return
-        if (!(await checkQuestionSet(body.questionSetId)))
+        const parsed = parse(occasionCreate, req.body, reply)
+        if (!parsed) return
+        const body = withForms(parsed, parsed.audience)
+        if (body === 'no_forms' || !body.forms?.length)
+          return invalid(reply, [{ path: 'recipients', message: 'pick at least one recipient' }])
+        if (!(await checkQuestionSet(body.questionSetId)) || !(await checkRecipientSets(body.recipients)))
           return invalid(reply, [{ path: 'questionSetId', message: 'question set not found' }])
         try {
-          const [row] = await db.insert(occasions).values(body).returning()
+          const [row] = await db
+            .insert(occasions)
+            .values({ ...body, forms: body.forms ?? [] })
+            .returning()
           return reply.code(201).send(row)
         } catch (e) {
           if (isUniqueViolation(e)) return invalid(reply, [{ path: 'key', message: 'key already exists' }])
@@ -583,9 +622,14 @@ export async function adminCatalogRoutes(app: FastifyInstance, ctx: AppContext) 
       })
       r.patch('/occasions/:id', async (req, reply) => {
         const oid = paramId(req.params) ?? 0
-        const body = parse(occasionBase.partial(), req.body, reply)
-        if (!body) return
-        if (!(await checkQuestionSet(body.questionSetId)))
+        const parsed = parse(occasionBase.partial(), req.body, reply)
+        if (!parsed) return
+        const [current] = await db.select().from(occasions).where(eq(occasions.id, oid))
+        if (!current) return reply.code(404).send({ error: 'not_found' })
+        const body = withForms(parsed, parsed.audience ?? current.audience)
+        if (body === 'no_forms')
+          return invalid(reply, [{ path: 'recipients', message: 'pick at least one recipient' }])
+        if (!(await checkQuestionSet(body.questionSetId)) || !(await checkRecipientSets(body.recipients)))
           return invalid(reply, [{ path: 'questionSetId', message: 'question set not found' }])
         try {
           const [row] = await db.update(occasions).set(body).where(eq(occasions.id, oid)).returning()

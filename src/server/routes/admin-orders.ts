@@ -16,7 +16,8 @@ import {
   tastings,
   uploads,
 } from '../db/schema.ts'
-import { FORMS, ORDER_STATUSES } from '../domain/types.ts'
+import { recipientForForm } from '../domain/recipient.ts'
+import { FORMS, ORDER_STATUSES, RECIPIENT_FORM, RECIPIENTS } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
 import { sendToBuyer } from '../services/delivery.ts'
 import {
@@ -26,7 +27,7 @@ import {
   createOrder,
   getOrder,
   type Order,
-  questionsForOccasion,
+  questionsForOrder,
   updateAnswersAndRebuild,
 } from '../services/orders.ts'
 import { afterBuilt } from '../services/payments.ts'
@@ -36,6 +37,8 @@ const letterNote = z.object({ text: z.string().max(600), signature: z.string().m
 const testGame = z.object({
   occasionKey: z.string().min(1),
   form: z.enum(FORMS),
+  // Who a private test game is for; absent: the form's recipient.
+  recipient: z.enum(RECIPIENTS).nullable().optional(),
   honoreeName: z.string().max(60).default(''),
   themeId: z.number().int(),
   paletteId: z.number().int().nullable().optional(),
@@ -197,7 +200,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         db.select().from(uploads).where(eq(uploads.orderId, id)).orderBy(desc(uploads.createdAt)),
         db.select().from(leads).where(eq(leads.orderId, id)),
         db.select().from(occasions).where(eq(occasions.key, order.occasionKey)),
-        questionsForOccasion(db, order.occasionKey),
+        questionsForOrder(db, order),
       ])
       const portions = used.reduce((n, x) => n + x.portions, 0)
       return {
@@ -220,11 +223,16 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       const body = testGame.safeParse(req.body)
       if (!body.success) return reply.code(400).send({ error: 'invalid', issues: body.error.issues })
       const b = body.data
+      const kind = b.companyName ? 'company' : 'private'
+      const [occ] = await db.select().from(occasions).where(eq(occasions.key, b.occasionKey))
+      const recipient = kind === 'company' ? null : (b.recipient ?? recipientForForm(b.form, occ?.decor))
       try {
         const order = await createOrder(db, {
-          kind: b.companyName ? 'company' : 'private',
+          kind,
           status: 'awaiting_answers',
           ...b,
+          form: recipient ? RECIPIENT_FORM[recipient] : b.form,
+          recipient,
           companyName: b.companyName ?? null,
           notes: 'test game',
         })

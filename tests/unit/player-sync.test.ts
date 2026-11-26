@@ -11,6 +11,7 @@ const view = (over: Partial<PlayerView> = {}): PlayerView => ({
   company: null,
   honoree: 'מיכל',
   form: 'she',
+  voice: 'she',
   people: 4,
   players: 4,
   allergens: [],

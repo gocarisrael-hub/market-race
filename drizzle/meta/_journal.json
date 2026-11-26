@@ -71,6 +71,13 @@
       "when": 1795343074305,
       "tag": "0009_game_pause",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795641599830,
+      "tag": "0010_recipients",
+      "breakpoints": true
     }
   ]
 }
