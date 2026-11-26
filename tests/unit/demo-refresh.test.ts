@@ -3,10 +3,18 @@
 // the last refresh stay, and games not started are rebuilt with mini-games on the same tokens.
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { gameStates, orders, questionSets, riddles, settings } from '../../src/server/db/schema.ts'
+import {
+  gameStates,
+  orders,
+  paySessions,
+  questionSets,
+  riddles,
+  settings,
+} from '../../src/server/db/schema.ts'
 import {
   DEMO_SEED_VERSION,
   demoSeedingEnabled,
+  realPaidOrders,
   refreshDemoContent,
 } from '../../src/server/services/demo-refresh.ts'
 import { buildOrderGame, createOrder } from '../../src/server/services/orders.ts'
@@ -59,7 +67,7 @@ describe('demo content refresh', () => {
       .where(eq(questionSets.id, priv.id))
   }
 
-  async function oldGame() {
+  async function oldGame(notes = 'test game') {
     const o = await createOrder(t.db, {
       kind: 'private',
       status: 'awaiting_answers',
@@ -70,7 +78,7 @@ describe('demo content refresh', () => {
       routeId: ids.carmelRouteId,
       people: 4,
       answers: RICH,
-      notes: 'test game',
+      notes,
     })
     const built = await buildOrderGame(t.db, o.id)
     // As built before mini-games existed.
@@ -78,6 +86,62 @@ describe('demo content refresh', () => {
     await t.db.update(orders).set({ game }).where(eq(orders.id, o.id))
     return built
   }
+
+  /** A paid pay window for an order, through a provider. */
+  async function paid(orderId: number, provider: 'mock' | 'pelecard' | 'tranzila') {
+    await t.db.update(orders).set({ paidAt: new Date() }).where(eq(orders.id, orderId))
+    await t.db.insert(paySessions).values({
+      orderId,
+      token: `tok-${orderId}-${provider}`,
+      amountAgorot: 100,
+      env: 'test',
+      provider,
+      status: 'paid',
+      transactionId: `tx-${orderId}-${provider}`,
+    })
+  }
+
+  it('rebuilds only demo games: test games and orders paid through the mock provider', async () => {
+    await makeOld()
+    const test = await oldGame()
+    const mock = await oldGame('')
+    await paid(mock.id, 'mock')
+    const other = await oldGame('') // built, not paid, not a test game
+    const r = await refreshDemoContent(t.db)
+    expect(r.ran).toBe(true)
+    expect(r.rebuilt.sort()).toEqual([test.orderNo, mock.orderNo].sort())
+    expect(r.skippedNotDemo).toEqual([other.orderNo])
+    const [o] = await t.db.select().from(orders).where(eq(orders.id, other.id))
+    expect(o.game!.minigames).toBeUndefined()
+  })
+
+  it('refuses the whole refresh when an order was paid through a real provider', async () => {
+    await makeOld()
+    const game = await oldGame()
+    const real = await oldGame('')
+    await paid(real.id, 'pelecard')
+    const r = await refreshDemoContent(t.db)
+    expect(r.ran).toBe(false)
+    expect(r.refused).toContain(real.orderNo)
+    // Nothing changed: the old riddle, no setting, no rebuild, the version still old.
+    expect((await riddle('תקווה')).templates).toEqual({ she: OLD_TIKVA })
+    expect(await setting('minigames')).toBeUndefined()
+    expect(await setting('demo_seed_version')).toBeUndefined()
+    const [g] = await t.db.select().from(orders).where(eq(orders.id, game.id))
+    expect(g.game!.minigames).toBeUndefined()
+  })
+
+  it('counts a paid order with no mock payment as real (unknown is not demo)', async () => {
+    await makeOld()
+    const o = await oldGame('')
+    await t.db.update(orders).set({ paidAt: new Date() }).where(eq(orders.id, o.id))
+    expect(await realPaidOrders(t.db)).toEqual([o.orderNo])
+    expect((await refreshDemoContent(t.db)).refused).toContain(o.orderNo)
+    // A paid test game, or one paid through the mock, is demo.
+    await t.db.update(orders).set({ notes: 'test game' }).where(eq(orders.id, o.id))
+    expect(await realPaidOrders(t.db)).toEqual([])
+    expect((await refreshDemoContent(t.db)).ran).toBe(true)
+  })
 
   it('runs only when asked, and never in production', () => {
     expect(demoSeedingEnabled({ SEED_DEMO: '1' }, 'staging')).toBe(true)

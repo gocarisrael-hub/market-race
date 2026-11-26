@@ -7,13 +7,14 @@
 // Rows the admin edited after the last refresh are left alone: every catalog row has an
 // `updated_at`, and the refresh records when it ran (`demo_seed_at`). A database refreshed for the
 // first time has no record, so its demo-keyed rows are overwritten (only those).
-import { and, eq, inArray, isNotNull } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, ne } from 'drizzle-orm'
 import type { DB } from '../db/index.ts'
 import {
   gameStates,
   markets,
   occasions,
   orders,
+  paySessions,
   questionSets,
   riddles,
   settings,
@@ -48,6 +49,54 @@ export interface RefreshReport {
   minigames: 'written' | 'kept'
   rebuilt: string[]
   rebuildFailed: string[]
+  /** Not started, but not a demo game (neither a test game nor paid through the mock): untouched. */
+  skippedNotDemo: string[]
+  /** Why the whole refresh was skipped (real payments in the database), if it was. */
+  refused?: string
+}
+
+/** The note the admin's test-game route puts on its orders. */
+export const TEST_GAME_NOTE = 'test game'
+
+/** Orders with a paid pay window of the mock provider. */
+async function mockPaidOrderIds(db: DB): Promise<Set<number>> {
+  const rows = await db
+    .select({ orderId: paySessions.orderId })
+    .from(paySessions)
+    .where(and(eq(paySessions.provider, 'mock'), eq(paySessions.status, 'paid')))
+  return new Set(rows.map((r) => r.orderId))
+}
+
+/** A demo game: an admin test game, or an order paid through the mock provider. */
+export const isDemoOrder = (o: { id: number; notes: string }, mockPaid: Set<number>) =>
+  o.notes === TEST_GAME_NOTE || mockPaid.has(o.id)
+
+/**
+ * Orders paid for real: a paid window of a real provider, or marked paid with no paid mock window
+ * and not a test game (unknown counts as real). Their order numbers.
+ */
+export async function realPaidOrders(db: DB): Promise<string[]> {
+  const realWindows = await db
+    .select({ orderId: paySessions.orderId })
+    .from(paySessions)
+    .where(and(ne(paySessions.provider, 'mock'), eq(paySessions.status, 'paid')))
+  const realIds = new Set(realWindows.map((r) => r.orderId))
+  const mockPaid = await mockPaidOrderIds(db)
+  const paid = await db
+    .select({ id: orders.id, orderNo: orders.orderNo, notes: orders.notes })
+    .from(orders)
+    .where(isNotNull(orders.paidAt))
+  const out = new Set<string>()
+  for (const o of paid) if (realIds.has(o.id) || !isDemoOrder(o, mockPaid)) out.add(o.orderNo)
+  // A real paid window on an order not marked paid still counts.
+  if (realIds.size) {
+    const rows = await db
+      .select({ orderNo: orders.orderNo })
+      .from(orders)
+      .where(inArray(orders.id, [...realIds]))
+    for (const r of rows) out.add(r.orderNo)
+  }
+  return [...out]
 }
 
 async function storedVersion(db: DB): Promise<number> {
@@ -83,8 +132,16 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     minigames: 'kept',
     rebuilt: [],
     rebuildFailed: [],
+    skippedNotDemo: [],
   }
   if (from >= DEMO_SEED_VERSION) return report
+  // A database with real payments is not a demo database, whatever the environment says.
+  const real = await realPaidOrders(db)
+  if (real.length) {
+    report.refused = `orders paid through a real payment provider: ${real.slice(0, 5).join(', ')}${real.length > 5 ? ', …' : ''}`
+    console.warn(`[demo] refresh refused: ${report.refused}`)
+    return report
+  }
   const [market] = await db.select().from(markets).where(eq(markets.name, DEMO_MARKET))
   if (!market) return report
   report.ran = true
@@ -178,13 +235,19 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
   }
 
   // Games built but not started get the new riddles and their mini-games; tokens stay.
+  // Only demo games: the admin's test games and orders paid through the mock provider.
   const built = await db
-    .select({ id: orders.id, orderNo: orders.orderNo, step: gameStates.step })
+    .select({ id: orders.id, orderNo: orders.orderNo, notes: orders.notes, step: gameStates.step })
     .from(orders)
     .leftJoin(gameStates, eq(gameStates.orderId, orders.id))
     .where(and(isNotNull(orders.game), inArray(orders.status, ['review', 'ready'])))
+  const mockPaid = await mockPaidOrderIds(db)
   for (const o of built) {
     if (o.step && o.step !== 'opening') continue
+    if (!isDemoOrder(o, mockPaid)) {
+      report.skippedNotDemo.push(o.orderNo)
+      continue
+    }
     try {
       await buildOrderGame(db, o.id, now)
       report.rebuilt.push(o.orderNo)

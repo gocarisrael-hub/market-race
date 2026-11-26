@@ -20,6 +20,7 @@ import { recipientForForm } from '../domain/recipient.ts'
 import { FORMS, ORDER_STATUSES, RECIPIENT_FORM, RECIPIENTS } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
 import { sendToBuyer } from '../services/delivery.ts'
+import { TEST_GAME_NOTE } from '../services/demo-refresh.ts'
 import {
   approveOrder,
   BuildError,
@@ -235,7 +236,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           form: recipient ? RECIPIENT_FORM[recipient] : b.form,
           recipient,
           companyName: b.companyName ?? null,
-          notes: 'test game',
+          notes: TEST_GAME_NOTE,
         })
         // The owner entered the answers here, so they count as submitted.
         await db.update(orders).set({ answersSubmittedAt: new Date() }).where(eq(orders.id, order.id))
