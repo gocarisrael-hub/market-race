@@ -110,6 +110,8 @@ const tastingBase = z.object({
   allergens: z.array(z.enum(ALLERGENS)),
   diets: z.array(z.enum(DIETS)),
   feeAgorot: z.number().int().min(0),
+  // Alcohol: a kids' game serves another tasting instead.
+  adultsOnly: z.boolean(),
   active: z.boolean(),
 })
 const tastingCreate = tastingBase.partial().extend({ stallId: id, name: str.min(1) })
@@ -157,6 +159,8 @@ const occasionBase = z.object({
   // The occasion's own name for a recipient on the order (empty: the site's default).
   recipientLabels: z.partialRecord(z.enum(RECIPIENTS), z.string().trim().max(30)),
   playersFeminine: z.boolean(),
+  // A game for kids: adults-only tastings are swapped.
+  forKids: z.boolean(),
   decor: z.enum(DECORS),
   sort: z.number().int(),
   active: z.boolean(),

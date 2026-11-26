@@ -15,6 +15,7 @@ import {
   type Palette,
   type Question,
   type Recipient,
+  type StopSwap,
   type TextPart,
 } from '../../../server/domain/types.ts'
 import { api } from '../api.ts'
@@ -377,6 +378,16 @@ export function RiddleText({ parts }: { parts: TextPart[] }) {
   )
 }
 
+const SWAP_REASONS: Record<StopSwap['reason'], string> = {
+  diet: 'בגלל אלרגנים/תזונה',
+  kids: 'משחק לילדים, בלי אלכוהול',
+  unavailable: 'הדוכן או הטעימה לא זמינים',
+}
+
+/** The owner's line for a stop that serves something other than the route lists. */
+export const swapText = (swap: StopSwap, toBackup: boolean) =>
+  `${toBackup ? 'הוחלף לדוכן הגיבוי' : 'הוחלפה הטעימה'}${swap.listedTasting ? ` (במקום ${swap.listedTasting})` : ''}: ${SWAP_REASONS[swap.reason]}`
+
 export function GameView({ game }: { game: GameSnapshot }) {
   return (
     <div className="game">
@@ -393,7 +404,14 @@ export function GameView({ game }: { game: GameSnapshot }) {
             <div>
               <strong>{s.stall.name}</strong>
               {s.finale && <span className="finale"> (סיום)</span>}
-              {s.swappedToBackup && <span className="error"> הוחלף לדוכן הגיבוי בגלל אלרגנים/תזונה</span>}
+              {s.swap ? (
+                <span className="error" data-testid="swap">
+                  {' '}
+                  {swapText(s.swap, s.swappedToBackup)}
+                </span>
+              ) : (
+                s.swappedToBackup && <span className="error"> הוחלף לדוכן הגיבוי בגלל אלרגנים/תזונה</span>
+              )}
               {s.stall.locationHint && <span className="muted"> · {s.stall.locationHint}</span>}
             </div>
             <div>

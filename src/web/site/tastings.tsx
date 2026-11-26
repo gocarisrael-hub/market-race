@@ -1,6 +1,6 @@
 // Step 1, "what you taste on the way": each stop's teaser (never the stall), updated for the
 // group's allergens and diets with the same safety logic the server uses to build the game.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getRoutePreview, type PreviewStop, type Shop } from './api.ts'
 import { copy } from './copy.ts'
 import { listedStops, routeForTheme } from './logic.ts'
@@ -13,33 +13,43 @@ export function RouteTastings(props: {
   themeId: number | null
   allergens: string[]
   diets: string[]
+  /** The order's occasion: a kids' game is served differently, so its list waits for the server. */
+  occasionKey?: string | null
 }) {
-  const { shop, themeId, allergens, diets } = props
+  const { shop, themeId, allergens, diets, occasionKey } = props
   const route = routeForTheme(shop, themeId)
-  const [stops, setStops] = useState<PreviewStop[]>(() => listedStops(route))
+  const forKids = shop.occasions.find((o) => o.key === occasionKey)?.forKids ?? false
+  const listed = (r: typeof route) => (forKids ? [] : listedStops(r))
+  const [stops, setStops] = useState<PreviewStop[]>(() => listed(route))
   const aKey = allergens.join(',')
   const dKey = diets.join(',')
+  const first = useRef(true)
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the joined lists
   useEffect(() => {
     if (themeId == null || !route) return
     const ctrl = new AbortController()
-    const timer = setTimeout(() => {
-      getRoutePreview(themeId, allergens, diets, ctrl.signal)
-        .then(setStops)
-        .catch(() => {}) // keep what is shown; the order still works
-    }, DEBOUNCE_MS)
+    // The first load is not debounced: a kids' list shows nothing until it arrives.
+    const timer = setTimeout(
+      () => {
+        getRoutePreview(themeId, allergens, diets, ctrl.signal, occasionKey)
+          .then(setStops)
+          .catch(() => {}) // keep what is shown; the order still works
+      },
+      first.current ? 0 : DEBOUNCE_MS,
+    )
+    first.current = false
     return () => {
       clearTimeout(timer)
       ctrl.abort()
     }
-  }, [themeId, route?.id, aKey, dKey])
+  }, [themeId, route?.id, aKey, dKey, occasionKey])
 
   // A theme of another market shows that market's route right away.
   const [routeId, setRouteId] = useState(route?.id)
   if (route?.id !== routeId) {
     setRouteId(route?.id)
-    setStops(listedStops(route))
+    setStops(listed(route))
   }
 
   if (!stops.length) return null

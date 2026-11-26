@@ -373,6 +373,8 @@ export interface DemoOccasion {
   active: boolean
   /** The occasion's own names for its recipients on the order (empty: the site's default). */
   recipientLabels: RecipientLabels
+  /** A game for kids: adults-only tastings (alcohol) are swapped. */
+  forKids?: boolean
 }
 
 const occ = (
@@ -399,6 +401,7 @@ export const DEMO_OCCASIONS: DemoOccasion[] = [
   occ('birthday_friend', 'יום הולדת', 'birthday', 'private'),
   occ('birthday_kid', 'יום הולדת לילד', 'kids', 'kidShe', {
     recipientLabels: { she: 'לילדה', he: 'לילד' },
+    forKids: true,
   }),
   // Folded into "יום הולדת", which offers everything it did. Kept (inactive) for its orders.
   occ('birthday_parent', 'יום הולדת להורה', 'birthday', 'private', { active: false }),
@@ -426,6 +429,7 @@ export function demoOccasionValues(o: DemoOccasion, index: number, setIds: Recor
     sort: index + 1,
     active: o.active,
     recipientLabels: { ...o.recipientLabels },
+    forKids: o.forKids ?? false,
   }
   if (o.audience === 'company')
     return { ...base, recipients: {}, forms: ['company'] as Form[], playersFeminine: false }
@@ -841,6 +845,19 @@ export const DEMO_RIDDLES: Record<string, RiddleTemplates> = {
 
 /** The demo market, by name: its stalls and riddles are the demo rows. */
 export const DEMO_MARKET = 'שוק הכרמל'
+
+/**
+ * Alcohol on the demo route (by tasting name), never served in a kids' game, and the drink the
+ * beer stall pours for kids instead. Also used by the production script (scripts/kids-juice-2026-11.ts).
+ */
+export const ADULTS_ONLY_TASTINGS = ['בירה מהחבית', 'סיידר תפוחים']
+export const KIDS_DRINK = {
+  name: 'מיץ',
+  teaser: 'מיץ טרי או לימונדה קרה לסיום',
+  teaserIcon: 'fruit',
+  allergens: [] as string[],
+  diets: [...ALL_DIETS],
+}
 export const DEMO_MAHANE = 'שוק מחנה יהודה'
 
 /** The demo riddles' fixed fields. Their stable key is the stall's name and the answer. */
@@ -1129,7 +1146,16 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     (
       await db
         .insert(tastings)
-        .values({ stallId, name, allergens, diets, feeAgorot, teaser, teaserIcon })
+        .values({
+          stallId,
+          name,
+          allergens,
+          diets,
+          feeAgorot,
+          teaser,
+          teaserIcon,
+          adultsOnly: ADULTS_ONLY_TASTINGS.includes(name),
+        })
         .returning()
     )[0]
   const tJuice = await t(
@@ -1205,6 +1231,16 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
     'tomatoes',
   )
   await t(beer.id, 'סיידר תפוחים', [], ALL_DIETS, 1200, 'משהו קר ומתוק לסיום', 'fruit')
+  // What a kids' game gets here instead of the beer (and the cider).
+  await t(
+    beer.id,
+    KIDS_DRINK.name,
+    KIDS_DRINK.allergens,
+    KIDS_DRINK.diets,
+    1200,
+    KIDS_DRINK.teaser,
+    KIDS_DRINK.teaserIcon,
+  )
   const tCoffee = await t(
     coffee.id,
     'קפה הפוך',

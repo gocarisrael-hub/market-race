@@ -217,6 +217,16 @@ export interface SnapshotStop {
   backup: { stall: SnapshotStall; tasting: SnapshotTasting } | null
   // True when the builder already swapped to the backup stall (allergen/diet safety).
   swappedToBackup: boolean
+  /** Set when the stop does not serve its listed tasting (another one at the stall, or the backup). */
+  swap?: StopSwap
+}
+
+/** Why a stop serves something else: allergens/diets, a kids' game (no alcohol), or not available. */
+export type SwapReason = 'diet' | 'kids' | 'unavailable'
+export interface StopSwap {
+  reason: SwapReason
+  /** The tasting the route lists for the stop. */
+  listedTasting: string
 }
 
 // Personal mini-games between stops, built only from the order's own answers and photos.

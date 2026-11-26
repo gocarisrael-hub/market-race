@@ -24,6 +24,7 @@ import {
 } from '../db/schema.ts'
 import { DEFAULT_MINIGAMES } from '../domain/minigames.ts'
 import type { Question } from '../domain/types.ts'
+import { updateKidsTastings } from './kids-update.ts'
 import { BuildError, buildOrderGame } from './orders.ts'
 import {
   DEMO_MAHANE,
@@ -49,7 +50,7 @@ export function demoSeedingEnabled(env: Record<string, string | undefined>, appE
 }
 
 /** Bump when the demo content changes, so seeded databases pick it up at their next boot. */
-export const DEMO_SEED_VERSION = 3
+export const DEMO_SEED_VERSION = 4
 
 export interface RefreshReport {
   ran: boolean
@@ -61,6 +62,8 @@ export interface RefreshReport {
   prices: string[]
   themes: { updated: number; inserted: number; kept: number }
   minigames: 'written' | 'kept'
+  /** Kids' games: adults-only tastings and the kids' drink (see kids-update.ts). */
+  kids: string[]
   rebuilt: string[]
   rebuildFailed: string[]
   /** Not started, but not a demo game (neither a test game nor paid through the mock): untouched. */
@@ -146,6 +149,7 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     prices: [],
     themes: { updated: 0, inserted: 0, kept: 0 },
     minigames: 'kept',
+    kids: [],
     rebuilt: [],
     rebuildFailed: [],
     skippedNotDemo: [],
@@ -304,6 +308,9 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
       .onConflictDoUpdate({ target: settings.key, set: { value: DEFAULT_MINIGAMES, updatedAt: now } })
     report.minigames = 'written'
   }
+
+  // Kids' games: the beer stall's alcohol is adults-only and it pours a drink for kids.
+  report.kids = await updateKidsTastings(db, { apply: true })
 
   // Games built but not started get the new riddles and their mini-games; tokens stay.
   // Only demo games: the admin's test games and orders paid through the mock provider.

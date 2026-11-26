@@ -108,6 +108,7 @@ export async function updateOccasions(db: DB, opts: { apply: boolean }): Promise
         forms: formsOfRecipients(recipients),
         recipientLabels: { ...def.recipientLabels },
         playersFeminine: false,
+        forKids: def.forKids ?? false,
         sort: ++sort,
         active: priced,
       })

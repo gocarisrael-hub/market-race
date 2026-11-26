@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { attachPhotos, buildGame } from '../../src/server/domain/builder.ts'
+import { attachPhotos, buildGame, previewRoute } from '../../src/server/domain/builder.ts'
 import { partsToString } from '../../src/server/domain/template.ts'
 import { catalog, order } from '../helpers/fixtures.ts'
 
@@ -67,6 +67,79 @@ describe('buildGame', () => {
     expect(game.letter.photos).toEqual(['a.jpg', 'b.jpg', 'c.jpg'])
     expect(game.theme.palette.accent).toBe('#123456')
     expect(game.company).toEqual({ name: 'אקמה', logo: 'logo.png' })
+  })
+
+  describe("kids' games (occasion forKids)", () => {
+    // The beer stall: beer and cider are alcohol; a juice is the kids' drink.
+    const kidsCatalog = () => {
+      const c = catalog()
+      for (const t of c.tastings) if (t.id === 5 || t.id === 6) t.adultsOnly = true
+      c.tastings.push({
+        id: 7,
+        stallId: 5,
+        name: 'מיץ',
+        allergens: [],
+        diets: ['vegan', 'vegetarian', 'gluten_free'],
+        feeAgorot: 1200,
+        active: true,
+      })
+      return c
+    }
+
+    it('kids get the juice at the same stall; the owner sees why', () => {
+      const { game, flags } = buildGame({ ...kidsCatalog(), forKids: true, order: order() })
+      expect(flags).toEqual([])
+      expect(game.stops[2].stall.id).toBe(5)
+      expect(game.stops[2].tasting.name).toBe('מיץ')
+      expect(game.stops[2].swappedToBackup).toBe(false)
+      expect(game.stops[2].swap).toEqual({ reason: 'kids', listedTasting: 'בירה' })
+      expect(game.stops[0].swap).toBeUndefined()
+    })
+
+    it('adults get the beer, unswapped', () => {
+      const { game, flags } = buildGame({ ...kidsCatalog(), order: order() })
+      expect(flags).toEqual([])
+      expect(game.stops[2].tasting.name).toBe('בירה')
+      expect(game.stops[2].swap).toBeUndefined()
+    })
+
+    it('an allergy swap stays an allergy swap', () => {
+      const { game } = buildGame({ ...kidsCatalog(), order: order({ allergens: ['גלוטן'] }) })
+      expect(game.stops[2].tasting.name).toBe('סיידר')
+      expect(game.stops[2].swap).toEqual({ reason: 'diet', listedTasting: 'בירה' })
+    })
+
+    it('no drink for kids at the stall: the backup stall, else block and flag', () => {
+      const c = catalog()
+      for (const t of c.tastings) if (t.id === 5 || t.id === 6) t.adultsOnly = true
+      const blocked = buildGame({ ...c, forKids: true, order: order() })
+      expect(blocked.flags).toEqual([
+        expect.objectContaining({
+          code: 'blocked_stop',
+          stopIndex: 2,
+          message: expect.stringContaining('ילדים'),
+        }),
+      ])
+      // With a backup that has a riddle and a soft drink, the stop moves there.
+      c.route.stops[2] = { ...c.route.stops[2], backupStallId: 1, backupRiddleId: 1 }
+      const moved = buildGame({ ...c, forKids: true, order: order() })
+      expect(moved.flags).toEqual([])
+      expect(moved.game.stops[2]).toMatchObject({
+        swappedToBackup: true,
+        swap: { reason: 'kids', listedTasting: 'בירה' },
+      })
+      expect(moved.game.stops[2].tasting.name).toBe('מיץ תפוזים')
+    })
+
+    it('previews the juice for kids as a swap with its reason', () => {
+      const c = kidsCatalog()
+      const kids = previewRoute({ ...c, stops: c.route.stops, allergens: [], diets: [], forKids: true })
+      expect(kids[2]).toMatchObject({ status: 'swapped', reason: 'kids' })
+      expect(kids[2].tasting?.name).toBe('מיץ')
+      const adults = previewRoute({ ...c, stops: c.route.stops, allergens: [], diets: [] })
+      expect(adults[2]).toMatchObject({ status: 'as_listed' })
+      expect(adults[2].tasting?.name).toBe('בירה')
+    })
   })
 
   describe('photos', () => {

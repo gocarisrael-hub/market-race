@@ -335,6 +335,15 @@ function TastingEditor({ value, set, isNew }: EditorProps<Tasting>) {
         agorot={value.feeAgorot}
         onChange={(feeAgorot) => set({ feeAgorot })}
       />
+      <Check
+        label="למבוגרים בלבד (אלכוהול)"
+        checked={value.adultsOnly ?? false}
+        onChange={(adultsOnly) => set({ adultsOnly })}
+      />
+      <p className="muted">
+        במשחק של ילדים מגישים במקומה טעימה אחרת מאותו דוכן, ואם אין, את דוכן הגיבוי. הקונים לא רואים את
+        ההחלפה.
+      </p>
       <Check label="פעיל" checked={value.active} onChange={(active) => set({ active })} />
     </>
   )
@@ -356,6 +365,7 @@ export function TastingsPage() {
         allergens: [],
         diets: [],
         feeAgorot: 0,
+        adultsOnly: false,
         active: true,
       })}
       columns={[
@@ -363,6 +373,7 @@ export function TastingsPage() {
         { label: 'תיאור לקונים', render: (t) => t.teaser || <span className="muted">חסר</span> },
         { label: 'דוכן', render: (t) => st.name(t.stallId) },
         { label: 'תשלום', render: (t) => shekels(t.feeAgorot) },
+        { label: 'למבוגרים', render: (t) => (t.adultsOnly ? 'כן' : '') },
         { label: 'מצב', render: (t) => activeLabel(t.active) },
       ]}
       Editor={TastingEditor}
@@ -464,6 +475,11 @@ function OccasionEditor({ value, set }: EditorProps<Occasion>) {
             checked={value.playersFeminine ?? false}
             onChange={(playersFeminine) => set({ playersFeminine })}
           />
+          <Check
+            label="משחק לילדים (טעימות למבוגרים בלבד מוחלפות)"
+            checked={value.forKids ?? false}
+            onChange={(forKids) => set({ forKids })}
+          />
         </fieldset>
       )}
       <Select
@@ -494,6 +510,7 @@ export function OccasionsPage() {
         recipients: { she: null, he: null },
         recipientLabels: {},
         playersFeminine: false,
+        forKids: false,
         decor: 'generic',
         sort: 0,
         active: true,

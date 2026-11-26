@@ -481,7 +481,13 @@ export function DietStage({ shop, d, set }: StageProps) {
           </Opt>
         ))}
       </fieldset>
-      <RouteTastings shop={shop} themeId={d.themeId} allergens={d.allergens} diets={d.diets} />
+      <RouteTastings
+        shop={shop}
+        themeId={d.themeId}
+        allergens={d.allergens}
+        diets={d.diets}
+        occasionKey={d.occasionKey}
+      />
     </>
   )
 }

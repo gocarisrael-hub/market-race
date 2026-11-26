@@ -1,5 +1,6 @@
 // Builds the frozen game snapshot for an order. Pure: the catalog is passed in.
 // SPEC "Building the game": safety swap → backup stall → block and flag. Never silently shorten.
+// A kids' game (occasion `forKids`) treats an adults-only tasting (alcohol) like an unsafe one.
 import { buildMinigames, type MinigameContent } from './minigames.ts'
 import { fillTemplate } from './template.ts'
 import { gameStyle } from './themes.ts'
@@ -17,6 +18,8 @@ import type {
   SnapshotStall,
   SnapshotStop,
   SnapshotTasting,
+  StopSwap,
+  SwapReason,
   ThemeStyle,
 } from './types.ts'
 
@@ -34,6 +37,8 @@ export interface CatalogTasting {
   diets: string[]
   feeAgorot: number
   active: boolean
+  /** Alcohol: never served in a kids' game (swapped like an allergen). */
+  adultsOnly?: boolean
 }
 export interface CatalogRiddle {
   id: number
@@ -72,6 +77,8 @@ export interface BuildInput {
   minigames?: MinigameContent
   /** The order's occasion (the mini-games an occasion prefers, see MinigameContent.byOccasion). */
   occasionKey?: string
+  /** The occasion is for kids: adults-only tastings are swapped like unsafe ones. */
+  forKids?: boolean
   /** Makes the random choices of a sold game reproducible (the order number). */
   seed?: string
   order: {
@@ -112,10 +119,25 @@ export function defaultAnswers(order: {
   return answers
 }
 
-export function isSafe(t: CatalogTasting, allergens: string[], diets: string[]): boolean {
-  if (!t.active) return false
-  if (t.allergens.some((a) => allergens.includes(a))) return false
-  return diets.every((d) => t.diets.includes(d))
+export function isSafe(t: CatalogTasting, allergens: string[], diets: string[], forKids = false): boolean {
+  return unsafeReason(t, allergens, diets, forKids) === null
+}
+
+/**
+ * Why a tasting cannot be served to this group, or null when it can. Allergens and diets come
+ * before the kids' rule, so a beer swapped for a gluten allergy reads as an allergy swap.
+ */
+export function unsafeReason(
+  t: CatalogTasting,
+  allergens: string[],
+  diets: string[],
+  forKids = false,
+): SwapReason | null {
+  if (!t.active) return 'unavailable'
+  if (t.allergens.some((a) => allergens.includes(a))) return 'diet'
+  if (!diets.every((d) => t.diets.includes(d))) return 'diet'
+  if (forKids && t.adultsOnly) return 'kids'
+  return null
 }
 
 /**
@@ -128,12 +150,27 @@ export function pickSafeTasting<T extends CatalogTasting>(
   preferredId: number | null | undefined,
   allergens: string[],
   diets: string[],
+  forKids = false,
 ): T | undefined {
   const preferred = preferredId != null ? tastings.find((t) => t.id === preferredId) : undefined
-  if (preferred && preferred.stallId === stallId && isSafe(preferred, allergens, diets)) return preferred
+  if (preferred && preferred.stallId === stallId && isSafe(preferred, allergens, diets, forKids))
+    return preferred
   return tastings
-    .filter((t) => t.stallId === stallId && isSafe(t, allergens, diets))
+    .filter((t) => t.stallId === stallId && isSafe(t, allergens, diets, forKids))
     .sort((a, b) => a.id - b.id)[0]
+}
+
+/**
+ * Why a stop does not serve its listed tasting: the listed tasting's own reason, else the stall
+ * (closed, or no riddle in this form) when the stop moved to the backup stall.
+ */
+function swapReasonFor(
+  listed: CatalogTasting | undefined,
+  allergens: string[],
+  diets: string[],
+  forKids: boolean,
+): SwapReason {
+  return (listed && unsafeReason(listed, allergens, diets, forKids)) ?? 'unavailable'
 }
 
 export type PreviewStatus = 'as_listed' | 'swapped' | 'blocked'
@@ -141,6 +178,8 @@ export interface PreviewStop<T> {
   index: number
   finale: boolean
   status: PreviewStatus
+  /** Why a swapped stop does not serve its listed tasting. */
+  reason?: SwapReason
   /** What will be served: the listed tasting, its safe replacement, or (blocked) the listed one. */
   tasting: T | undefined
 }
@@ -156,8 +195,11 @@ export function previewRoute<T extends CatalogTasting>(input: {
   tastings: T[]
   allergens: string[]
   diets: string[]
+  /** A kids' occasion: adults-only tastings are swapped. */
+  forKids?: boolean
 }): PreviewStop<T>[] {
   const { allergens, diets } = input
+  const forKids = input.forKids ?? false
   const stallById = new Map(input.stalls.map((s) => [s.id, s]))
   const usable = (id: number | null | undefined) => (id != null ? stallById.get(id)?.active : false)
   const listedById = new Map(input.tastings.map((t) => [t.id, t]))
@@ -165,14 +207,24 @@ export function previewRoute<T extends CatalogTasting>(input: {
     const finale = index === input.stops.length - 1
     const listed = listedById.get(stop.tastingId)
     const main = usable(stop.stallId)
-      ? pickSafeTasting(input.tastings, stop.stallId, stop.tastingId, allergens, diets)
+      ? pickSafeTasting(input.tastings, stop.stallId, stop.tastingId, allergens, diets, forKids)
       : undefined
+    const reason = swapReasonFor(listed, allergens, diets, forKids)
     if (main)
-      return { index, finale, status: main.id === stop.tastingId ? 'as_listed' : 'swapped', tasting: main }
+      return main.id === stop.tastingId
+        ? { index, finale, status: 'as_listed', tasting: main }
+        : { index, finale, status: 'swapped', reason, tasting: main }
     const backup = usable(stop.backupStallId)
-      ? pickSafeTasting(input.tastings, stop.backupStallId!, stop.backupTastingId, allergens, diets)
+      ? pickSafeTasting(input.tastings, stop.backupStallId!, stop.backupTastingId, allergens, diets, forKids)
       : undefined
-    if (backup) return { index, finale, status: 'swapped', tasting: backup }
+    if (backup)
+      return {
+        index,
+        finale,
+        status: 'swapped',
+        reason: usable(stop.stallId) ? reason : 'unavailable',
+        tasting: backup,
+      }
     return { index, finale, status: 'blocked', tasting: listed }
   })
 }
@@ -199,8 +251,9 @@ export function buildGame(input: BuildInput): BuildResult {
     diets: [...t.diets],
     feeAgorot: t.feeAgorot,
   })
+  const forKids = input.forKids ?? false
   const pickTasting = (stallId: number, preferredId?: number | null) =>
-    pickSafeTasting(input.tastings, stallId, preferredId, order.allergens, order.diets)
+    pickSafeTasting(input.tastings, stallId, preferredId, order.allergens, order.diets, forKids)
   const usableStall = (id: number | null | undefined) => {
     const s = id != null ? stallById.get(id) : undefined
     return s?.active ? s : undefined
@@ -238,10 +291,16 @@ export function buildGame(input: BuildInput): BuildResult {
 
     if (!stall || !tasting || !riddle) {
       const s = stallById.get(stop.stallId)
+      // Kids only when an allergy-safe tasting exists but every one of them is adults-only.
+      const kidsOnly =
+        forKids &&
+        input.tastings.some((t) => t.stallId === stop.stallId && isSafe(t, order.allergens, order.diets))
       const reason = !s?.active
         ? 'הדוכן לא פעיל'
         : !tasting
-          ? 'אין טעימה בטוחה לאלרגיות/תזונה'
+          ? kidsOnly
+            ? 'אין טעימה בלי אלכוהול למשחק של ילדים'
+            : 'אין טעימה בטוחה לאלרגיות/תזונה'
           : 'אין חידה בצורה הזו'
       flags.push({
         code: 'blocked_stop',
@@ -263,6 +322,21 @@ export function buildGame(input: BuildInput): BuildResult {
         stopIndex: index,
         message: `חסר מילוי ל-{${slot}} בתחנה ${index + 1}`,
       })
+
+    // Why the stop does not serve what the route lists (shown to the owner, never to buyers).
+    const listed = tastingById.get(stop.tastingId)
+    const swapped = swappedToBackup || (tasting != null && tasting.id !== stop.tastingId)
+    const swap: StopSwap | undefined =
+      swapped && !flags.some((f) => f.code === 'blocked_stop' && f.stopIndex === index)
+        ? {
+            // On the backup because the stall is closed or has no riddle in this form: unavailable.
+            reason:
+              swappedToBackup && (!usableStall(stop.stallId) || pickTasting(stop.stallId, stop.tastingId))
+                ? 'unavailable'
+                : swapReasonFor(listed, order.allergens, order.diets, forKids),
+            listedTasting: listed?.name ?? '',
+          }
+        : undefined
 
     const t = tasting ?? {
       id: 0,
@@ -292,6 +366,7 @@ export function buildGame(input: BuildInput): BuildResult {
           ? { stall: snapStall(backupStall), tasting: snapTasting(backupTasting) }
           : null,
       swappedToBackup,
+      ...(swap ? { swap } : {}),
     })
   })
 
