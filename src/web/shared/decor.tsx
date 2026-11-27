@@ -428,7 +428,8 @@ export function Doodles(props: { decor: string | null | undefined; spots: Spot[]
           <Doodle
             // biome-ignore lint/suspicious/noArrayIndexKey: spots are positional
             key={i}
-            name={set[i % set.length]}
+            // Icon spots do not use up a doodle: the set's doodles keep their order.
+            name={set[(i - Math.floor((i + 1) / 3)) % set.length]}
             className="doodle-bob"
             style={{
               top: s.top,
