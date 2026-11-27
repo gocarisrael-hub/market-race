@@ -171,6 +171,8 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await next(page, /\/order\/diet$/)
   await page.getByRole('checkbox', { name: 'בוטנים' }).click()
   await page.getByRole('checkbox', { name: 'טבעוני' }).click()
+  // How many of the five: one each by default; two vegans.
+  await page.getByRole('button', { name: 'עוד אדם: טבעוני' }).click()
   await expect(page.getByTestId('tastings')).toBeVisible()
   const diet = page.waitForResponse((r) => r.request().method() === 'PUT')
   await next(page, new RegExp(`/order/${token}/details$`))
@@ -178,6 +180,7 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
     people: 5,
     allergens: ['בוטנים'],
     diets: ['vegan'],
+    restrictionCounts: { בוטנים: 1, vegan: 2 },
   })
 
   await expect(page.getByRole('heading', { name: 'לאן לשלוח את המשחק?' })).toBeVisible()
@@ -196,7 +199,7 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'המשחק שלכם מוכן לבנייה' })).toBeVisible()
   await expect(bar).toHaveAttribute('aria-valuenow', '13')
   await expect(page.getByTestId('total')).toContainText('495 ₪')
-  await expect(page.getByText('בוטנים, טבעוני')).toBeVisible()
+  await expect(page.getByText('בוטנים (1), טבעוני (2)')).toBeVisible()
   await expect(page.getByText('תמונה אחת')).toBeVisible()
   // The summary, like every stage before it (checked in next()), has no underlined links.
   await noBareLinks(page)
@@ -302,7 +305,15 @@ test('the diet stage shows what is tasted on the way and follows the allergens',
   await expect(list).not.toContainText('בירה בסוף השוק')
   await expect(list.getByText('מוחלף בטעימה מתאימה')).toHaveCount(0)
 
+  // Gluten for one of four: the falafel and the beer stalls have something for them, so those stops
+  // read as listed; the bakery has nothing gluten-free.
   await page.getByRole('checkbox', { name: 'גלוטן', exact: true }).click()
+  await expect(stops.nth(1)).toHaveAttribute('data-status', 'blocked')
+  await expect(stops.nth(3)).toHaveAttribute('data-status', 'as_listed')
+  await expect(stops.last()).toContainText('משהו קר מהחבית לסיום')
+  // Gluten for all four: the whole group's tastings change.
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'עוד אדם: גלוטן' }).click()
+  await expect(page.getByRole('button', { name: 'עוד אדם: גלוטן' })).toBeDisabled()
   await expect(stops.nth(1)).toHaveAttribute('data-status', 'blocked')
   await expect(stops.nth(1)).toContainText('אין כרגע טעימה מתאימה בתחנה הזו; ניצור קשר')
   await expect(stops.nth(3)).toHaveAttribute('data-status', 'swapped')

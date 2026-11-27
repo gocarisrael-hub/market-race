@@ -239,6 +239,9 @@ export const orders = pgTable('orders', {
   people: integer().notNull().default(2),
   allergens: textArray(),
   diets: textArray(),
+  // How many of the group each ticked allergen or diet is for (1..people). A ticked one with no
+  // count is everyone: orders placed before counts existed were migrated that way.
+  restrictionCounts: jsonb().$type<Record<string, number>>().notNull().default({}),
   answers: jsonb().$type<Record<string, string>>().notNull().default({}),
   letterNotes: jsonb().$type<LetterNote[]>().notNull().default([]),
   // Optional personal questions about the honoree, asked in the game to unlock a riddle's hint.
@@ -311,7 +314,8 @@ export const redemptions = pgTable(
     usedBackup: boolean().notNull().default(false),
     redeemedAt: now(),
   },
-  (t) => [uniqueIndex('redemptions_order_stop').on(t.orderId, t.stopIndex)],
+  // A mixed stop (an alternative for some of the group) has a row per tasting.
+  (t) => [uniqueIndex('redemptions_order_stop_tasting').on(t.orderId, t.stopIndex, t.tastingId)],
 )
 
 // One row per payment attempt (Tranzila hosted page).

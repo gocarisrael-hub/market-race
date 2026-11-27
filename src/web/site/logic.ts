@@ -43,6 +43,8 @@ export type Draft = {
   people: number
   allergens: string[]
   diets: string[]
+  /** How many of the group each ticked allergen or diet is for (missing: 1). */
+  restrictionCounts: Record<string, number>
   honoreeName: string
   answers: Record<string, string>
   letterNotes: LetterNote[]
@@ -66,6 +68,7 @@ export function emptyDraft(minPeople = 1): Draft {
     people: Math.max(minPeople, 4),
     allergens: [],
     diets: [],
+    restrictionCounts: {},
     honoreeName: '',
     answers: {},
     letterNotes: [],
@@ -220,6 +223,33 @@ export function chooseOccasion(d: Draft, occ: Occasion): Draft {
 export const toggle = (list: string[], v: string) =>
   list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
 
+/** How many of the group a ticked allergen or diet is for: 1 when just ticked, at most everyone. */
+export const restrictionCount = (d: Pick<Draft, 'people' | 'restrictionCounts'>, key: string): number =>
+  Math.max(1, Math.min(d.restrictionCounts?.[key] ?? 1, Math.max(1, d.people)))
+
+/** The counts of what is ticked, as the order stores them. */
+export const restrictionCounts = (
+  d: Pick<Draft, 'people' | 'allergens' | 'diets' | 'restrictionCounts'>,
+): Record<string, number> =>
+  Object.fromEntries([...d.allergens, ...d.diets].map((k) => [k, restrictionCount(d, k)]))
+
+/** Ticks or unticks an allergen or diet; a new tick is for one person. */
+export function toggleRestriction(
+  d: Pick<Draft, 'allergens' | 'diets' | 'restrictionCounts'>,
+  kind: 'allergens' | 'diets',
+  key: string,
+): Pick<Draft, 'allergens' | 'diets' | 'restrictionCounts'> {
+  const on = !d[kind].includes(key)
+  const counts = { ...(d.restrictionCounts ?? {}) }
+  if (on) counts[key] = 1
+  else delete counts[key]
+  return {
+    allergens: kind === 'allergens' ? toggle(d.allergens, key) : d.allergens,
+    diets: kind === 'diets' ? toggle(d.diets, key) : d.diets,
+    restrictionCounts: counts,
+  }
+}
+
 /** Error message for step 1, or null when it is complete. */
 export function step1Error(d: Draft, shop: Shop): string | null {
   const occ = shop.occasions.find((o) => o.key === d.occasionKey && o.audience === 'private')
@@ -351,6 +381,7 @@ export function orderPayload(d: Draft, questions: Question[]): OrderPayload {
     people: d.people,
     allergens: d.allergens,
     diets: d.diets,
+    restrictionCounts: restrictionCounts(d),
     answers,
     letterNotes: d.answersLater ? [] : cleanNotes(d.letterNotes),
     hintQuestions: d.answersLater ? [] : cleanHintQuestions(d.hintQuestions),

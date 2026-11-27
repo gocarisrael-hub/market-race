@@ -1,11 +1,13 @@
 // The manage page's edit mode: the buyer changes the name, the answers, the letter notes, the
-// personal questions for hints, the style and its color (with a live preview), and reaches the
-// photos, any number of times until the game starts. Same fields as the order flow.
+// personal questions for hints, who doesn't eat what (and how many of them), the style and its
+// color (with a live preview), and reaches the photos, any number of times until the game starts.
+// Same fields as the order flow.
 
 import { useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
 import { ApiError, type HintQuestion, type LetterNote, type Manage as M, submitAnswers } from '../api.ts'
 import { copy, type SiteForm } from '../copy.ts'
+import { DietPicker, type DietValue } from '../diet.tsx'
 import { HintQuestions } from '../hintQuestions.tsx'
 import {
   askedQuestions,
@@ -15,6 +17,7 @@ import {
   errorText,
   MAX_NOTES,
   nameLabel,
+  restrictionCounts,
 } from '../logic.ts'
 import { PhotoDrop } from '../photo-background.tsx'
 import {
@@ -54,6 +57,10 @@ export function ManageEdit(props: {
     m.letterNotes?.length ? m.letterNotes : [{ text: '', signature: '' }],
   )
   const [hintQuestions, setHintQuestions] = useState<HintQuestion[]>(m.hintQuestions ?? [])
+  // Who doesn't eat what, with how many of the group (older servers: not editable here).
+  const [diet, setDiet] = useState<DietValue | null>(
+    m.diet ? { allergens: m.diet.allergens, diets: m.diet.diets, restrictionCounts: m.diet.counts } : null,
+  )
   const look = m.look ?? null
   // The style: the ones offered for this occasion on the same market (older servers: just this one).
   const styles = look?.themes ?? []
@@ -86,6 +93,13 @@ export function ManageEdit(props: {
         answers: sent,
         letterNotes: cleanNotes(notes),
         hintQuestions: cleanHintQuestions(hintQuestions),
+        ...(diet
+          ? {
+              allergens: diet.allergens,
+              diets: diet.diets,
+              restrictionCounts: restrictionCounts({ ...diet, people: m.people }),
+            }
+          : {}),
         ...(themeId != null && themeId !== look?.themeId
           ? { themeId, paletteId: pals.length ? paletteId : null }
           : {}),
@@ -293,6 +307,25 @@ export function ManageEdit(props: {
                   name={pal.name}
                 />
               )}
+            </section>
+          )}
+          {diet && m.diet && (
+            <section className="section m-diet" aria-labelledby="l-edit-diet">
+              <QNote id="l-edit-diet" tilt={-1}>
+                {copy.home.allergens}
+              </QNote>
+              <p className="hint">{copy.home.allergensHint}</p>
+              <DietPicker
+                allergenOptions={m.diet.options.allergens}
+                dietOptions={m.diet.options.diets}
+                people={m.people}
+                value={diet}
+                onChange={(v) => {
+                  setError(null)
+                  setDiet(v)
+                }}
+                labelledBy="l-edit-diet"
+              />
             </section>
           )}
           {m.photos.editable && (

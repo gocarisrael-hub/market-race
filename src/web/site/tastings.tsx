@@ -13,16 +13,19 @@ export function RouteTastings(props: {
   themeId: number | null
   allergens: string[]
   diets: string[]
+  /** How many of the group each one is for (absent: everyone). */
+  group?: { people: number; counts: Record<string, number> }
   /** The order's occasion: a kids' game is served differently, so its list waits for the server. */
   occasionKey?: string | null
 }) {
-  const { shop, themeId, allergens, diets, occasionKey } = props
+  const { shop, themeId, allergens, diets, occasionKey, group } = props
   const route = routeForTheme(shop, themeId)
   const forKids = shop.occasions.find((o) => o.key === occasionKey)?.forKids ?? false
   const listed = (r: typeof route) => (forKids ? [] : listedStops(r))
   const [stops, setStops] = useState<PreviewStop[]>(() => listed(route))
   const aKey = allergens.join(',')
   const dKey = diets.join(',')
+  const gKey = group ? `${group.people}|${JSON.stringify(group.counts)}` : ''
   const first = useRef(true)
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the joined lists
@@ -32,7 +35,7 @@ export function RouteTastings(props: {
     // The first load is not debounced: a kids' list shows nothing until it arrives.
     const timer = setTimeout(
       () => {
-        getRoutePreview(themeId, allergens, diets, ctrl.signal, occasionKey)
+        getRoutePreview(themeId, allergens, diets, ctrl.signal, occasionKey, group)
           .then(setStops)
           .catch(() => {}) // keep what is shown; the order still works
       },
@@ -43,7 +46,7 @@ export function RouteTastings(props: {
       clearTimeout(timer)
       ctrl.abort()
     }
-  }, [themeId, route?.id, aKey, dKey, occasionKey])
+  }, [themeId, route?.id, aKey, dKey, gKey, occasionKey])
 
   // A theme of another market shows that market's route right away.
   const [routeId, setRouteId] = useState(route?.id)

@@ -29,6 +29,7 @@ import type { Question } from '../domain/types.ts'
 import { updateKidsTastings } from './kids-update.ts'
 import { BuildError, buildOrderGame } from './orders.ts'
 import {
+  DEMO_DIET_ALTERNATIVES,
   DEMO_MAHANE,
   DEMO_MARKET,
   DEMO_OCCASIONS,
@@ -53,7 +54,7 @@ export function demoSeedingEnabled(env: Record<string, string | undefined>, appE
 }
 
 /** Bump when the demo content changes, so seeded databases pick it up at their next boot. */
-export const DEMO_SEED_VERSION = 5
+export const DEMO_SEED_VERSION = 6
 
 export interface RefreshReport {
   ran: boolean
@@ -69,6 +70,8 @@ export interface RefreshReport {
   minigames: 'written' | 'kept'
   /** Kids' games: adults-only tastings and the kids' drink (see kids-update.ts). */
   kids: string[]
+  /** Alternatives for part of the group added at demo stalls (per-person diets). */
+  alternatives: string[]
   rebuilt: string[]
   rebuildFailed: string[]
   /** Not started, but not a demo game (neither a test game nor paid through the mock): untouched. */
@@ -159,6 +162,7 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
     rebuilt: [],
     rebuildFailed: [],
     skippedNotDemo: [],
+    alternatives: [],
   }
   if (from >= DEMO_SEED_VERSION) return report
   // A database with real payments is not a demo database, whatever the environment says.
@@ -198,6 +202,28 @@ export async function refreshDemoContent(db: DB, now = new Date()): Promise<Refr
       await db.insert(riddles).values({ ...values, stallId: stall.id })
       report.riddles.inserted++
     }
+  }
+
+  // Alternatives for part of the group (a vegan, a milk allergy): added where the stall has none
+  // by that name. Never changed or removed afterwards (tastings have no edit time).
+  for (const a of DEMO_DIET_ALTERNATIVES) {
+    const stall = stallByName.get(a.stall)
+    if (!stall) continue
+    const [have] = await db
+      .select({ id: tastings.id })
+      .from(tastings)
+      .where(and(eq(tastings.stallId, stall.id), eq(tastings.name, a.name)))
+    if (have) continue
+    await db.insert(tastings).values({
+      stallId: stall.id,
+      name: a.name,
+      allergens: a.allergens,
+      diets: a.diets,
+      feeAgorot: a.feeAgorot,
+      teaser: a.teaser,
+      teaserIcon: DEMO_TASTING_ICONS[a.name] ?? null,
+    })
+    report.alternatives.push(`${a.stall}: ${a.name}`)
   }
 
   // Tasting icons, by the tasting's name. Tastings have no edit time: only an icon that is still one

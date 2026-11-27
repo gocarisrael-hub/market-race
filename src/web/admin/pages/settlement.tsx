@@ -20,6 +20,8 @@ interface StallRow {
   redemptions: number
   portions: number
   totalAgorot: number
+  /** Portions per tasting (a mixed stop serves two tastings, each at its own fee). */
+  byTasting?: { tastingName: string; feeAgorot: number; portions: number; totalAgorot: number }[]
   rows: Line[]
 }
 interface Data {
@@ -91,6 +93,16 @@ export function SettlementPage() {
                     {open === s.stallId && (
                       <tr className="drill">
                         <td colSpan={4}>
+                          {(s.byTasting?.length ?? 0) > 1 && (
+                            <p className="muted" data-testid="by-tasting">
+                              {s
+                                .byTasting!.map(
+                                  (t) =>
+                                    `${t.portions} × ${t.tastingName} (${shekels(t.feeAgorot)}) = ${shekels(t.totalAgorot)}`,
+                                )
+                                .join(' · ')}
+                            </p>
+                          )}
                           <table>
                             <thead>
                               <tr>

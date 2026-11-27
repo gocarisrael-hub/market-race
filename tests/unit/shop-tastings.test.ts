@@ -98,8 +98,27 @@ describe('shop tastings (public, before purchase)', () => {
 
   it('diets narrow the choice too', async () => {
     const stops = (await preview('&diets=vegan')).json().stops
-    // Jachnun and burik are vegetarian only, and back each other up.
+    // The whole group vegan: the bakery and the burik stall serve their vegan alternatives.
     expect(stops.map((s: { status: string }) => s.status)).toEqual([
+      'as_listed',
+      'swapped',
+      'swapped',
+      'as_listed',
+      'as_listed',
+    ])
+  })
+
+  it('one vegan of four: every stop still serves its listed tasting (to the others)', async () => {
+    const stops = (await preview('&diets=vegan&people=4&counts=vegan:1')).json().stops
+    expect(stops.map((s: { status: string }) => s.status)).toEqual(Array(5).fill('as_listed'))
+    expect(stops[1].teaser).toBe('מאפה תימני מסורתי מהתנור')
+    // Gluten for one of four: the bakery has nothing gluten-free, so the whole group moves on.
+    const gluten = (
+      await preview(
+        `&allergens=${encodeURIComponent('גלוטן')}&people=4&counts=${encodeURIComponent('גלוטן:1')}`,
+      )
+    ).json().stops
+    expect(gluten.map((s: { status: string }) => s.status)).toEqual([
       'as_listed',
       'blocked',
       'blocked',

@@ -1111,6 +1111,22 @@ h2 {
   font-weight: var(--hand-weight, 700);
   line-height: 1.1;
 }
+.portions.mixed {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  font-size: calc(clamp(26px, 8vw, 32px) * var(--hs, 1));
+}
+.portions.mixed ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: right;
+}
+.portions.mixed li + li {
+  margin-top: 4px;
+}
 .for {
   margin-top: 2px;
   font-size: 15px;

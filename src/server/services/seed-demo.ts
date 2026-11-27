@@ -444,6 +444,9 @@ export const DEMO_TASTING_ICONS: Record<string, string> = {
   'בירה מהחבית': 'drinks/beer',
   'סיידר תפוחים': 'produce/apples',
   'קפה הפוך': 'drinks/cappuccino',
+  'לחוח עם רסק וסחוג': 'food/pita-stack',
+  'בוריק טבעוני (בלי ביצה)': 'food/brik',
+  'קפה הפוך בחלב סויה': 'drinks/cappuccino',
   מיץ: 'drinks/lemonade',
   לימונדה: 'drinks/lemonade',
   'לימונדה קרה': 'drinks/lemonade',
@@ -900,6 +903,45 @@ export const KIDS_DRINK = {
 }
 export const DEMO_MAHANE = 'שוק מחנה יהודה'
 
+/**
+ * Alternatives at the demo stalls for part of the group (per-person diets): a vegan tasting at the
+ * bakery and the burik stall, soy milk at the coffee stall (a milk allergy). The kebab stall has
+ * none on purpose. Keyed by stall and tasting name (the demo refresh adds the missing ones).
+ */
+export const DEMO_DIET_ALTERNATIVES: {
+  stall: string
+  name: string
+  allergens: string[]
+  diets: string[]
+  feeAgorot: number
+  teaser: string
+}[] = [
+  {
+    stall: 'המאפייה התימנית',
+    name: 'לחוח עם רסק וסחוג',
+    allergens: ['גלוטן'],
+    diets: ['vegan', 'vegetarian'],
+    feeAgorot: 1300,
+    teaser: 'מאפה תימני מסורתי מהתנור',
+  },
+  {
+    stall: 'בוריק',
+    name: 'בוריק טבעוני (בלי ביצה)',
+    allergens: ['גלוטן'],
+    diets: ['vegan', 'vegetarian'],
+    feeAgorot: 1200,
+    teaser: 'מאפה פריך וחם, ממולא תפוחי אדמה',
+  },
+  {
+    stall: 'קפה של השוק',
+    name: 'קפה הפוך בחלב סויה',
+    allergens: ['סויה'],
+    diets: [...ALL_DIETS],
+    feeAgorot: 900,
+    teaser: 'משהו חם ומעורר',
+  },
+]
+
 /** The demo riddles' fixed fields. Their stable key is the stall's name and the answer. */
 export const DEMO_RIDDLE_ROWS: {
   stall: string
@@ -1294,6 +1336,11 @@ export async function seedDemo(db: DB): Promise<{ carmelRouteId: number; carmelT
   const stallIdByName = new Map(
     [tikva, juice2, bakery, burik, falafel, kebab, beer, coffee].map((x) => [x.name, x.id]),
   )
+  // Alternatives for part of the group (a vegan, a milk allergy), after the regular tastings.
+  for (const a of DEMO_DIET_ALTERNATIVES) {
+    const stallId = stallIdByName.get(a.stall)
+    if (stallId) await t(stallId, a.name, a.allergens, a.diets, a.feeAgorot, a.teaser, null)
+  }
   const byAnswer = new Map<string, typeof riddles.$inferSelect>()
   for (const d of DEMO_RIDDLE_ROWS) {
     const [row] = await db

@@ -1,6 +1,7 @@
 // Orders: list with filters, review queue, order detail (answers, game, links, payments,
 // messages, redemptions, company tools), test-game form, live games.
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { restrictionsOf, stopPortions } from '../../../server/domain/diet.ts'
 import { occasionRecipients } from '../../../server/domain/recipient.ts'
 import { nameSlots, questionTextFor } from '../../../server/domain/template.ts'
 import {
@@ -95,6 +96,7 @@ interface OrderRow {
   people: number
   allergens: string[]
   diets: string[]
+  restrictionCounts?: Record<string, number>
   answers: Record<string, string>
   letterNotes: LetterNote[]
   hintQuestions?: { question: string; answer: string }[]
@@ -388,14 +390,27 @@ const SWAP_REASONS: Record<StopSwap['reason'], string> = {
 export const swapText = (swap: StopSwap, toBackup: boolean) =>
   `${toBackup ? 'הוחלף לדוכן הגיבוי' : 'הוחלפה הטעימה'}${swap.listedTasting ? ` (במקום ${swap.listedTasting})` : ''}: ${SWAP_REASONS[swap.reason]}`
 
+/** "טבעוני ×1, אגוזים ×2": each restriction with how many of the group it is for. */
+export function restrictionsText(o: {
+  people: number
+  allergens: string[]
+  diets: string[]
+  restrictionCounts?: Record<string, number> | null
+}): string {
+  return restrictionsOf(o)
+    .map((r) => `${r.kind === 'diet' ? (DIET_LABELS[r.key] ?? r.key) : r.key} ×${r.count}`)
+    .join(', ')
+}
+
+const forText = (keys: string[]) => keys.map((k) => DIET_LABELS[k] ?? k).join(', ')
+
 export function GameView({ game }: { game: GameSnapshot }) {
   return (
     <div className="game">
       <p className="muted">
         {game.market.name} · {game.theme.name} · {FORM_LABELS[game.form]} ·{' '}
         {game.people === 1 ? 'משתתף אחד' : `${game.people} אנשים`}
-        {game.allergens.length > 0 && ` · אלרגנים: ${game.allergens.join(', ')}`}
-        {game.diets.length > 0 && ` · ${game.diets.map((d) => DIET_LABELS[d] ?? d).join(', ')}`} · נבנה{' '}
+        {game.allergens.length + game.diets.length > 0 && ` · לא אוכלים: ${restrictionsText(game)}`} · נבנה{' '}
         {when(game.builtAt)}
       </p>
       <ol className="stops">
@@ -414,12 +429,15 @@ export function GameView({ game }: { game: GameSnapshot }) {
               )}
               {s.stall.locationHint && <span className="muted"> · {s.stall.locationHint}</span>}
             </div>
-            <div>
-              טעימה: {s.tasting.name} ({shekels(s.tasting.feeAgorot)} למנה)
-              {s.tasting.allergens.length > 0 && (
-                <span className="muted"> · אלרגנים: {s.tasting.allergens.join(', ')}</span>
-              )}
-            </div>
+            {stopPortions(s, game.people).map((p) => (
+              <div key={p.tasting.id} data-testid="portion">
+                {p.count} × {p.tasting.name} ({shekels(p.tasting.feeAgorot)} למנה)
+                {p.for.length > 0 && <span className="error"> · חלופה בשביל: {forText(p.for)}</span>}
+                {p.tasting.allergens.length > 0 && (
+                  <span className="muted"> · אלרגנים: {p.tasting.allergens.join(', ')}</span>
+                )}
+              </div>
+            ))}
             <RiddleText parts={s.riddle.parts} />
             <div className="muted small">
               תשובה: <strong>{s.riddle.answer}</strong>
@@ -429,7 +447,9 @@ export function GameView({ game }: { game: GameSnapshot }) {
             <div className="muted small">
               גיבוי:{' '}
               {s.backup ? (
-                `${s.backup.stall.name}, ${s.backup.tasting.name}`
+                `${s.backup.stall.name}, ${stopPortions(s, game.people, true)
+                  .map((p) => `${p.count} × ${p.tasting.name}`)
+                  .join(', ')}`
               ) : (
                 <span className="error">אין</span>
               )}
@@ -1033,7 +1053,7 @@ function OrderDetail({ id, back }: { id: number; back: string }) {
             <dt>אנשים</dt>
             <dd>{o.people}</dd>
             <dt>אלרגנים / תזונה</dt>
-            <dd>{[...o.allergens, ...o.diets.map((x) => DIET_LABELS[x] ?? x)].join(', ') || '—'}</dd>
+            <dd>{restrictionsText(o) || '—'}</dd>
             {(o.hintQuestions?.length ?? 0) > 0 && (
               <>
                 <dt>שאלות לרמזים</dt>
@@ -1274,6 +1294,8 @@ export function TestGamePage() {
   const [people, setPeople] = useState(4)
   const [allergens, setAllergens] = useState<string[]>([])
   const [diets, setDiets] = useState<string[]>([])
+  // How many of the group each ticked one is for (missing: everyone).
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const [honoreeName, setHonoreeName] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -1325,6 +1347,9 @@ export function TestGamePage() {
           people,
           allergens,
           diets,
+          restrictionCounts: Object.fromEntries(
+            [...allergens, ...diets].filter((k) => counts[k] >= 1).map((k) => [k, counts[k]]),
+          ),
           answers: Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim())),
         },
       })
@@ -1433,6 +1458,21 @@ export function TestGamePage() {
             ))}
           </div>
         </fieldset>
+        {allergens.length + diets.length > 0 && (
+          <fieldset>
+            <legend>כמה מהקבוצה (ריק: כולם)</legend>
+            <div className="checks">
+              {[...allergens, ...diets].map((k) => (
+                <NumberInput
+                  key={k}
+                  label={DIET_LABELS[k] ?? k}
+                  value={counts[k] ?? people}
+                  onChange={(v) => setCounts({ ...counts, [k]: Math.max(1, Math.min(people, v)) })}
+                />
+              ))}
+            </div>
+          </fieldset>
+        )}
         {questions.length > 0 && (
           <fieldset>
             <legend>שאלות</legend>

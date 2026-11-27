@@ -109,6 +109,7 @@ export const COPY = {
   'redeem.codeLabel': 'הקוד של היום',
   'redeem.portions': '{n} מנות {tasting}',
   'redeem.portionsOne': 'מנה אחת {tasting}',
+  'redeem.item': '{n} × {tasting}',
   'redeem.for': 'בשביל המירוץ של {name}',
   'redeem.allergens': 'אלרגיה ל{allergens}. תזכירו גם בעל פה.',
   'redeem.button': 'קיבלנו! לחידה הבאה',

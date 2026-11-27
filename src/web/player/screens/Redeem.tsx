@@ -1,4 +1,5 @@
-// Redeem: the screen the vendor checks. Day's code, who it is for, portions, tasting, allergens.
+// Redeem: the screen the vendor checks. Day's code, who it is for, portions per tasting (a mixed
+// stop lists the regular tasting and the alternative by name), allergens.
 import { Icon } from '../../shared/decor.tsx'
 import { LibIcon } from '../../shared/icon.tsx'
 import { joinList } from '../copy.ts'
@@ -12,6 +13,10 @@ export function Redeem({ view, t, act }: ScreenProps) {
   const rd = cur.redeem!
   const { busy, run } = useBusy()
   const digits = [...rd.code]
+  // Older servers send no items: one tasting for everyone.
+  const items = rd.items?.length ? rd.items : [{ count: rd.portions, tasting: rd.tasting }]
+  const mixed = items.length > 1
+  const { count: portions, tasting } = items[0]
   return (
     <main className="scr redeem">
       <header className="redeem-head">
@@ -57,12 +62,24 @@ export function Redeem({ view, t, act }: ScreenProps) {
       </div>
 
       <div className="redeem-what">
-        <div className="portions">
-          <LibIcon icon="game/fork-knife" size={34} tilt={-4} />
-          {rd.portions === 1
-            ? t('redeem.portionsOne', { tasting: rd.tasting })
-            : t('redeem.portions', { n: rd.portions, tasting: rd.tasting })}
-        </div>
+        {mixed ? (
+          // A mixed stop: each tasting with its portions, by its own name (the stall must know).
+          <div className="portions mixed" data-testid="portions">
+            <LibIcon icon="game/fork-knife" size={34} tilt={-4} />
+            <ul>
+              {items.map((it) => (
+                <li key={it.tasting}>{t('redeem.item', { n: it.count, tasting: it.tasting })}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="portions" data-testid="portions">
+            <LibIcon icon="game/fork-knife" size={34} tilt={-4} />
+            {portions === 1
+              ? t('redeem.portionsOne', { tasting: tasting })
+              : t('redeem.portions', { n: portions, tasting: tasting })}
+          </div>
+        )}
         <div className="for">
           <Icon name="people" size={26} tilt={4} />
           {t('redeem.for', { name: rd.name })}
