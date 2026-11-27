@@ -23,10 +23,13 @@ test('occasions: an even two-column grid, the last one never under the sticky bu
 
   // Two columns of equal width: every option's left edge is one of two, and rows are full.
   const boxes = await Promise.all(Array.from({ length: n }, (_, i) => box(options.nth(i))))
-  const columns = [...new Set(boxes.map((b) => Math.round(b.x)))]
+  // Positions fall on half pixels: compare within a few pixels.
+  const near = (a: number, b: number) => Math.abs(a - b) < 3
+  const columns: number[] = []
+  for (const b of boxes) if (!columns.some((x) => near(x, b.x))) columns.push(b.x)
   expect(columns).toHaveLength(2)
   expect(Math.abs(boxes[0].width - boxes[1].width)).toBeLessThan(2)
-  for (let i = 0; i + 1 < n; i += 2) expect(Math.round(boxes[i].y)).toBe(Math.round(boxes[i + 1].y))
+  for (let i = 0; i + 1 < n; i += 2) expect(near(boxes[i].y, boxes[i + 1].y)).toBe(true)
   // The icon sits over the word.
   const art = await box(options.first().locator('.opt-art'))
   expect(art.y - boxes[0].y).toBeLessThan(20)
