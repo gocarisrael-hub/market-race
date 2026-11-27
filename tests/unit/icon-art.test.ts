@@ -28,6 +28,14 @@ describe('icons named in code', () => {
     expect(occasionIcon({ decor: 'love', icons: [] })).toBe(DECOR_ICONS.love[0])
   })
 
+  it("gives each offered demo occasion its own first icon (a kid's birthday is not a birthday)", () => {
+    const offered = Object.entries(DEMO_OCCASION_ICONS).filter(([k]) => k !== 'birthday_parent')
+    const firsts = offered.map(([, icons]) => icons[0])
+    expect(new Set(firsts).size).toBe(firsts.length)
+    expect(DEMO_OCCASION_ICONS.birthday_kid[0]).not.toBe(DEMO_OCCASION_ICONS.birthday_friend[0])
+    expect(DECOR_ICONS.kids[0]).not.toBe(DECOR_ICONS.birthday[0])
+  })
+
   it('gives recipients animal and fun icons, kids their own', () => {
     for (const r of RECIPIENTS) {
       expect(keys.has(recipientIcon(r)!), r).toBe(true)
