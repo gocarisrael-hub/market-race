@@ -10,6 +10,7 @@ import type { DB } from '../db/index.ts'
 import { gameStates, markets, occasions, orders, redemptions, stalls } from '../db/schema.ts'
 import { dailyCode } from '../domain/dailycode.ts'
 import { israelDate } from '../domain/dates.ts'
+import { portionsForPlayers, stopPortions } from '../domain/diet.ts'
 import { matchAnswer } from '../domain/matcher.ts'
 import {
   checkMinigame,
@@ -167,7 +168,15 @@ export interface PlayerView {
       originalStallName: string | null
     }
     // On "redeem":
-    redeem: null | { code: string; portions: number; tasting: string; allergens: string[]; name: string }
+    redeem: null | {
+      code: string
+      portions: number
+      tasting: string
+      /** Per tasting, for a mixed stop (the regular one and an alternative): "3 × בוריק". */
+      items: { count: number; tasting: string }[]
+      allergens: string[]
+      name: string
+    }
   }
   completed: { index: number; stall: string; tasting: string; icon?: string | null }[]
   letter: null | { notes: { text: string; signature: string }[]; photos: string[] }
@@ -392,10 +401,12 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
     }
     if (state.step === 'redeem') {
       const [market] = await db.select().from(markets).where(eq(markets.id, game.market.id))
+      const items = portionsForPlayers(stopPortions(stop, game.people, usingBackup), players)
       current.redeem = {
         code: dailyCode(market.codeSecret, today),
         portions: players,
         tasting: tasting.name,
+        items: items.map((p) => ({ count: p.count, tasting: p.tasting.name })),
         allergens: game.allergens,
         name: game.company?.name ?? game.honoree,
       }
@@ -510,7 +521,8 @@ export async function act(
       if (state.step !== 'redeem') return stale()
       const usingBackup = state.backupStops.includes(stop.index) && !!stop.backup
       const stall = usingBackup ? stop.backup!.stall : stop.stall
-      const tasting = usingBackup ? stop.backup!.tasting : stop.tasting
+      // One row per tasting: a mixed stop pays each tasting's own fee for its portions.
+      const served = portionsForPlayers(stopPortions(stop, game.people, usingBackup), playersOf(state, game))
       const last = state.stopIndex >= game.stops.length - 1
       // A mini-game placed before the next stop comes first.
       const next = state.stopIndex + 1
@@ -519,16 +531,18 @@ export async function act(
         return stale()
       await db
         .insert(redemptions)
-        .values({
-          orderId: order.id,
-          stopIndex: stop.index,
-          stallId: stall.id,
-          tastingId: tasting.id,
-          portions: playersOf(state, game),
-          feeAgorot: tasting.feeAgorot,
-          usedBackup: usingBackup,
-          redeemedAt: now,
-        })
+        .values(
+          served.map((p) => ({
+            orderId: order.id,
+            stopIndex: stop.index,
+            stallId: stall.id,
+            tastingId: p.tasting.id,
+            portions: p.count,
+            feeAgorot: p.tasting.feeAgorot,
+            usedBackup: usingBackup,
+            redeemedAt: now,
+          })),
+        )
         .onConflictDoNothing()
       if (last) await db.update(orders).set({ status: 'done' }).where(eq(orders.id, order.id))
       return reload()

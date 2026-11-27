@@ -201,11 +201,25 @@ export interface SnapshotTasting {
   feeAgorot: number
 }
 
+/**
+ * How many portions of a tasting a stop serves, and for which restrictions (empty: the regular
+ * tasting). A mixed stop serves the regular tasting and a fitting alternative at the same stall.
+ */
+export interface SnapshotPortion {
+  tasting: SnapshotTasting
+  count: number
+  for: string[]
+}
+
 export interface SnapshotStop {
   index: number
   finale: boolean
   stall: SnapshotStall
+  /** The regular tasting, or the first served when nobody gets it. */
   tasting: SnapshotTasting
+  /** Every tasting served, with its portions for the people bought. Missing on older games: the
+   * whole group gets `tasting`. */
+  portions?: SnapshotPortion[]
   riddle: {
     id: number
     parts: TextPart[]
@@ -216,7 +230,7 @@ export interface SnapshotStop {
   }
   photo: string | null
   // Used on the day if the stall is closed. Null when there is no safe backup.
-  backup: { stall: SnapshotStall; tasting: SnapshotTasting } | null
+  backup: { stall: SnapshotStall; tasting: SnapshotTasting; portions?: SnapshotPortion[] } | null
   // True when the builder already swapped to the backup stall (allergen/diet safety).
   swappedToBackup: boolean
   /** Set when the stop does not serve its listed tasting (another one at the stall, or the backup). */
@@ -300,6 +314,8 @@ export interface GameSnapshot {
   people: number
   allergens: string[]
   diets: string[]
+  /** How many of the group each allergen or diet is for. Missing on older games: everyone. */
+  restrictionCounts?: Record<string, number>
   stops: SnapshotStop[]
   letter: { notes: LetterNote[]; photos: string[] }
   /** Personal mini-games between stops. Missing on games built before they existed. */

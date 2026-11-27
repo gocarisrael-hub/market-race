@@ -21,7 +21,13 @@ import {
 } from '../../src/server/services/demo-refresh.ts'
 import { buildOrderGame, createOrder } from '../../src/server/services/orders.ts'
 import { startGame } from '../../src/server/services/play.ts'
-import { DEMO_RIDDLES, KIDS_DRINK, RECIPIENT_SETS, seedDemo } from '../../src/server/services/seed-demo.ts'
+import {
+  DEMO_DIET_ALTERNATIVES,
+  DEMO_RIDDLES,
+  KIDS_DRINK,
+  RECIPIENT_SETS,
+  seedDemo,
+} from '../../src/server/services/seed-demo.ts'
 import { makeTestApp, ownerCookie } from '../helpers/app.ts'
 
 const RICH = {
@@ -258,6 +264,22 @@ describe('demo content refresh', () => {
     expect(all.filter((x) => x.adultsOnly).map((x) => x.name)).toEqual(['בירה מהחבית', 'סיידר תפוחים'])
     expect(all.filter((x) => x.name === KIDS_DRINK.name)).toHaveLength(1)
     expect(r.kids.some((l) => l.includes(`added "${KIDS_DRINK.name}"`))).toBe(true)
+  })
+
+  it('version 6: the demo stalls get alternatives for part of the group (a vegan, a milk allergy)', async () => {
+    const names = DEMO_DIET_ALTERNATIVES.map((a) => a.name)
+    const count = async () =>
+      (await t.db.select().from(tastings)).filter((x) => names.includes(x.name)).length
+    expect(await count()).toBe(names.length)
+    for (const n of names) await t.db.delete(tastings).where(eq(tastings.name, n))
+    await t.db.update(settings).set({ value: 5 }).where(eq(settings.key, 'demo_seed_version'))
+    const r = await refreshDemoContent(t.db)
+    expect(r.alternatives).toHaveLength(names.length)
+    expect(await count()).toBe(names.length)
+    // Once there, never added twice.
+    await t.db.update(settings).set({ value: 5 }).where(eq(settings.key, 'demo_seed_version'))
+    expect((await refreshDemoContent(t.db)).alternatives).toEqual([])
+    expect(await count()).toBe(names.length)
   })
 
   it('renames, adds and retires demo occasions, leaving one the admin edited alone', async () => {

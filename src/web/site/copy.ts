@@ -134,6 +134,12 @@ export const copy = {
     blocked: 'אין כרגע טעימה מתאימה בתחנה הזו; ניצור קשר',
     blockedSummary: 'בחלק מהתחנות אין כרגע טעימה שמתאימה לכולם. אפשר להזמין, ונחזור אליכם לפני המשחק.',
     diets: 'תזונה',
+    // For each ticked allergen or diet: how many of the group (a small stepper).
+    howMany: 'כמה מכם?',
+    howManyLess: (what: string) => `פחות אנשים: ${what}`,
+    howManyMore: (what: string) => `עוד אדם: ${what}`,
+    howManyOf: (what: string, n: number) => `${what}: ${n}`,
+    ofPeople: (n: number) => `מתוך ${n}`,
     dietLabels: { vegan: 'טבעוני', vegetarian: 'צמחוני', gluten_free: 'ללא גלוטן' } as Record<string, string>,
     total: 'סה״כ',
     perPerson: (p: string) => `${p} לאדם`,

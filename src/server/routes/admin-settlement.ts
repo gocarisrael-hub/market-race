@@ -23,6 +23,7 @@ export async function loadSettlement(db: DB, month: string): Promise<Settlement>
       redemptionId: redemptions.id,
       redeemedAt: redemptions.redeemedAt,
       orderId: redemptions.orderId,
+      stopIndex: redemptions.stopIndex,
       orderNo: orders.orderNo,
       stallId: redemptions.stallId,
       stallName: stalls.name,

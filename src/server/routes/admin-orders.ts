@@ -1,5 +1,5 @@
 // Admin: orders, test games, review queue, live games, resend and cancel.
-import { and, count, desc, eq, gt, ilike, inArray, max, or, sum } from 'drizzle-orm'
+import { and, count, countDistinct, desc, eq, gt, ilike, inArray, max, or, sum } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppContext } from '../app.ts'
@@ -16,6 +16,7 @@ import {
   tastings,
   uploads,
 } from '../db/schema.ts'
+import { cleanCounts } from '../domain/diet.ts'
 import { recipientForForm } from '../domain/recipient.ts'
 import { FORMS, ORDER_STATUSES, RECIPIENT_FORM, RECIPIENTS } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
@@ -48,6 +49,8 @@ const testGame = z.object({
   people: z.number().int().min(1).max(100),
   allergens: z.array(z.string()).default([]),
   diets: z.array(z.string()).default([]),
+  // How many of the group each one is for; missing: everyone.
+  restrictionCounts: z.record(z.string(), z.number().int().min(1)).optional(),
   answers: z.record(z.string(), z.string()).default({}),
   letterNotes: z.array(letterNote).default([]),
   companyName: z.string().max(80).optional(),
@@ -89,7 +92,11 @@ export function usage(
 async function usedByOrder(db: DB, ids: number[]) {
   if (!ids.length) return new Map<number, { portions: number; stops: number }>()
   const rows = await db
-    .select({ orderId: redemptions.orderId, portions: sum(redemptions.portions), stops: count() })
+    .select({
+      orderId: redemptions.orderId,
+      portions: sum(redemptions.portions),
+      stops: countDistinct(redemptions.stopIndex),
+    })
     .from(redemptions)
     .where(inArray(redemptions.orderId, ids))
     .groupBy(redemptions.orderId)
@@ -209,7 +216,11 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         order,
         state: state ?? null,
         redemptions: used,
-        usage: usage(order, { portions, stops: used.length }, state?.players ?? null),
+        usage: usage(
+          order,
+          { portions, stops: new Set(used.map((x) => x.stopIndex)).size },
+          state?.players ?? null,
+        ),
         messages: msgs,
         paySessions: sessions,
         uploads: files,
@@ -233,6 +244,7 @@ export async function adminOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           kind,
           status: 'awaiting_answers',
           ...b,
+          restrictionCounts: cleanCounts(b.people, b.allergens, b.diets, b.restrictionCounts),
           form: recipient ? RECIPIENT_FORM[recipient] : b.form,
           recipient,
           companyName: b.companyName ?? null,

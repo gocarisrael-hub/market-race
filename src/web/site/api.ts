@@ -86,6 +86,8 @@ export type OrderPayload = {
   people: number
   allergens: string[]
   diets: string[]
+  /** How many of the group each ticked allergen or diet is for. */
+  restrictionCounts: Record<string, number>
   answers: Record<string, string>
   letterNotes: LetterNote[]
   hintQuestions: HintQuestion[]
@@ -129,6 +131,13 @@ export type Manage = {
   honoreeName?: string
   letterNotes?: LetterNote[]
   hintQuestions?: HintQuestion[]
+  /** Who does not eat what, and how many of the group each one is for (editable orders only). */
+  diet?: {
+    allergens: string[]
+    diets: string[]
+    counts: Record<string, number>
+    options: { allergens: string[]; diets: string[] }
+  }
   /** The color choice for the edit form: the map, its palettes (default first) and the chosen id. */
   look?: {
     /** The chosen style, and the styles it can change to (offered for the occasion, same market). */
@@ -203,11 +212,21 @@ export const getRoutePreview = (
   diets: string[],
   signal?: AbortSignal,
   occasionKey?: string | null,
-) =>
-  api<{ stops: PreviewStop[] }>(
-    `/api/shop/route-preview?themeId=${themeId}&allergens=${encodeURIComponent(allergens.join(','))}&diets=${encodeURIComponent(diets.join(','))}${occasionKey ? `&occasion=${encodeURIComponent(occasionKey)}` : ''}`,
+  /** How many of `people` each one is for; absent: everyone. */
+  group?: { people: number; counts: Record<string, number> },
+) => {
+  const counts = group
+    ? `&people=${group.people}&counts=${encodeURIComponent(
+        Object.entries(group.counts)
+          .map(([k, n]) => `${k}:${n}`)
+          .join(','),
+      )}`
+    : ''
+  return api<{ stops: PreviewStop[] }>(
+    `/api/shop/route-preview?themeId=${themeId}&allergens=${encodeURIComponent(allergens.join(','))}&diets=${encodeURIComponent(diets.join(','))}${occasionKey ? `&occasion=${encodeURIComponent(occasionKey)}` : ''}${counts}`,
     { signal },
   ).then((r) => r.stops)
+}
 
 type Created = { orderNo: string; manageToken: string; amountAgorot: number }
 export const createOrder = (p: OrderPayload) => api<Created>('/api/orders', { method: 'POST', json: p })
@@ -224,6 +243,10 @@ export type OrderEdit = {
   answers: Record<string, string>
   letterNotes: LetterNote[]
   hintQuestions?: HintQuestion[]
+  /** Allergens and diets with how many each one is for; absent: unchanged. */
+  allergens?: string[]
+  diets?: string[]
+  restrictionCounts?: Record<string, number>
 }
 export const submitAnswers = (token: string, edit: OrderEdit) =>
   api<{ status: string }>(`/api/manage/${encodeURIComponent(token)}/answers`, {

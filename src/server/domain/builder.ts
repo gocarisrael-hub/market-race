@@ -1,6 +1,14 @@
 // Builds the frozen game snapshot for an order. Pure: the catalog is passed in.
 // SPEC "Building the game": safety swap → backup stall → block and flag. Never silently shorten.
 // A kids' game (occasion `forKids`) treats an adults-only tasting (alcohol) like an unsafe one.
+import {
+  type DietProfile,
+  dietProfiles,
+  type Portion,
+  type RestrictionCounts,
+  restrictionsOf,
+  servePortions,
+} from './diet.ts'
 import { buildMinigames, type MinigameContent } from './minigames.ts'
 import { fillTemplate } from './template.ts'
 import { gameStyle } from './themes.ts'
@@ -15,6 +23,7 @@ import type {
   Recipient,
   RiddleTemplates,
   RouteStop,
+  SnapshotPortion,
   SnapshotStall,
   SnapshotStop,
   SnapshotTasting,
@@ -91,6 +100,8 @@ export interface BuildInput {
     people: number
     allergens: string[]
     diets: string[]
+    /** How many of the group each allergen or diet is for (missing: everyone). */
+    restrictionCounts?: RestrictionCounts | null
     answers: Record<string, string>
     letterNotes: LetterNote[]
     photos: string[]
@@ -162,19 +173,6 @@ export function pickSafeTasting<T extends CatalogTasting>(
     .sort((a, b) => a.id - b.id)[0]
 }
 
-/**
- * Why a stop does not serve its listed tasting: the listed tasting's own reason, else the stall
- * (closed, or no riddle in this form) when the stop moved to the backup stall.
- */
-function swapReasonFor(
-  listed: CatalogTasting | undefined,
-  allergens: string[],
-  diets: string[],
-  forKids: boolean,
-): SwapReason {
-  return (listed && unsafeReason(listed, allergens, diets, forKids)) ?? 'unavailable'
-}
-
 export type PreviewStatus = 'as_listed' | 'swapped' | 'blocked'
 export interface PreviewStop<T> {
   index: number
@@ -184,12 +182,40 @@ export interface PreviewStop<T> {
   reason?: SwapReason
   /** What will be served: the listed tasting, its safe replacement, or (blocked) the listed one. */
   tasting: T | undefined
+  /** Every tasting served, with its portions (empty when blocked). */
+  portions: Portion<T>[]
+}
+
+/**
+ * Why a stop does not serve its listed tasting to anyone: the listed tasting's own reason for the
+ * whole group's restrictions (inactive, allergens/diets, then kids), else allergens/diets.
+ */
+function listedReason(
+  listed: CatalogTasting | undefined,
+  profiles: DietProfile[],
+  forKids: boolean,
+): SwapReason {
+  if (!listed) return 'unavailable'
+  const allergens = [...new Set(profiles.flatMap((p) => p.allergens))]
+  const diets = [...new Set(profiles.flatMap((p) => p.diets))]
+  return unsafeReason(listed, allergens, diets, forKids) ?? 'diet'
+}
+
+/** The group split by restrictions: everyone counts as one profile when nothing is ticked. */
+export function orderProfiles(order: {
+  people: number
+  allergens: string[]
+  diets: string[]
+  restrictionCounts?: RestrictionCounts | null
+}): DietProfile[] {
+  return dietProfiles(order.people, restrictionsOf(order))
 }
 
 /**
  * Before purchase: what each stop of a route serves for a set of allergens and diets. Same safety
- * order as buildGame (listed tasting → other safe tasting at the stall → backup stall). Riddles are
- * not considered: the form is not known yet and a missing riddle is a catalog error, not the buyer's.
+ * order as buildGame (listed tasting → a fitting one at the stall for those who need it → backup
+ * stall). Riddles are not considered: the form is not known yet and a missing riddle is a catalog
+ * error, not the buyer's. Without counts, a ticked restriction is the whole group's.
  */
 export function previewRoute<T extends CatalogTasting>(input: {
   stops: RouteStop[]
@@ -197,11 +223,19 @@ export function previewRoute<T extends CatalogTasting>(input: {
   tastings: T[]
   allergens: string[]
   diets: string[]
+  /** How many of the group each restriction is for, of `people`. */
+  restrictionCounts?: RestrictionCounts | null
+  people?: number
   /** A kids' occasion: adults-only tastings are swapped. */
   forKids?: boolean
 }): PreviewStop<T>[] {
-  const { allergens, diets } = input
   const forKids = input.forKids ?? false
+  const profiles = orderProfiles({
+    people: input.people ?? 1,
+    allergens: input.allergens,
+    diets: input.diets,
+    restrictionCounts: input.people ? input.restrictionCounts : null,
+  })
   const stallById = new Map(input.stalls.map((s) => [s.id, s]))
   const usable = (id: number | null | undefined) => (id != null ? stallById.get(id)?.active : false)
   const listedById = new Map(input.tastings.map((t) => [t.id, t]))
@@ -209,25 +243,32 @@ export function previewRoute<T extends CatalogTasting>(input: {
     const finale = index === input.stops.length - 1
     const listed = listedById.get(stop.tastingId)
     const main = usable(stop.stallId)
-      ? pickSafeTasting(input.tastings, stop.stallId, stop.tastingId, allergens, diets, forKids)
+      ? servePortions(input.tastings, stop.stallId, stop.tastingId, profiles, forKids)
       : undefined
-    const reason = swapReasonFor(listed, allergens, diets, forKids)
     if (main)
-      return main.id === stop.tastingId
-        ? { index, finale, status: 'as_listed', tasting: main }
-        : { index, finale, status: 'swapped', reason, tasting: main }
+      return main.some((p) => p.tasting.id === stop.tastingId)
+        ? { index, finale, status: 'as_listed', tasting: listed, portions: main }
+        : {
+            index,
+            finale,
+            status: 'swapped',
+            reason: listedReason(listed, profiles, forKids),
+            tasting: main[0].tasting,
+            portions: main,
+          }
     const backup = usable(stop.backupStallId)
-      ? pickSafeTasting(input.tastings, stop.backupStallId!, stop.backupTastingId, allergens, diets, forKids)
+      ? servePortions(input.tastings, stop.backupStallId!, stop.backupTastingId, profiles, forKids)
       : undefined
     if (backup)
       return {
         index,
         finale,
         status: 'swapped',
-        reason: usable(stop.stallId) ? reason : 'unavailable',
-        tasting: backup,
+        reason: usable(stop.stallId) ? listedReason(listed, profiles, forKids) : 'unavailable',
+        tasting: backup[0].tasting,
+        portions: backup,
       }
-    return { index, finale, status: 'blocked', tasting: listed }
+    return { index, finale, status: 'blocked', tasting: listed, portions: [] }
   })
 }
 
@@ -255,8 +296,11 @@ export function buildGame(input: BuildInput): BuildResult {
     icon: t.teaserIcon ?? null,
   })
   const forKids = input.forKids ?? false
-  const pickTasting = (stallId: number, preferredId?: number | null) =>
-    pickSafeTasting(input.tastings, stallId, preferredId, order.allergens, order.diets, forKids)
+  const profiles = orderProfiles(order)
+  const serve = (stallId: number, preferredId?: number | null) =>
+    servePortions(input.tastings, stallId, preferredId, profiles, forKids)
+  const snapPortions = (ps: Portion<CatalogTasting>[]): SnapshotPortion[] =>
+    ps.map((p) => ({ tasting: snapTasting(p.tasting), count: p.count, for: p.for }))
   const usableStall = (id: number | null | undefined) => {
     const s = id != null ? stallById.get(id) : undefined
     return s?.active ? s : undefined
@@ -274,33 +318,37 @@ export function buildGame(input: BuildInput): BuildResult {
   input.route.stops.forEach((stop, index) => {
     const finale = index === input.route.stops.length - 1
     let stall = usableStall(stop.stallId)
-    let tasting = stall ? pickTasting(stall.id, stop.tastingId) : undefined
+    // The regular tasting to everyone it fits, an alternative at the stall to the others.
+    const mainPortions = stall ? serve(stall.id, stop.tastingId) : undefined
+    let portions = mainPortions
     let riddle = stall ? riddleFor(stall.id, stop.riddleId) : undefined
     let swappedToBackup = false
+    let blocked = false
 
-    // Day-of backup option (stall closed on the day): a safe tasting at the backup stall.
+    // Day-of backup option (stall closed on the day): what the backup stall serves the group.
     const backupStall = usableStall(stop.backupStallId)
-    const backupTasting = backupStall ? pickTasting(backupStall.id, stop.backupTastingId) : undefined
+    const backupPortions = backupStall ? serve(backupStall.id, stop.backupTastingId) : undefined
 
-    if (!stall || !tasting || !riddle) {
+    // Someone has nothing here (or the stall is closed, or has no riddle): the whole group moves.
+    if (!stall || !portions || !riddle) {
       const bRiddle = backupStall ? riddleFor(backupStall.id, stop.backupRiddleId) : undefined
-      if (backupStall && backupTasting && bRiddle) {
+      if (backupStall && backupPortions && bRiddle) {
         stall = backupStall
-        tasting = backupTasting
+        portions = backupPortions
         riddle = bRiddle
         swappedToBackup = true
       }
     }
 
-    if (!stall || !tasting || !riddle) {
+    if (!stall || !portions || !riddle) {
+      blocked = true
       const s = stallById.get(stop.stallId)
-      // Kids only when an allergy-safe tasting exists but every one of them is adults-only.
+      // Kids only when everyone could eat here but what fits them is adults-only.
       const kidsOnly =
-        forKids &&
-        input.tastings.some((t) => t.stallId === stop.stallId && isSafe(t, order.allergens, order.diets))
+        forKids && !!servePortions(input.tastings, stop.stallId, stop.tastingId, profiles, false)
       const reason = !s?.active
         ? 'הדוכן לא פעיל'
-        : !tasting
+        : !portions
           ? kidsOnly
             ? 'אין טעימה בלי אלכוהול למשחק של ילדים'
             : 'אין טעימה בטוחה לאלרגיות/תזונה'
@@ -312,7 +360,6 @@ export function buildGame(input: BuildInput): BuildResult {
       })
       // Keep the stop in place with what we have so the owner can see and fix it.
       stall = s ?? { id: stop.stallId, name: '?', locationHint: '', active: false }
-      tasting = tasting ?? tastingById.get(stop.tastingId)
       riddle = riddle ?? riddleById.get(stop.riddleId)
     }
 
@@ -326,17 +373,19 @@ export function buildGame(input: BuildInput): BuildResult {
         message: `חסר מילוי ל-{${slot}} בתחנה ${index + 1}`,
       })
 
-    // Why the stop does not serve what the route lists (shown to the owner, never to buyers).
+    // Why nobody gets what the route lists (shown to the owner, never to buyers). A mixed stop
+    // still serves the listed tasting: its alternatives say who they are for.
     const listed = tastingById.get(stop.tastingId)
-    const swapped = swappedToBackup || (tasting != null && tasting.id !== stop.tastingId)
+    const tasting = portions?.[0]?.tasting ?? listed
+    const servesListed = !swappedToBackup && !!portions?.some((p) => p.tasting.id === stop.tastingId)
     const swap: StopSwap | undefined =
-      swapped && !flags.some((f) => f.code === 'blocked_stop' && f.stopIndex === index)
+      !blocked && !servesListed
         ? {
             // On the backup because the stall is closed or has no riddle in this form: unavailable.
             reason:
-              swappedToBackup && (!usableStall(stop.stallId) || pickTasting(stop.stallId, stop.tastingId))
+              swappedToBackup && (!usableStall(stop.stallId) || mainPortions)
                 ? 'unavailable'
-                : swapReasonFor(listed, order.allergens, order.diets, forKids),
+                : listedReason(listed, profiles, forKids),
             listedTasting: listed?.name ?? '',
           }
         : undefined
@@ -355,6 +404,10 @@ export function buildGame(input: BuildInput): BuildResult {
       finale,
       stall: snapStall(stall),
       tasting: snapTasting(t),
+      portions:
+        portions && !blocked
+          ? snapPortions(portions)
+          : [{ tasting: snapTasting(t), count: order.people, for: [] }],
       riddle: {
         id: riddle?.id ?? 0,
         parts: filled.parts,
@@ -365,8 +418,12 @@ export function buildGame(input: BuildInput): BuildResult {
       },
       photo: null,
       backup:
-        !swappedToBackup && backupStall && backupTasting
-          ? { stall: snapStall(backupStall), tasting: snapTasting(backupTasting) }
+        !swappedToBackup && backupStall && backupPortions
+          ? {
+              stall: snapStall(backupStall),
+              tasting: snapTasting(backupPortions[0].tasting),
+              portions: snapPortions(backupPortions),
+            }
           : null,
       swappedToBackup,
       ...(swap ? { swap } : {}),
@@ -396,6 +453,7 @@ export function buildGame(input: BuildInput): BuildResult {
     people: order.people,
     allergens: [...order.allergens],
     diets: [...order.diets],
+    restrictionCounts: Object.fromEntries(restrictionsOf(order).map((r) => [r.key, r.count])),
     stops,
     letter: { notes: order.letterNotes.map((n) => ({ ...n })), photos: [] },
   }

@@ -1,7 +1,7 @@
 // The order on torn paper before paying: what was built, and the total from the server.
 import type { Manage, Shop } from './api.ts'
 import { copy } from './copy.ts'
-import { currentPalette, type Draft, formatShekels } from './logic.ts'
+import { currentPalette, type Draft, formatShekels, restrictionCount } from './logic.ts'
 import { TornPaper } from './ui.tsx'
 
 export function OrderSummary(props: {
@@ -15,7 +15,14 @@ export function OrderSummary(props: {
   const occasion = shop.occasions.find((o) => o.key === order.occasionKey)?.label ?? ''
   const theme = draft ? shop.themes.find((t) => t.id === draft.themeId)?.name : undefined
   const palette = draft ? currentPalette(shop, draft)?.name : undefined
-  const allergens = draft ? [...draft.allergens, ...draft.diets.map((x) => copy.home.dietLabels[x] ?? x)] : []
+  // Each with how many of the group it is for, when not everyone ("טבעוני (1)").
+  const allergens = draft
+    ? [...draft.allergens, ...draft.diets].map((k) => {
+        const n = restrictionCount(draft, k)
+        const label = copy.home.dietLabels[k] ?? k
+        return n < draft.people ? `${label} (${n})` : label
+      })
+    : []
   return (
     <TornPaper tilt="l">
       <h2 className="sub">{copy.checkout.summary}</h2>

@@ -18,6 +18,7 @@ import {
 } from '../db/schema.ts'
 import { previewRoute } from '../domain/builder.ts'
 import { israelDate } from '../domain/dates.ts'
+import { cleanCounts, restrictionsOf } from '../domain/diet.ts'
 import { isIsraeliPhone } from '../domain/phone.ts'
 import {
   occasionRecipients,
@@ -200,6 +201,21 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     diets: list(DIETS),
     // The order's occasion: a kids' occasion swaps adults-only tastings (alcohol).
     occasion: z.string().max(60).optional(),
+    // How many of the group each one is for ("vegan:1,אגוזים:2"), of `people`. Missing: everyone.
+    people: z.coerce.number().int().min(1).max(500).optional(),
+    counts: z
+      .string()
+      .max(400)
+      .default('')
+      .transform((v) =>
+        Object.fromEntries(
+          v
+            .split(',')
+            .map((x) => x.split(':'))
+            .filter(([k, n]) => k && Number(n) >= 1)
+            .map(([k, n]) => [k.trim(), Math.floor(Number(n))]),
+        ),
+      ),
   })
   app.get(
     '/api/shop/route-preview',
@@ -222,6 +238,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         tastings: marketTastings,
         allergens: q.data.allergens,
         diets: q.data.diets,
+        people: q.data.people,
+        restrictionCounts: q.data.counts,
         forKids: occ?.forKids ?? false,
       })
       return {
@@ -258,6 +276,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     phone,
     email: z.string().email().max(120),
   })
+  const counts = z.record(z.string().max(40), z.number().int().min(1).max(500)).default({})
   const orderBody = z.object({
     occasionKey: z.string().min(1),
     // Who the game is for. Pages from before recipients existed send only the form.
@@ -269,6 +288,8 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
     people: z.number().int().min(1),
     allergens: z.array(z.enum(ALLERGENS)).default([]),
     diets: z.array(z.enum(DIETS)).default([]),
+    // How many of the group each ticked one is for. Missing (an older page): everyone.
+    restrictionCounts: counts,
     answers: z.record(z.string(), z.string().max(300)).default({}),
     letterNotes: z.array(letterNote).max(10).default([]),
     hintQuestions: hintQuestionList.default([]),
@@ -315,6 +336,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
         people: b.people,
         allergens: b.allergens,
         diets: b.diets,
+        restrictionCounts: cleanCounts(b.people, b.allergens, b.diets, b.restrictionCounts),
         answers: cleanAnswers(b.answers, questions),
         letterNotes: b.letterNotes.filter((n) => n.text.trim()),
         hintQuestions: b.answersLater ? [] : cleanHintQuestions(b.hintQuestions),
@@ -560,7 +582,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
             step: state.step,
             stopIndex: state.stopIndex,
             total: order.game?.stops.length ?? 0,
-            redeemed: used.length,
+            redeemed: new Set(used.map((u) => u.stopIndex)).size,
           }
         : null,
       needsAnswers,
@@ -573,6 +595,15 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
       letterNotes: editable ? order.letterNotes : undefined,
       // The buyer's own questions and answers, on the buyer's own link only (never in the game).
       hintQuestions: editable ? order.hintQuestions : undefined,
+      // Who does not eat what, and how many of the group each one is for (missing: everyone).
+      diet: editable
+        ? {
+            allergens: order.allergens,
+            diets: order.diets,
+            counts: Object.fromEntries(restrictionsOf(order).map((r) => [r.key, r.count])),
+            options: { allergens: ALLERGENS, diets: DIETS },
+          }
+        : undefined,
       // The color: the palettes this order's map can be played in, and the chosen one.
       look: editable ? await lookFor(order, recipient) : undefined,
       questions:
@@ -598,6 +629,10 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           answers: z.record(z.string(), z.string().max(300)),
           letterNotes: z.array(letterNote).max(10).default([]),
           hintQuestions: hintQuestionList.optional(),
+          // Allergens and diets with their counts; absent: unchanged.
+          allergens: z.array(z.enum(ALLERGENS)).optional(),
+          diets: z.array(z.enum(DIETS)).optional(),
+          restrictionCounts: z.record(z.string().max(40), z.number().int().min(1).max(500)).optional(),
         })
         .safeParse(req.body)
       if (!body.success) return reply.code(400).send({ error: 'invalid' })
@@ -622,6 +657,23 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           return reply.code(400).send({ error: 'bad_palette' })
       }
       const questions = await questionsForOrder(db, order)
+      const { allergens, diets, restrictionCounts } = body.data
+      const dietEdit =
+        allergens || diets || restrictionCounts
+          ? {
+              allergens: allergens ?? order.allergens,
+              diets: diets ?? order.diets,
+              restrictionCounts: cleanCounts(
+                order.people,
+                allergens ?? order.allergens,
+                diets ?? order.diets,
+                {
+                  ...Object.fromEntries(restrictionsOf(order).map((r) => [r.key, r.count])),
+                  ...restrictionCounts,
+                },
+              ),
+            }
+          : {}
       await db
         .update(orders)
         .set({
@@ -631,6 +683,7 @@ export async function publicOrderRoutes(app: FastifyInstance, ctx: AppContext) {
           answers: cleanAnswers(body.data.answers, questions),
           letterNotes: body.data.letterNotes.filter((n) => n.text.trim()),
           ...(body.data.hintQuestions ? { hintQuestions: cleanHintQuestions(body.data.hintQuestions) } : {}),
+          ...dietEdit,
           answersSubmittedAt: order.answersSubmittedAt ?? new Date(),
         })
         // Re-checked in the write: the game may have started since it was read.

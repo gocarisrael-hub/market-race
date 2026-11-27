@@ -46,6 +46,7 @@ export interface NewOrder {
   people: number
   allergens?: string[]
   diets?: string[]
+  restrictionCounts?: Record<string, number>
   answers?: Record<string, string>
   letterNotes?: LetterNote[]
   buyerName?: string
@@ -180,6 +181,7 @@ export async function buildOrderGame(db: DB, orderId: number, now = new Date()):
       people: order.people,
       allergens: order.allergens,
       diets: order.diets,
+      restrictionCounts: order.restrictionCounts,
       answers: order.answers,
       letterNotes: order.letterNotes,
       photos: order.photos,

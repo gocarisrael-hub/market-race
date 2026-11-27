@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from 'react'
 import { LibIcon } from '../../shared/icon.tsx'
 import type { Photo, Question, Shop } from '../api.ts'
 import { copy, type SiteForm, type SiteRecipient } from '../copy.ts'
+import { DietPicker } from '../diet.tsx'
 import { HintQuestions } from '../hintQuestions.tsx'
 import {
   type buyerErrors,
@@ -23,6 +24,7 @@ import {
   privateOccasions,
   recipientLabel,
   recipientsFor,
+  restrictionCounts,
   themesForDraft,
   toggle,
   withOfferedTheme,
@@ -481,40 +483,20 @@ export function DietStage({ shop, d, set }: StageProps) {
         title={copy.home.allergens}
         lead={copy.home.allergensHint}
       />
-      <fieldset className="row plain-set" aria-labelledby={TITLE_ID} style={{ gap: '2px 10px' }}>
-        {shop.allergens.map((a) => (
-          <Opt
-            key={a}
-            small
-            role="checkbox"
-            pressed={d.allergens.includes(a)}
-            onClick={() => set({ allergens: toggle(d.allergens, a) })}
-          >
-            {a}
-          </Opt>
-        ))}
-      </fieldset>
-      <div className="label" id="l-diets" style={{ marginTop: 14 }}>
-        {copy.home.diets}
-      </div>
-      <fieldset className="row plain-set" aria-labelledby="l-diets" style={{ gap: '2px 10px' }}>
-        {shop.diets.map((x) => (
-          <Opt
-            key={x}
-            small
-            role="checkbox"
-            pressed={d.diets.includes(x)}
-            onClick={() => set({ diets: toggle(d.diets, x) })}
-          >
-            {copy.home.dietLabels[x] ?? x}
-          </Opt>
-        ))}
-      </fieldset>
+      <DietPicker
+        allergenOptions={shop.allergens}
+        dietOptions={shop.diets}
+        people={d.people}
+        value={d}
+        onChange={(v) => set(v)}
+        labelledBy={TITLE_ID}
+      />
       <RouteTastings
         shop={shop}
         themeId={d.themeId}
         allergens={d.allergens}
         diets={d.diets}
+        group={{ people: d.people, counts: restrictionCounts(d) }}
         occasionKey={d.occasionKey}
       />
     </>

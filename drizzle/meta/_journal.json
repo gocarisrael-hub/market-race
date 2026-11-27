@@ -120,6 +120,13 @@
       "when": 1795725333743,
       "tag": "0016_occasion_icons",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795767436292,
+      "tag": "0017_per_person_diet",
+      "breakpoints": true
     }
   ]
 }
