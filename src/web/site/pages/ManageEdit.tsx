@@ -1,6 +1,7 @@
 // The manage page's edit mode: the buyer changes the name, the answers, the letter notes, the
-// personal questions for hints, the style and its color (with a live preview), and reaches the
-// photos, any number of times until the game starts. Same fields as the order flow.
+// personal questions for hints, who doesn't eat what (and how many of them), the style and its
+// color (with a live preview), and reaches the photos, any number of times until the game starts.
+// Same fields as the order flow.
 
 import { useState } from 'react'
 import { Icon } from '../../shared/decor.tsx'
