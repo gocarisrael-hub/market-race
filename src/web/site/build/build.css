@@ -607,3 +607,48 @@ h1.stage-title .stage-art {
     height: 76px !important;
   }
 }
+
+/* The sticky bar at the bottom of a stage (phones and tablets): whatever the page scrolls into view
+   (an option, a focused field) stops above it, never under it. --stage-nav-h is the bar's height:
+   the back button (68px) and the bar's padding. */
+:root {
+  --stage-nav-h: calc(68px + 28px + env(safe-area-inset-bottom));
+}
+@media (max-width: 767px) {
+  html:has(.stage-nav) {
+    scroll-padding-bottom: calc(var(--stage-nav-h) + 12px);
+  }
+
+  /* Occasions on phones: an even grid of two, the icon over the word. */
+  .stage-options.occasion-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 14px;
+    align-items: start;
+  }
+  .occasion-options .opt.with-art {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 100%;
+    padding: 8px 4px 6px;
+    font-size: 30px;
+    line-height: 1;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .occasion-options .opt.with-art .opt-art {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  .occasion-options .opt .ring {
+    inset: -2px -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 4px);
+  }
+}
+@media (max-width: 767px) {
+  .occasion-options .opt .tick {
+    left: 2px;
+  }
+}

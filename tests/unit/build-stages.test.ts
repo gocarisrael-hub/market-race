@@ -9,6 +9,7 @@ import {
   findStage,
   gateStage,
   nameError,
+  needsOrder,
   needsQuestions,
   QUESTIONS_PER_STAGE,
   questionParts,
@@ -81,6 +82,7 @@ describe('order build stages', () => {
     expect(keys(buildStages(shop, ready(), parts))).toEqual([
       'occasion',
       'for',
+      'people',
       'name',
       'look',
       'questions1',
@@ -89,22 +91,22 @@ describe('order build stages', () => {
       'photos',
       'notes',
       'hints',
-      'people',
       'diet',
       'details',
       'pay',
     ])
     const bachelorette = chooseOccasion(emptyDraft(), shop.occasions[0])
-    expect(keys(buildStages(shop, bachelorette, parts))).not.toContain('for')
+    // No recipient to choose: how many come follows the occasion.
+    expect(keys(buildStages(shop, bachelorette, parts)).slice(0, 3)).toEqual(['occasion', 'people', 'name'])
     const later = keys(buildStages(shop, ready({ answersLater: true }), questionParts(seven, true)))
     expect(later).toEqual([
       'occasion',
       'for',
+      'people',
       'name',
       'look',
       'questions1',
       'photos',
-      'people',
       'diet',
       'details',
       'pay',
@@ -168,7 +170,11 @@ describe('order build stages', () => {
     // No name yet: back to the name.
     expect(gateStage(stages, at('look'), ready({ honoreeName: '' }), shop, parts)).toBe(at('name'))
     // The required question in part 2 is unanswered: back there.
-    expect(gateStage(stages, at('people'), ready({ manageToken: 't' }), shop, parts)).toBe(at('questions2'))
+    expect(gateStage(stages, at('diet'), ready({ manageToken: 't' }), shop, parts)).toBe(at('questions2'))
+    // How many come is asked before the order exists, right after who it is for.
+    expect(gateStage(stages, at('people'), ready(), shop, parts)).toBe(at('people'))
+    expect(gateStage(stages, at('name'), ready({ people: 99 }), shop, parts)).toBe(at('people'))
+    expect(needsOrder('people')).toBe(false)
     const answered = ready({ answers: { e: 'x' } })
     // Everything answered but no order yet: the last question part, whose button creates it.
     expect(gateStage(stages, at('notes'), answered, shop, parts)).toBe(at('questions3'))
@@ -185,8 +191,9 @@ describe('order build stages', () => {
       chooseOccasion(emptyDraft(), shop.occasions[0]),
       questionParts(seven, false),
     )
-    expect(findStage(stages, { key: 'name', part: 1 })).toBe(1)
-    // No who-for for a bachelorette: the name comes next.
+    expect(findStage(stages, { key: 'people', part: 1 })).toBe(1)
+    expect(findStage(stages, { key: 'name', part: 1 })).toBe(2)
+    // No who-for for a bachelorette: how many come is next.
     expect(findStage(stages, { key: 'for', part: 1 })).toBe(1)
     // A question part beyond the last: the photos.
     expect(stages[findStage(stages, { key: 'questions', part: 9 })].key).toBe('photos')

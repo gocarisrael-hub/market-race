@@ -45,8 +45,11 @@ export async function buildToPhotos(page: Page, o: BuildTo) {
   await next(page)
   if (page.url().endsWith('/order/for')) {
     if (o.recipient) await page.getByRole('radio', { name: o.recipient }).click()
-    await next(page, /\/order\/name$/)
+    await next(page, /\/order\/people$/)
   }
+  // How many come, right after who it is for (the default stays).
+  await expect(page).toHaveURL(/\/order\/people$/)
+  await next(page, /\/order\/name$/)
   await expect(page).toHaveURL(/\/order\/name$/)
   await page.locator('input[name=honoreeName]').fill(o.name)
   await next(page, /\/order\/look$/)
@@ -75,7 +78,7 @@ export async function answerQuestions(page: Page, answers: Record<string, string
   expect(Object.keys(left), 'every answer found a question').toEqual([])
 }
 
-/** From the photos to the summary: notes, hints, people, diet left as they are; the buyer filled. */
+/** From the photos to the summary: notes, hints, diet left as they are; the buyer filled. */
 export async function photosToPay(page: Page) {
   const buyer = { name: 'נועה', phone: '050-1234567', email: 'noa@example.com' }
   for (let i = 0; i < 8 && !/\/details$/.test(page.url()); i++) await next(page)

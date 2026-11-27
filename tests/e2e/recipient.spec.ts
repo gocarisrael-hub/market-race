@@ -39,6 +39,7 @@ test('a birthday for her: she is picked first, her questions, her grammar in the
     fullPage: true,
     animations: 'disabled',
   })
+  await next(page, /\/order\/people$/)
   await next(page, /\/order\/name$/)
   await page.getByLabel(/איך קוראים לה\?/).fill('מיכל')
   await next(page, /\/order\/look$/)
@@ -89,6 +90,7 @@ test('a love game for him: his questions from the giver, his grammar in the game
   await expect(who.getByRole('radio')).toHaveText(['למישהי', 'למישהו', 'לזוג'])
   await who.getByRole('radio', { name: 'למישהו' }).click()
   await expect(who.getByRole('radio', { name: 'למישהו' })).toHaveAttribute('aria-checked', 'true')
+  await next(page, /\/order\/people$/)
   await next(page, /\/order\/name$/)
   await page.getByLabel(/איך קוראים לו\?/).fill('יואב')
   await next(page, /\/order\/look$/)
@@ -151,6 +153,7 @@ test("a kid's birthday: for a girl or a boy, a parent's questions about the chil
   // The occasion names its recipients itself.
   await expect(who.getByRole('radio')).toHaveText(['לילדה', 'לילד'])
   await who.getByRole('radio', { name: 'לילד', exact: true }).click()
+  await next(page, /\/order\/people$/)
   await next(page, /\/order\/name$/)
   await page.getByLabel(/איך קוראים לו\?/).fill('איתי')
   await next(page, /\/order\/look$/)

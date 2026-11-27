@@ -108,7 +108,7 @@ export function OccasionStage({ shop, d, set }: StageProps) {
       {occasions.length === 0 ? (
         <p className="status">{copy.home.noOccasions}</p>
       ) : (
-        <div className="row stage-options" role="radiogroup" aria-labelledby={TITLE_ID}>
+        <div className="row stage-options occasion-options" role="radiogroup" aria-labelledby={TITLE_ID}>
           {occasions.map((o) => (
             <Opt
               key={o.key}

@@ -21,27 +21,28 @@ import {
 export type StageKey = BuildStageKey
 
 /** Every stage in build order. `for` is skipped when the occasion has one recipient; notes and
- * hints when the questions are answered later. */
+ * hints when the questions are answered later. How many come is asked right after who it is for,
+ * so the price is clear from the start. */
 export const STAGE_ORDER: StageKey[] = [
   'occasion',
   'for',
+  'people',
   'name',
   'look',
   'questions',
   'photos',
   'notes',
   'hints',
-  'people',
   'diet',
   'details',
   'pay',
 ]
 
 /** Stages that need the order on the server. */
-const NEEDS_ORDER: StageKey[] = ['photos', 'notes', 'hints', 'people', 'diet', 'details', 'pay']
+const NEEDS_ORDER: StageKey[] = ['photos', 'notes', 'hints', 'diet', 'details', 'pay']
 /** Stages whose path carries the order's token (also opened from the manage page or an email). */
 export const TOKEN_STAGES: StageKey[] = ['photos', 'details', 'pay']
-/** Stages that edit what the order holds: leaving them saves it. */
+/** Stages that edit what the order holds: leaving them saves it (once the order exists). */
 export const SAVES_ORDER: StageKey[] = ['notes', 'hints', 'people', 'diet']
 
 export const QUESTIONS_PER_STAGE = 3
