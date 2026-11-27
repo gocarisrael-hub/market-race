@@ -116,6 +116,10 @@ test('site at 1440: the map being built beside the stage, back and next inside t
   // The colour stage: the map beside is the preview (no second one inline).
   await page.getByRole('radio', { name: 'רווקות' }).click()
   await cta.click()
+  // How many come: the price beside from the start.
+  await expect(page).toHaveURL(/\/order\/people$/)
+  await expect(side.getByTestId('price')).toContainText('396 ₪')
+  await cta.click()
   await page.locator('input[name=honoreeName]').fill('מיכל')
   await cta.click()
   await expect(page).toHaveURL(/\/order\/look$/)

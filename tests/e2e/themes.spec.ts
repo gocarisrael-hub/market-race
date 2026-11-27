@@ -140,7 +140,7 @@ test('the look stage offers each occasion its own styles', async ({ page }) => {
 async function buildToLook(page: Page, occasion: string, name: string) {
   await page.goto('/order')
   await page.getByRole('radio', { name: occasion, exact: true }).click()
-  for (let i = 0; i < 3 && !page.url().endsWith('/order/name'); i++) {
+  for (let i = 0; i < 4 && !page.url().endsWith('/order/name'); i++) {
     const from = page.url()
     await page.locator('.stage-nav .brush').click()
     await expect.poll(() => page.url()).not.toBe(from)

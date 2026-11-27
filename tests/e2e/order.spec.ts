@@ -43,13 +43,24 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await page.getByRole('radio', { name: 'רווקות' }).click()
   await shot(page, 'build-01-occasion')
 
-  // A bachelorette is for her only: no "who is it for" stage, no she/he switch.
-  await next(page, /\/order\/name$/)
+  // A bachelorette is for her only: no "who is it for" stage. How many come is asked next, so the
+  // price is clear from the start.
+  await next(page, /\/order\/people$/)
   await expect(bar).toHaveAttribute('aria-valuenow', '2')
-  await expect(bar).toHaveAttribute('aria-valuetext', /שלב 2 מתוך 13, השם/)
+  await expect(bar).toHaveAttribute('aria-valuetext', /שלב 2 מתוך 13, כמה אתם/)
+  await expect(page.getByText('יופי. כמה באים לשוק?')).toBeVisible()
+  await expect(page.getByTestId('price')).toContainText('396 ₪')
+  await page.getByRole('button', { name: 'עוד משתתף' }).click()
+  await expect(page.getByTestId('price')).toContainText('495 ₪')
+  await shot(page, 'build-02-people')
+
+  // No she/he switch for a bachelorette.
+  await next(page, /\/order\/name$/)
+  await expect(bar).toHaveAttribute('aria-valuenow', '3')
+  await expect(bar).toHaveAttribute('aria-valuetext', /שלב 3 מתוך 13, השם/)
   await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
-  // The first stop passed shows a tasting on the map.
-  await expect(map.locator('.bm-stop.done .bm-food')).toHaveCount(1)
+  // Each stop passed (the occasion, how many) shows a tasting on the map.
+  await expect(map.locator('.bm-stop.done .bm-food')).toHaveCount(2)
   const ribbon = page.getByTestId('build-ribbon')
   await expect(ribbon).toHaveText('המירוץ של ...')
   await mainButton(page).click()
@@ -94,7 +105,8 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   expect((await created).request().postDataJSON()).toMatchObject({
     occasionKey: 'bachelorette',
     honoreeName: 'מיכל',
-    people: 4,
+    // Chosen on the second stage: the order is created with it.
+    people: 5,
     answers: { first_love: 'יואב מהשכבה', favorite_food: 'סושי', catchphrase: 'יאללה' },
   })
 
@@ -155,12 +167,6 @@ test('buyer builds a game stage by stage, up to the pay step', async ({ page }) 
   await mainButton(page).click()
   await expect(page.getByText('לכל שאלה לרמז צריך גם תשובה')).toBeVisible()
   await page.getByRole('textbox', { name: 'תשובה 1', exact: true }).fill('בוני')
-
-  await next(page, /\/order\/people$/)
-  await expect(page.getByTestId('price')).toContainText('396 ₪')
-  await page.getByRole('button', { name: 'עוד משתתף' }).click()
-  await expect(page.getByTestId('price')).toContainText('495 ₪')
-  await shot(page, 'build-07-people')
 
   await next(page, /\/order\/diet$/)
   await page.getByRole('checkbox', { name: 'בוטנים' }).click()
@@ -244,12 +250,17 @@ test('the who-for stage, back and next, and a stage asked for too early', async 
   ])
   await page.getByRole('radio', { name: 'למישהו' }).click()
   await shot(page, 'build-01b-for')
+  // How many come, right after who it is for.
+  await next(page, /\/order\/people$/)
+  await expect(page.getByRole('heading', { name: 'כמה אתם?' })).toBeVisible()
   await next(page, /\/order\/name$/)
   await expect(page.getByRole('heading', { name: 'איך קוראים לו?' })).toBeVisible()
   // Skipping ahead before the name lands back on the name.
   await page.goto('/order/look')
   await expect(page).toHaveURL(/\/order\/name$/)
   // Back, and the browser's own back, step through the stages; the choices stay.
+  await backButton(page).click()
+  await expect(page).toHaveURL(/\/order\/people$/)
   await backButton(page).click()
   await expect(page).toHaveURL(/\/order\/for$/)
   await expect(page.getByRole('radio', { name: 'למישהו' })).toHaveAttribute('aria-checked', 'true')
@@ -325,8 +336,8 @@ test("a kid's birthday previews juice at the last stop, never a swap", async ({ 
 
 test('answers later, then from the manage page', async ({ page }) => {
   const token = await buildToPhotos(page, { occasion: 'רווקות', name: 'דנה', later: true })
-  // No notes or hint questions to write now: straight on to how many.
-  await next(page, /\/order\/people$/)
+  // No notes or hint questions to write now: straight on to allergies.
+  await next(page, /\/order\/diet$/)
   await photosToPay(page)
   await expect(page.getByText('השאלות: ימולאו אחרי התשלום')).toBeVisible()
 
@@ -448,7 +459,8 @@ test('a family game: no who-for or she/he, the name field is the family name, fa
 }) => {
   await page.goto('/order')
   await page.getByRole('radio', { name: 'יום משפחתי' }).click()
-  // A family game is for a family only: straight to the name, no she/he.
+  // A family game is for a family only: how many come, then the name, no she/he.
+  await next(page, /\/order\/people$/)
   await next(page, /\/order\/name$/)
   await expect(page.getByRole('radio', { name: 'עליה' })).toHaveCount(0)
   // The family's name is asked once, with the question set's own wording.
@@ -488,13 +500,13 @@ test('stages slide in, and only fade when the system asks for reduced motion', a
   await page.goto('/order')
   const anim = () => page.locator('.stage').evaluate((el) => getComputedStyle(el).animationName)
   await page.getByRole('radio', { name: 'רווקות' }).click()
-  await next(page, /\/order\/name$/)
+  await next(page, /\/order\/people$/)
   expect(await anim()).toBe('stage-in')
   await backButton(page).click()
   await expect(page).toHaveURL(/\/order$/)
   expect(await anim()).toBe('stage-in-back')
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await next(page, /\/order\/name$/)
+  await next(page, /\/order\/people$/)
   expect(await anim()).toBe('stage-fade')
   expect(await page.locator('.bm-stop.now').evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
 })
