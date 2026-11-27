@@ -15,6 +15,8 @@ export type Occasion = {
   decor?: string
   /** A kids' game (some tastings are served differently). Missing from older servers. */
   forKids?: boolean
+  /** Library icons drawn with the doodles (empty: the set's defaults). Missing from older servers. */
+  icons?: string[]
 }
 /** A color palette a map can be played in. */
 export type ShopPalette = { id: number; name: string; palette: Palette }

@@ -6,6 +6,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import type { Decor } from '../../server/domain/types.ts'
 import { MORE_DRAWINGS, type MoreDoodle } from './drawings.tsx'
+import { LibIcon, useDecorIcons } from './icon.tsx'
 
 type BaseDoodle =
   | 'balloons'
@@ -393,34 +394,56 @@ export type Spot = {
 
 /**
  * A few doodles of a set at absolute spots inside a positioned parent; each spot takes the next
- * doodle of the set. They bob gently (none with reduced motion) and never catch taps.
+ * doodle of the set, and every third spot one of the occasion's color icons instead (ink doodles
+ * stay the most). They bob gently (none with reduced motion) and never catch taps.
  */
 export function Doodles(props: { decor: string | null | undefined; spots: Spot[]; className?: string }) {
   const set = decorSet(props.decor)
+  const icons = useDecorIcons(props.decor)
   return (
     <div
       className={`doodles ${props.className ?? ''}`}
       aria-hidden="true"
       data-decor={props.decor ?? 'generic'}
     >
-      {props.spots.map((s, i) => (
-        <Doodle
-          // biome-ignore lint/suspicious/noArrayIndexKey: spots are positional
-          key={i}
-          name={set[i % set.length]}
-          className="doodle-bob"
-          style={{
-            top: s.top,
-            bottom: s.bottom,
-            left: s.left,
-            right: s.right,
-            width: s.size,
-            height: s.size,
-            ['--r' as string]: `${s.rot ?? 0}deg`,
-            animationDelay: `${s.delay ?? -i * 1.3}s`,
-          }}
-        />
-      ))}
+      {props.spots.map((s, i) =>
+        i % 3 === 1 && icons.length ? (
+          <LibIcon
+            // biome-ignore lint/suspicious/noArrayIndexKey: spots are positional
+            key={i}
+            icon={icons[Math.floor(i / 3) % icons.length]}
+            size={Math.round(s.size * 0.95)}
+            tilt={s.rot ?? 0}
+            className="doodle doodle-bob decor-icon"
+            style={{
+              position: 'absolute',
+              top: s.top,
+              bottom: s.bottom,
+              left: s.left,
+              right: s.right,
+              animationDelay: `${s.delay ?? -i * 1.3}s`,
+            }}
+          />
+        ) : (
+          <Doodle
+            // biome-ignore lint/suspicious/noArrayIndexKey: spots are positional
+            key={i}
+            // Icon spots do not use up a doodle: the set's doodles keep their order.
+            name={set[(i - Math.floor((i + 1) / 3)) % set.length]}
+            className="doodle-bob"
+            style={{
+              top: s.top,
+              bottom: s.bottom,
+              left: s.left,
+              right: s.right,
+              width: s.size,
+              height: s.size,
+              ['--r' as string]: `${s.rot ?? 0}deg`,
+              animationDelay: `${s.delay ?? -i * 1.3}s`,
+            }}
+          />
+        ),
+      )}
     </div>
   )
 }

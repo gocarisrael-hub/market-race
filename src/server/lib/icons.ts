@@ -1,18 +1,14 @@
-// Illustrations shipped in assets/icons, served at /static/icons/<name>.png.
-import { readdirSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+// The icon library on the server: checks keys against the manifest and resolves their URLs.
+import { ICON_MANIFEST } from '../domain/icon-manifest.generated.ts'
+import { iconUrl as urlOf } from '../domain/icons.ts'
 
-const dir = fileURLToPath(new URL('../../../assets/icons', import.meta.url))
-let cached: string[] | null = null
+const keys = new Set<string>(ICON_MANIFEST.map((e) => e.key))
 
-/** Icon names (file names without extension) that have a .png. */
-export function iconNames(): string[] {
-  cached ??= readdirSync(dir)
-    .filter((f) => f.endsWith('.png'))
-    .map((f) => f.slice(0, -4))
-    .sort()
-  return cached
-}
+/** True for a key in the manifest ("food/falafel-cone", or a classic like "falafel"). */
+export const isIconKey = (v: unknown): v is string => typeof v === 'string' && keys.has(v)
 
-export const iconUrl = (name: string | null | undefined) =>
-  name && iconNames().includes(name) ? `/static/icons/${name}.png` : null
+/** Every icon key, sorted. */
+export const iconNames = (): string[] => [...keys]
+
+/** URL of a known icon, or null (unknown or empty). */
+export const iconUrl = (name: string | null | undefined) => (isIconKey(name) ? urlOf(name) : null)

@@ -3,6 +3,7 @@
 // action into the order, then how it works, the tastings and the FAQ folded. Companies have their
 // own site; a quiet footer line links to it. Prices, group size, validity and duration come from
 // the settings.
+import { iconUrl } from '../../../server/domain/icons.ts'
 import { Doodles } from '../../shared/decor.tsx'
 import type { Shop } from '../api.ts'
 import { copy } from '../copy.ts'
@@ -60,7 +61,7 @@ export function Landing({ shop }: { shop: Shop }) {
       <ol className="l-strip" aria-label={c.howLabel}>
         {c.steps.map((s, i) => (
           <li key={s.title}>
-            <img src={`/static/icons/${STEP_ICONS[i]}.png`} alt="" />
+            <img src={iconUrl(STEP_ICONS[i])} alt="" loading="lazy" decoding="async" />
             <span className="l-strip-text">
               <strong>
                 {i + 1}. {s.title}

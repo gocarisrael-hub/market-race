@@ -4,6 +4,7 @@
 // the DB ("משהו מטוגן ופריך"). Never a stall name or location: the API never sends them, and the
 // stops sit evenly along a drawn path, not where the stalls are.
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { iconUrl } from '../../server/domain/icons.ts'
 import { Icon } from '../shared/decor.tsx'
 import type { Shop } from './api.ts'
 import { copy } from './copy.ts'
@@ -17,9 +18,15 @@ const PATH =
   'M86 13 C 74 4, 60 19, 47 14 S 16 9, 14 27 C 12 43, 33 47, 50 44 S 87 40, 86 58 C 85 74, 62 70, 47 73 S 20 82, 13 79'
 
 /** Food illustrations for stops whose tasting has no icon of its own. */
-const FOOD = ['fruit', 'hummus', 'falafel', 'coffee', 'spices', 'tomatoes', 'flowers'].map(
-  (n) => `/static/icons/${n}.png`,
-)
+const FOOD = [
+  'drinks/orange-juice',
+  'food/falafel-cone',
+  'food/burekas',
+  'food/sabich',
+  'sweets/knafeh',
+  'drinks/turkish-coffee',
+  'produce/watermelon',
+].map((k) => iconUrl(k))
 
 /** Where along the path each of n stops sits (a little in from both ends). */
 export const stopAt = (n: number) =>
@@ -135,7 +142,7 @@ export function RouteTeaser({
                     setOpen((o) => (o === i ? null : o))
                   }}
                 >
-                  <img className="rt-food" src={s.icon || FOOD[i % FOOD.length]} alt="" />
+                  <img className="rt-food" src={s.icon || FOOD[i % FOOD.length]} alt="" decoding="async" />
                   <span className="rt-no">{i + 1}</span>
                   <span className="sr-only">
                     {s.finale ? `${c.stop(i + 1)}, ${c.finale}` : c.stop(i + 1)}

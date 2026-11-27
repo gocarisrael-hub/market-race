@@ -4,7 +4,7 @@
 import { Doodles } from '../../shared/decor.tsx'
 import { stageTitle, type T } from '../copy.ts'
 import { HandCircle, Tick } from '../draw.tsx'
-import { stopIcon } from '../logic.ts'
+import { stopIconKey } from '../logic.ts'
 import { MapCrop } from './Reveal.tsx'
 import { StageIcon } from './Stages.tsx'
 import type { ScreenProps } from './types.ts'
@@ -26,7 +26,7 @@ export function GameSide({ view, t }: { view: ScreenProps['view']; t: T }) {
         <MapCrop
           map={view.theme?.map ?? null}
           pin={null}
-          icon={stopIcon(at)}
+          icon={stopIconKey(at)}
           company={view.company}
           tint={view.theme?.palette.mapTint}
           t={t}

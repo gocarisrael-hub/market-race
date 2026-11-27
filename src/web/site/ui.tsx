@@ -1,8 +1,11 @@
 // Hand-drawn building blocks, SVG paths taken from docs/mockup.
+
 import { type CSSProperties, type ReactNode, useEffect, useId, useState } from 'react'
+import { iconUrl } from '../../server/domain/icons.ts'
 import { themeVars } from '../../server/domain/look.ts'
 import type { Palette, ThemeStyle } from '../../server/domain/types.ts'
 import { type DoodleName, Icon, SketchShape } from '../shared/decor.tsx'
+import { LibIcon } from '../shared/icon.tsx'
 import { loadThemeFont, lookVars } from '../shared/look.ts'
 import { copy } from './copy.ts'
 import { navigate } from './router.ts'
@@ -83,13 +86,21 @@ export function Opt(props: {
   children: ReactNode
   small?: boolean
   role?: 'radio' | 'checkbox'
+  /** A library icon drawn before the word. */
+  icon?: string
 }) {
   const aria =
     props.role === 'radio' || props.role === 'checkbox'
       ? { role: props.role, 'aria-checked': props.pressed }
       : { 'aria-pressed': props.pressed }
   return (
-    <button type="button" className={props.small ? 'opt small' : 'opt'} onClick={props.onClick} {...aria}>
+    <button
+      type="button"
+      className={`opt${props.small ? ' small' : ''}${props.icon ? ' with-art' : ''}`}
+      onClick={props.onClick}
+      {...aria}
+    >
+      {props.icon && <LibIcon icon={props.icon} size={props.small ? 34 : 40} tilt={-6} className="opt-art" />}
       {props.children}
       {props.pressed && <Ring />}
       {props.pressed && <Tick />}
@@ -440,7 +451,7 @@ export function Deco(props: { icon: string; style: CSSProperties; className?: st
   return (
     <img
       className={`deco ${props.className ?? ''}`}
-      src={`/static/icons/${props.icon}.png`}
+      src={iconUrl(props.icon)}
       alt=""
       aria-hidden="true"
       style={props.style}
@@ -460,6 +471,8 @@ export function QField(props: {
   name?: string
   /** Draws the question on a torn paper note, tilted by this many degrees. */
   paper?: number
+  /** A library icon by the question. */
+  icon?: string
 }) {
   const n = [...props.value].length
   const over = !!props.maxLen && n > props.maxLen
@@ -492,6 +505,7 @@ export function QField(props: {
       )}
       <span className="top">
         <span>
+          {props.icon && <LibIcon icon={props.icon} size={34} tilt={-6} className="q-art" />}
           {props.label}
           {props.required && <span className="req"> ({copy.required})</span>}
         </span>

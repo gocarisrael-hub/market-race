@@ -88,20 +88,20 @@ const SCREENS: Record<Exclude<StageKey, 'pay'>, (p: StageProps) => ReactNode> = 
   details: DetailsStage,
 }
 
-/** A little market illustration in the margin of each stage. */
+/** A little market illustration in the margin of each stage (the map's originals and library food). */
 const MARGIN: Record<StageKey, { icon: string; style: CSSProperties; className: string }> = {
   occasion: { icon: 'awning', className: 'sway', style: { top: -30, left: -36, width: 210 } },
   for: { icon: 'flowers', className: 'sway', style: { top: 200, left: -34, width: 70 } },
   name: { icon: 'falafel', className: 'bob', style: { top: 210, left: -50, width: 112 } },
   look: { icon: 'spices', className: 'bob', style: { top: 200, left: -44, width: 90 } },
-  questions: { icon: 'falafel', className: 'bob', style: { top: 210, left: -50, width: 112 } },
+  questions: { icon: 'food/sabich', className: 'bob', style: { top: 210, left: -44, width: 96 } },
   photos: { icon: 'coffee', className: 'bob', style: { top: 200, left: -18, width: 66 } },
-  notes: { icon: 'flowers', className: 'sway', style: { top: 200, left: -34, width: 70 } },
-  hints: { icon: 'spices', className: 'bob', style: { top: 200, left: -44, width: 90 } },
+  notes: { icon: 'nature/bouquet', className: 'sway', style: { top: 200, left: -34, width: 76 } },
+  hints: { icon: 'sweets/rugelach', className: 'bob', style: { top: 200, left: -40, width: 86 } },
   people: { icon: 'fruit', className: 'bob', style: { top: 200, left: -48, width: 92 } },
   diet: { icon: 'hummus', className: 'bob', style: { top: 200, left: -40, width: 92 } },
-  details: { icon: 'tomatoes', className: 'bob', style: { top: 200, left: -40, width: 92 } },
-  pay: { icon: 'tomatoes', className: 'bob', style: { top: 200, left: -40, width: 92 } },
+  details: { icon: 'drinks/turkish-coffee', className: 'bob', style: { top: 200, left: -30, width: 76 } },
+  pay: { icon: 'market/wicker-basket', className: 'bob', style: { top: 200, left: -40, width: 90 } },
 }
 
 export function Build(props: {

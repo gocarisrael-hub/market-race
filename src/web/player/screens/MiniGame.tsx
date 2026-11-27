@@ -5,6 +5,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import type { TextPart } from '../../../server/domain/types.ts'
 import { Burst, Confetti, Icon } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import { useWide } from '../../shared/useWide.ts'
 import type { CopyKey, T } from '../copy.ts'
 import { BrushButton, HandCircle, Paper, SketchButton, Tape } from '../draw.tsx'
@@ -132,7 +133,7 @@ function Play({ view, game, t, act, captain }: ScreenProps & { game: Game; capta
           {t('game.kicker')}
         </p>
         <h1 className="note-kicker game-title">
-          <Icon name={GAME_ICONS[game.type]} size={38} tilt={-8} />
+          <LibIcon icon={GAME_ICONS[game.type]} size={46} tilt={-8} eager />
           {title}
         </h1>
         <p className="game-only">{t('game.only', { name: view.honoree })}</p>
@@ -142,7 +143,7 @@ function Play({ view, game, t, act, captain }: ScreenProps & { game: Game; capta
         )}
         {game.type === 'photo' && zoom < PHOTO_ZOOMS.length - 1 && (
           <SketchButton className="zoom-out" onClick={() => setZoom((z) => z + 1)}>
-            <Icon name="magnifier" size={22} tilt={-8} />
+            <LibIcon icon="game/magnifier" size={28} tilt={-8} />
             {t('game.zoomOut')}
           </SketchButton>
         )}
@@ -159,7 +160,7 @@ function Play({ view, game, t, act, captain }: ScreenProps & { game: Game; capta
         </p>
         {game.type === 'cipher' && game.keyHint && (
           <p className="cipher-hint" data-testid="cipher-key">
-            <Icon name="key" size={26} tilt={8} />
+            <LibIcon icon="game/key" size={30} tilt={8} />
             <span>
               <span className="game-label">{t('game.cipherKey')} </span>
               <Parts parts={game.keyHint} />
@@ -383,6 +384,7 @@ function Solved({ view, game, t, act }: ScreenProps & { game: Game }) {
         <Burst decor={view.decor} />
         <h1 className="correct pop">{t('game.solved')}</h1>
       </div>
+      <LibIcon icon="game/treasure-chest" size={84} tilt={-4} className="solved-prize pop" eager />
       {reward?.text && (
         <Paper className="reward-piece rise" tilt={-2.4}>
           <Tape className="reward-tape" />

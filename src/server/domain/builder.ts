@@ -39,6 +39,8 @@ export interface CatalogTasting {
   active: boolean
   /** Alcohol: never served in a kids' game (swapped like an allergen). */
   adultsOnly?: boolean
+  /** Icon key (tastings.teaserIcon). */
+  teaserIcon?: string | null
 }
 export interface CatalogRiddle {
   id: number
@@ -250,6 +252,7 @@ export function buildGame(input: BuildInput): BuildResult {
     allergens: [...t.allergens],
     diets: [...t.diets],
     feeAgorot: t.feeAgorot,
+    icon: t.teaserIcon ?? null,
   })
   const forKids = input.forKids ?? false
   const pickTasting = (stallId: number, preferredId?: number | null) =>

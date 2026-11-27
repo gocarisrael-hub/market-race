@@ -3,6 +3,7 @@
 // The same sheet is the paused screen ("המשחק בהפסקה"): the captain stopped for today, nothing of
 // the stop is shown, and every phone moves on by itself when the captain resumes.
 import { Doodles, Icon } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import { joinList } from '../copy.ts'
 import { Paper, Ribbon, TornEdge } from '../draw.tsx'
 import { iconUrl, ribbonFontSize } from '../logic.ts'
@@ -70,7 +71,7 @@ export function Opening({ view, t, paused = false }: Omit<ScreenProps, 'act'> & 
             <Icon name={paused ? 'map' : 'ticket'} size={36} tilt={10} className="wait-d2" />
           </span>
           <h2 className="wait-title">
-            <Icon name={paused ? 'clock' : 'hourglass'} size={38} tilt={-8} />
+            <LibIcon icon={paused ? 'game/alarm-clock' : 'game/hourglass'} size={42} tilt={-8} eager />
             <span>{t(paused ? 'paused.title' : 'wait.title')}</span>
           </h2>
           <p className="wait-body" role="status">

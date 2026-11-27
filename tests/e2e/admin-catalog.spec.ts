@@ -54,11 +54,21 @@ test('owner builds a catalog: market, stall, tasting, question set, riddle, rout
   await editor.getByLabel('תשלום לדוכן למנה').fill('12.5')
   await expect(editor.getByText(/לא לכתוב את שם הדוכן/)).toBeVisible()
   await editor.getByLabel('תיאור לקונים').fill('משהו מתוק וטרי')
-  await editor.getByRole('combobox', { name: /^איור לתיאור/ }).selectOption('fruit')
-  await expect(editor.locator('img[src="/static/icons/fruit.png"]')).toBeVisible()
+  // The icon picker: categories, then search by the Hebrew name.
+  const picker = editor.getByTestId('icon-picker')
+  await picker.getByRole('button', { name: 'בחירת איור' }).click()
+  await picker.getByRole('tab', { name: 'משקאות' }).click()
+  await expect(picker.getByRole('option', { name: 'בירה' })).toBeVisible()
+  await picker.getByRole('searchbox', { name: 'חיפוש איור' }).fill('מיץ תפוז')
+  await expect(picker.getByRole('option')).toHaveCount(1)
+  await picker.getByRole('option', { name: 'מיץ תפוזים' }).click()
+  await expect(picker.locator('.icon-chip img[src*="/static/icons/drinks/orange-juice.webp"]')).toBeVisible()
   await save(page)
   await expect(page.locator('.list tr', { hasText: TASTING })).toContainText('₪12.50')
   await expect(page.locator('.list tr', { hasText: TASTING })).toContainText('משהו מתוק וטרי')
+  await expect(
+    page.locator('.list tr', { hasText: TASTING }).locator('img[src*="drinks/orange-juice"]'),
+  ).toBeVisible()
 
   // Question set with a "name" slot whose fallback is the sample answer
   editor = await open(page, 'שאלונים', 'שאלון חדש')
@@ -99,4 +109,29 @@ test('owner builds a catalog: market, stall, tasting, question set, riddle, rout
   await expect(stop.getByRole('combobox', { name: /^חידה/ })).toHaveValue(/\d+/)
   await save(page)
   await expect(page.locator('.list tr', { hasText: ROUTE })).toContainText('1')
+})
+
+test('owner picks icons for an occasion from the library', async ({ page }) => {
+  await login(page)
+  const editor = await open(page, 'אירועים', 'אירוע חדש')
+  await editor.getByLabel('מפתח (באנגלית)').fill(`party_${run}`)
+  await editor.getByLabel('שם', { exact: true }).fill(`מסיבה ${run}`)
+  const picker = editor.getByTestId('icon-picker')
+  await picker.getByRole('button', { name: 'בחירת איור' }).click()
+  // Opens on the holidays; several can be chosen, in order.
+  await expect(picker.getByRole('tab', { name: 'חגים' })).toHaveAttribute('aria-selected', 'true')
+  await picker.getByRole('option', { name: 'סביבון' }).click()
+  await picker.getByRole('tab', { name: 'כיף ומוזיקה' }).click()
+  await picker.getByRole('option', { name: 'דרבוקה' }).click()
+  await expect(picker.getByRole('option', { selected: true })).toHaveCount(1)
+  await expect(picker.locator('.icon-chip')).toHaveCount(2)
+  await picker.getByRole('button', { name: 'הסרת סביבון' }).click()
+  await picker.getByRole('searchbox', { name: 'חיפוש איור' }).fill('balloon')
+  await picker.getByRole('option', { name: 'בלון', exact: true }).click()
+  await expect(picker.locator('.icon-chip')).toHaveCount(2)
+  await save(page)
+  const row = page.locator('.list tr', { hasText: `מסיבה ${run}` })
+  await expect(row.locator('img.list-icon')).toHaveCount(2)
+  await expect(row.locator('img[src*="fun/darbuka"]')).toBeVisible()
+  await expect(row.locator('img[src*="game/balloon"]')).toBeVisible()
 })

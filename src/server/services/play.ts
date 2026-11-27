@@ -45,6 +45,11 @@ export interface Stage {
   /** A mini-game's type (shown as its icon on the trail). */
   type?: MinigameType
   state: 'done' | 'skipped' | 'now' | 'later'
+  /**
+   * A done stop's tasting icon. Never on a stop ahead or the current one: what they taste there
+   * would hint the riddle's answer.
+   */
+  icon?: string
 }
 
 type StateLike = {
@@ -115,6 +120,8 @@ export interface PlayerView {
   theme: { name: string; map: string | null; palette: Palette; style: ThemeStyle } | null
   /** The occasion's doodle set. */
   decor: Decor
+  /** The occasion's library icons drawn with the doodles (empty: the set's defaults). */
+  decorIcons?: string[]
   company: { name: string; logo: string | null } | null
   honoree: string
   form: string
@@ -162,7 +169,7 @@ export interface PlayerView {
     // On "redeem":
     redeem: null | { code: string; portions: number; tasting: string; allergens: string[]; name: string }
   }
-  completed: { index: number; stall: string; tasting: string }[]
+  completed: { index: number; stall: string; tasting: string; icon?: string | null }[]
   letter: null | { notes: { text: string; signature: string }[]; photos: string[] }
 }
 
@@ -198,13 +205,18 @@ async function stallClosedToday(db: DB, stallId: number, today: string) {
 }
 
 /** The snapshot's doodle set; games built before it existed use the occasion's current one. */
-async function decorOf(db: DB, order: Loaded['order'], game: GameSnapshot): Promise<Decor> {
-  if (isDecor(game.decor)) return game.decor
+async function decorOf(
+  db: DB,
+  order: Loaded['order'],
+  game: GameSnapshot,
+): Promise<{ decor: Decor; decorIcons: string[] }> {
   const [occ] = await db
-    .select({ decor: occasions.decor })
+    .select({ decor: occasions.decor, icons: occasions.icons })
     .from(occasions)
     .where(eq(occasions.key, order.occasionKey))
-  return isDecor(occ?.decor) ? occ.decor : 'generic'
+  const decor = isDecor(game.decor) ? game.decor : isDecor(occ?.decor) ? occ.decor : 'generic'
+  // The icons are decoration, read live: an occasion's new icons show in games already built.
+  return { decor, decorIcons: occ?.icons ?? [] }
 }
 
 /** Players who arrived (games started before the choice existed serve the portions bought). */
@@ -272,7 +284,12 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
   const { order, game, state } = l
   const today = israelDate(now)
   const players = playersOf(state, game)
-  const stages = stagesOf(game, state)
+  const servedTasting = (s: GameSnapshot['stops'][number]) =>
+    state.backupStops.includes(s.index) && s.backup ? s.backup.tasting : s.tasting
+  const stages = stagesOf(game, state).map((x) => {
+    const icon = x.kind === 'stop' && x.state === 'done' ? servedTasting(game.stops[x.index])?.icon : null
+    return icon ? { ...x, icon } : x
+  })
   const status: PlayerView['status'] = isExpired(order, today)
     ? 'expired'
     : state.step === 'done'
@@ -292,7 +309,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
       palette: game.theme.palette,
       style: game.theme.style ?? {},
     },
-    decor: await decorOf(db, order, game),
+    ...(await decorOf(db, order, game)),
     company: game.company ? { name: game.company.name, logo: fileUrl(game.company.logo) } : null,
     honoree: game.honoree,
     form: game.form,
@@ -314,6 +331,7 @@ async function buildView(db: DB, l: Loaded, pollSeconds: number, now: Date): Pro
         index: s.index,
         stall: usedBackup ? s.backup!.stall.name : s.stall.name,
         tasting: usedBackup ? s.backup!.tasting.name : s.tasting.name,
+        icon: (usedBackup ? s.backup!.tasting.icon : s.tasting.icon) ?? null,
       }
     }),
     letter: null,

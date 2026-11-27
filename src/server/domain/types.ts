@@ -194,6 +194,8 @@ export interface SnapshotStall {
 export interface SnapshotTasting {
   id: number
   name: string
+  /** The tasting's icon (a key in the icon manifest). Missing on games built before it existed. */
+  icon?: string | null
   allergens: string[]
   diets: string[]
   feeAgorot: number

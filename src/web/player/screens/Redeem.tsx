@@ -1,8 +1,9 @@
 // Redeem: the screen the vendor checks. Day's code, who it is for, portions, tasting, allergens.
 import { Icon } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import { joinList } from '../copy.ts'
 import { BrushButton, Paper, Underline } from '../draw.tsx'
-import { stopIcon } from '../logic.ts'
+import { stopIconKey } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
 import { useBusy } from './useBusy.ts'
 
@@ -19,11 +20,20 @@ export function Redeem({ view, t, act }: ScreenProps) {
         {cur.reveal && <div className="redeem-stall">{cur.reveal.stall.name}</div>}
       </header>
 
-      <img className="redeem-icon bob" src={stopIcon(cur.index)} alt="" />
+      <span className="redeem-art">
+        <LibIcon
+          icon={stopIconKey(cur.index, cur.reveal?.tasting.icon)}
+          size={120}
+          className="redeem-icon bob"
+          eager
+          style={{ width: undefined, height: undefined }}
+        />
+        <LibIcon icon="reactions/face-yummy" size={44} tilt={10} className="redeem-yum pop" eager />
+      </span>
 
       <div className="code-block">
         <div className="muted-label with-icon">
-          <Icon name="key" size={28} tilt={-10} />
+          <LibIcon icon="game/key" size={32} tilt={-10} />
           {t('redeem.codeLabel')}
         </div>
         <div
@@ -48,7 +58,7 @@ export function Redeem({ view, t, act }: ScreenProps) {
 
       <div className="redeem-what">
         <div className="portions">
-          <Icon name="plate" size={34} tilt={-4} />
+          <LibIcon icon="game/fork-knife" size={34} tilt={-4} />
           {rd.portions === 1
             ? t('redeem.portionsOne', { tasting: rd.tasting })
             : t('redeem.portions', { n: rd.portions, tasting: rd.tasting })}

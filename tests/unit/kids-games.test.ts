@@ -3,6 +3,7 @@
 import { eq } from 'drizzle-orm'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { occasions, stalls, tastings } from '../../src/server/db/schema.ts'
+import { iconUrl } from '../../src/server/domain/icons.ts'
 import { updateKidsTastings } from '../../src/server/services/kids-update.ts'
 import { KIDS_DRINK, seedDemo } from '../../src/server/services/seed-demo.ts'
 import { makeTestApp, ownerCookie } from '../helpers/app.ts'
@@ -23,7 +24,7 @@ describe("kids' route preview (public)", () => {
     const last = kids.stops.at(-1)
     expect(last).toEqual({
       teaser: KIDS_DRINK.teaser,
-      icon: '/static/icons/fruit.png',
+      icon: iconUrl(KIDS_DRINK.teaserIcon),
       finale: true,
       status: 'as_listed',
     })
@@ -105,7 +106,7 @@ describe('kids update for unseeded databases (production script)', () => {
       expect.objectContaining({
         stallId: beerStall.id,
         teaser: KIDS_DRINK.teaser,
-        teaserIcon: 'fruit',
+        teaserIcon: KIDS_DRINK.teaserIcon,
         feeAgorot: 1200,
       }),
     ])

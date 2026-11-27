@@ -44,7 +44,7 @@ import {
   THEME_FONTS,
 } from '../domain/types.ts'
 import { requireOwner } from '../lib/auth.ts'
-import { iconNames } from '../lib/icons.ts'
+import { iconNames, isIconKey } from '../lib/icons.ts'
 import { randomToken } from '../lib/tokens.ts'
 
 const builtinMapsDir = fileURLToPath(new URL('../../../assets/maps', import.meta.url))
@@ -104,7 +104,7 @@ const tastingBase = z.object({
     (v) => (v === '' ? null : v),
     z
       .string()
-      .refine((v) => iconNames().includes(v), 'unknown icon')
+      .refine((v) => isIconKey(v), 'unknown icon')
       .nullable(),
   ),
   allergens: z.array(z.enum(ALLERGENS)),
@@ -162,6 +162,8 @@ const occasionBase = z.object({
   // A game for kids: adults-only tastings are swapped.
   forKids: z.boolean(),
   decor: z.enum(DECORS),
+  // Library icons drawn with the doodles (empty: the set's defaults).
+  icons: z.array(z.string().refine((v) => isIconKey(v), 'unknown icon')).max(8),
   sort: z.number().int(),
   active: z.boolean(),
 })

@@ -1998,6 +1998,17 @@ h2 {
   align-items: center;
   justify-content: center;
 }
+/* Stop icons keep their drawn proportions; a mini-game's icon fills its square. */
+.trail-stops img.stage-stop,
+.side-stop-icon img.stage-stop {
+  height: auto;
+}
+.trail-stops .stage-game img,
+.side-stop-icon .stage-game img {
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1;
+}
 .trail-stops .later .stage-game,
 .side-route .later .stage-game {
   opacity: 0.45;
@@ -2524,4 +2535,45 @@ h2 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* ---------- Library icons in the game ---------- */
+
+.map-icon,
+.redeem-icon {
+  height: auto;
+}
+.correct-wrap .correct-reaction {
+  position: absolute;
+  top: 34%;
+  right: -34px;
+  z-index: 1;
+}
+.redeem-art {
+  position: relative;
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+}
+.redeem-art .redeem-yum {
+  position: absolute;
+  bottom: 4px;
+  inset-inline-end: -30px;
+}
+.game-solved .solved-prize {
+  display: block;
+  margin: 4px auto 0;
+}
+.lib-icon.pop {
+  animation-delay: 0.25s;
+}
+.route li .lib-icon {
+  height: auto;
+}
+.finale-prize {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2px;
+  margin-bottom: -4px;
 }

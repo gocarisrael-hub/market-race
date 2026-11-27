@@ -153,6 +153,8 @@ export const occasions = pgTable('occasions', {
   forKids: boolean().notNull().default(false),
   // Doodle set drawn around the game and the order flow (see DECORS).
   decor: text().$type<Decor>().notNull().default('generic'),
+  // Library icons (keys in the icon manifest) drawn with the doodles; empty: the set's defaults.
+  icons: textArray(),
   sort: integer().notNull().default(0),
   active: boolean().notNull().default(true),
   updatedAt: updatedAt(),

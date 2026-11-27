@@ -1,5 +1,6 @@
 // Small pure helpers for the screens (unit tested).
 import type { TextPart } from '../../server/domain/types.ts'
+import { themedIconUrl } from '../shared/icon.tsx'
 
 /**
  * Riddles end with a short question ("מה היא?"). The mockup sets it apart in big handwriting,
@@ -81,23 +82,24 @@ export function trailPath(x: number, y: number): string {
   return `M${sx} ${sy} C ${sx + wob} ${sy - 18}, ${mx - wob} ${my + 10}, ${mx} ${my} S ${x - wob / 2} ${y + 14}, ${x} ${y + 5}`
 }
 
-/** Decorative food icons, one per stop, cycled. Icons are illustration, not data. */
+/**
+ * Decorative food icons for stops not solved yet, one per stop, cycled (the map's originals, with
+ * recolored copies per theme). Once solved, a stop shows its tasting's own icon. Illustration, not data.
+ */
 export const STOP_ICONS = ['fruit', 'hummus', 'falafel', 'tomatoes', 'coffee', 'spices', 'flowers']
 
-// The theme's recolored illustrations (a folder under assets/icons); empty: the originals.
-let iconSet = ''
+export { setIconSet } from '../shared/icon.tsx'
 
-/** Sets the illustration set of the theme in play (only simple folder names are taken). */
-export function setIconSet(set: string | null | undefined) {
-  iconSet = set && /^[a-z0-9-]+$/.test(set) ? set : ''
+/** URL of an icon (library key or an original) in the theme in play. */
+export const iconUrl = (name: string) => themedIconUrl(name)
+
+/** The stop's picture: its tasting's icon once known, else the cycled decoration. */
+export function stopIconKey(index: number, tastingIcon?: string | null) {
+  return tastingIcon || STOP_ICONS[index % STOP_ICONS.length]
 }
 
-export function iconUrl(name: string) {
-  return iconSet ? `/static/icons/${iconSet}/${name}.webp` : `/static/icons/${name}.webp`
-}
-
-export function stopIcon(index: number) {
-  return iconUrl(STOP_ICONS[index % STOP_ICONS.length])
+export function stopIcon(index: number, tastingIcon?: string | null) {
+  return iconUrl(stopIconKey(index, tastingIcon))
 }
 
 /** Font size for the ribbon title so long names still fit on one line. */

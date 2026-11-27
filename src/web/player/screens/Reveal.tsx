@@ -1,11 +1,23 @@
 // Reveal: "נכון!", the answer, and the next stall marked on the map.
 import { useState } from 'react'
+import type { IconKey } from '../../../server/domain/icons.ts'
 import { Burst, Confetti, Doodles, Icon } from '../../shared/decor.tsx'
+import { LibIcon } from '../../shared/icon.tsx'
 import type { T } from '../copy.ts'
 import { BrushButton, PinMark, Rays, Underline } from '../draw.tsx'
-import { mapFrame, stopIcon, trailPath } from '../logic.ts'
+import { mapFrame, stopIconKey, trailPath } from '../logic.ts'
 import type { ScreenProps } from './types.ts'
 import { useBusy } from './useBusy.ts'
+
+/** A reaction by the "correct!", a different one at each stop. */
+export const REACTIONS: IconKey[] = [
+  'reactions/clapping',
+  'reactions/face-heart-eyes',
+  'reactions/high-five',
+  'reactions/thumbs-up',
+  'reactions/face-laughing',
+  'reactions/ok-hand',
+]
 
 const FRAME_RATIO = 0.9 // height / width of the map crop
 const CLIP =
@@ -22,6 +34,7 @@ export function MapCrop({
   map: string | null
   tint?: string
   pin: { x: number; y: number } | null
+  /** Icon key. */
   icon: string
   company: { name: string; logo: string | null } | null
   t: T
@@ -59,7 +72,13 @@ export function MapCrop({
           </svg>
         </span>
       )}
-      <img className={`map-icon bob ${f && f.x > 50 ? 'at-left' : 'at-right'}`} src={icon} alt="" />
+      <LibIcon
+        icon={icon}
+        className={`map-icon bob ${f && f.x > 50 ? 'at-left' : 'at-right'}`}
+        tilt={8}
+        eager
+        style={{ width: undefined, height: undefined }}
+      />
       {company?.logo && (
         <span
           className={`map-stamp pop ${f && f.x > 50 ? 'side-r' : 'side-l'} ${f && f.y > 50 ? 'top' : 'bottom'}`}
@@ -92,6 +111,13 @@ export function Reveal({ view, t, act }: ScreenProps) {
         <div className="correct-wrap">
           <Burst decor={view.decor} />
           <h1 className="correct pop">{t('reveal.correct')}</h1>
+          <LibIcon
+            icon={REACTIONS[cur.index % REACTIONS.length]}
+            size={52}
+            tilt={12}
+            className="correct-reaction pop"
+            eager
+          />
         </div>
         <p className="answer-was rise">{t('reveal.answerWas', { answer: rv.answer })}</p>
         {rv.afterText && <p className="after-text rise">{rv.afterText}</p>}
@@ -100,7 +126,7 @@ export function Reveal({ view, t, act }: ScreenProps) {
       <MapCrop
         map={view.theme?.map ?? null}
         pin={rv.stall.pin}
-        icon={stopIcon(cur.index)}
+        icon={stopIconKey(cur.index, rv.tasting.icon)}
         company={view.company}
         tint={view.theme?.palette.mapTint}
         t={t}

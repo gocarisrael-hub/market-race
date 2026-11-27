@@ -140,6 +140,8 @@ test('game openings for birthday, love and family', async ({ page, request }) =>
     const opening = page.locator('main.opening')
     await expect(opening).toHaveAttribute('data-decor', decor)
     await expect(opening.locator(`[data-doodle="${doodle}"]`)).toHaveCount(1)
+    // The occasion's color icons join its doodles.
+    await expect(opening.locator('.doodles img.decor-icon').first()).toBeVisible()
     expect(await cssVar(page, '--bg')).toBe(p.palette.background)
     await page.evaluate(() => document.fonts.ready)
     await page.waitForLoadState('networkidle')
