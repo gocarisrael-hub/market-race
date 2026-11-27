@@ -18,6 +18,15 @@ test('occasions: an even two-column grid, the last one never under the sticky bu
   await page.goto('/order')
   const options = page.getByRole('radiogroup').getByRole('radio')
   await expect(options.first()).toBeVisible()
+  // Measure once the stage has slid in (the doodles bob forever: only finite animations count).
+  await page.locator('main.page').evaluate((el) =>
+    Promise.all(
+      el
+        .getAnimations({ subtree: true })
+        .filter((a) => a.effect?.getTiming().iterations !== Number.POSITIVE_INFINITY)
+        .map((a) => a.finished.catch(() => {})),
+    ),
+  )
   const n = await options.count()
   expect(n).toBeGreaterThan(2)
 
@@ -38,8 +47,15 @@ test('occasions: an even two-column grid, the last one never under the sticky bu
 
   const button = page.locator('.stage-nav .brush')
   const last = options.last()
-  // As loaded, and once the page scrolls the last option into view (as a keyboard or a tap would).
-  if (await last.isVisible()) expect(intersects(await box(last), await box(button))).toBe(false)
+  // Wherever the page brings the last option into view, it is never under the sticky button.
+  // As loaded: when it fits above the fold it is clear of the button (below the fold, the page
+  // scrolls on to it, as any page under a sticky bar).
+  const loaded = await box(last)
+  if (loaded.y + loaded.height <= 844) expect(intersects(loaded, await box(button))).toBe(false)
+  // At the bottom of the page.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  expect(intersects(await box(last), await box(button))).toBe(false)
+  await page.evaluate(() => window.scrollTo(0, 0))
   await last.evaluate((el) => el.scrollIntoView({ block: 'nearest' }))
   expect(intersects(await box(last), await box(button))).toBe(false)
   await last.focus()
